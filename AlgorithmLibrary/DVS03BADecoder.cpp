@@ -364,7 +364,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 	{
 		return false;
 	}
-	nFooterLens = FrameFooter.FooterStatic.FooterSize;
+	nFooterLens = FrameFooter.FooterStatic.FooterSize - 8; //芯片bug,footer少8字节
 	nIndex += sizeof(FrameTypeFrameFooter);
 	if (FrameFooter.FooterStatic.ST)
 	{
@@ -383,7 +383,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 			nIndex += sizeof(FrameTypeStats);
 		}
 	}
-
+#if 0	//芯片bug,footer少8字节
 	if (FrameFooter.FooterStatic.CSZ)
 	{
 		if ((nBinLens - nIndex) < sizeof(FrameTypeByteCount))
@@ -408,7 +408,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 		nIndex += sizeof(FrameTypeCrc);
 
 	}
-
+#endif
 	if (nIndex == nFooterLens)
 	{
 		return true;
