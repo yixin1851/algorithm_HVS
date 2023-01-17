@@ -4,6 +4,7 @@
 #define PADDING_BLOCK_SECTION_INDEX 0x40
 #define DVS_HEADER_003BA 0xF8F1F8F1F8F1F8F1
 #define DVS_FOOTER_003BA 0xF4F2F4F2F4F2F4F2
+#define DVS_THREAD_POOL 4
 
 
 CBlockBase::CBlockBase() : m_BlockType(BlockType::PaddingBlock), m_SectionIndex(0), m_nBlockLens(0), m_pOffsetBlock(nullptr), m_pContentBlock(nullptr), m_pPaddingBlock(nullptr)
@@ -355,7 +356,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 	{
 		return false;
 	}
-
+	m_nFrameSize = 0;
 	size_t nIndex = 0;
 	FrameTypeFrameFooter FrameFooter;
 	memcpy_s(&FrameFooter, sizeof(FrameFooter), pucBinData, sizeof(FrameFooter));
@@ -364,7 +365,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 	{
 		return false;
 	}
-	nFooterLens = FrameFooter.FooterStatic.FooterSize - 8; //芯片bug,footer少8字节
+	nFooterLens = FrameFooter.FooterStatic.FooterSize; 
 	nIndex += sizeof(FrameTypeFrameFooter);
 	if (FrameFooter.FooterStatic.ST)
 	{
@@ -383,7 +384,6 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 			nIndex += sizeof(FrameTypeStats);
 		}
 	}
-#if 0	//芯片bug,footer少8字节
 	if (FrameFooter.FooterStatic.CSZ)
 	{
 		if ((nBinLens - nIndex) < sizeof(FrameTypeByteCount))
@@ -408,7 +408,6 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 		nIndex += sizeof(FrameTypeCrc);
 
 	}
-#endif
 	if (nIndex == nFooterLens)
 	{
 		return true;
@@ -679,6 +678,7 @@ bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData
 			break;
 		}
 	}
+	size_t nFrameStart = nCurIndex;
 	if (nBinLens <= nCurIndex || !CheckFrameHeader(pucBinData + nCurIndex, nBinLens - nCurIndex, nHeaderLens))
 	{
 		return false;
@@ -695,6 +695,13 @@ bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData
 		{
 			nCurIndex += nFooterLens;
 			bFindFooter = true;
+			if (m_nFrameSize != 0)
+			{
+				if (m_nFrameSize != (nCurIndex - nFrameStart))
+				{
+					return false;
+				}
+			}
 			break;
 		}
 		else
@@ -722,11 +729,11 @@ bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData
 
 	if (m_bMultiThreadEnable)
 	{
-		uint32_t nThreadPool = m_nSectionTotalNum < 4 ? m_nSectionTotalNum : 4;
+		uint32_t nThreadPool = m_nSectionTotalNum < DVS_THREAD_POOL ? m_nSectionTotalNum : DVS_THREAD_POOL;
 
 		uint32_t nSectionStep = m_nSectionTotalNum / nThreadPool;
 
-		std::thread** t = new std::thread *[nThreadPool];
+		std::thread* t[DVS_THREAD_POOL] = { 0 };
 
 		for (uint32_t i = 0; i < nThreadPool; i++)
 		{
@@ -744,8 +751,6 @@ bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData
 			t[i]->join();
 			delete t[i];
 		}
-
-		delete[] t;
 	}
 	else
 	{
