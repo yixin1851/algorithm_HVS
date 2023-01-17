@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DialogDVSSpatialResponseUniformity</class>
+ <widget class="QDialog" name="DialogDVSSpatialResponseUniformity">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>701</width>
+    <height>426</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>SpatialResponseUniformity</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="maximumSize">
+      <size>
+       <width>181</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Setting</string>
+     </property>
+     <widget class="QLabel" name="label_Res">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>270</y>
+        <width>71</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonExport">
+      <property name="geometry">
+       <rect>
+        <x>110</x>
+        <y>230</y>
+        <width>51</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Export</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditNumber">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>70</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonStart">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>230</y>
+        <width>77</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Start</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditIndexStart">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>30</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_3">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>70</y>
+        <width>54</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Number</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_2">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>30</y>
+        <width>61</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>IndexStart</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>PeakNum</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditPeakNum">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>110</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+     <widget class="QComboBox" name="comboBoxLightType">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>150</y>
+        <width>75</width>
+        <height>22</height>
+       </rect>
+      </property>
+      <item>
+       <property name="text">
+        <string>OffEventsOnly</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>OnEventsOnly</string>
+       </property>
+      </item>
+      <item>
+       <property name="text">
+        <string>On/OffEvents</string>
+       </property>
+      </item>
+     </widget>
+     <widget class="QLabel" name="label_4">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>150</y>
+        <width>61</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>LightType</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditBlockNum">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>190</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_5">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>190</y>
+        <width>61</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>BlockNum</string>
+      </property>
+     </widget>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="CWidgetTableView" name="tabUniformityRes">
+      <attribute name="title">
+       <string>UniformityRes</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOffEventsTableWidegetAll">
+      <attribute name="title">
+       <string>OffEventsUniformity(All)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOffEventsTableWidegetGb">
+      <attribute name="title">
+       <string>OffEventsUniformity(Gb)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOffEventsTableWidegetB">
+      <attribute name="title">
+       <string>OffEventsUniformity(B)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOffEventsTableWidegetR">
+      <attribute name="title">
+       <string>OffEventsUniformity(R)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOffEventsTableWidegetGr">
+      <attribute name="title">
+       <string>OffEventsUniformity(Gr)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOnEventsTableWidegetAll">
+      <attribute name="title">
+       <string>OnEventsUniformity(All)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOnEventsTableWidegetGb">
+      <attribute name="title">
+       <string>OnEventsUniformity(Gb)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOnEventsTableWidegetB">
+      <attribute name="title">
+       <string>OnEventsUniformity(B)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOnEventsTableWidegetR">
+      <attribute name="title">
+       <string>OnEventsUniformity(R)</string>
+      </attribute>
+     </widget>
+     <widget class="CWidgetTableView" name="tabOnEventsTableWidegetGr">
+      <attribute name="title">
+       <string>OnEventsUniformity(Gr)</string>
+      </attribute>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CWidgetTableView</class>
+   <extends>QWidget</extends>
+   <header>WidgetTableView.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

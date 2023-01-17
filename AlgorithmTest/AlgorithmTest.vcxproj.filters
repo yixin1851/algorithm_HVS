@@ -1,0 +1,361 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>qml;cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>qrc;rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Translation Files">
+      <UniqueIdentifier>{639EADAA-A684-42e4-A9AD-28FC9BCB8F7C}</UniqueIdentifier>
+      <Extensions>ts</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="AlgorithmTest.qrc">
+      <Filter>Resource Files</Filter>
+    </QtRcc>
+    <QtUic Include="AlgorithmTest.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtMoc Include="AlgorithmTest.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <ClCompile Include="AlgorithmTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WidgetWelcome.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WidgetDVSInit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSFunction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSImportData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSCountEvents.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSStationaryNoise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="qcustomplot.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WidgetChartView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WidgetTableView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSStationaryUniformity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WidgetImageView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSHotPixel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSFindPeak.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSImageContrastSensitivity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSAccompaniedPeakAndDelayedPeak.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSSpatialResponseUniformity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSBadPixel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogDVSShow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSInit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSFunction.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSImportData.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSShow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSTNoise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSSNoise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSHotPixel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSBLC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSShading.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSBadPixel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSDarkCurrent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSDSNU.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSLinearity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSOverallSystemGain.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSDataMean.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSSaturation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <QtUic Include="WidgetTableView.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="WidgetChartView.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="WidgetImageView.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="WidgetWelcome.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSInit.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSFunction.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSImportData.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSCountEvents.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSStationaryNoise.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSStationaryUniformity.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSHotPixel.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSFindPeak.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSImageContrastSensitivity.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSAccompaniedPeakAndDelayedPeak.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSSpatialResponseUniformity.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSBadPixel.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogDVSShow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSInit.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSFunction.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSImportData.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSShow.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSTNoise.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSSNoise.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSHotPixel.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSBLC.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSShading.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSBadPixel.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSDarkCurrent.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSDSNU.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSLinearity.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSOverallSystemGain.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSDataMean.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSSaturation.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="WidgetWelcome.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="WidgetDVSInit.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSFunction.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSImportData.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSCountEvents.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSStationaryNoise.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="qcustomplot.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="WidgetChartView.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="WidgetTableView.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSStationaryUniformity.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="WidgetImageView.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSHotPixel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSFindPeak.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSImageContrastSensitivity.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSAccompaniedPeakAndDelayedPeak.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSSpatialResponseUniformity.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSBadPixel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogDVSShow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSInit.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSFunction.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSImportData.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSShow.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSTNoise.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSSNoise.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSHotPixel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSBLC.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSShading.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSBadPixel.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSDarkCurrent.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSDSNU.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSLinearity.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSOverallSystemGain.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSDataMean.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSSaturation.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AlgorithmTest.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

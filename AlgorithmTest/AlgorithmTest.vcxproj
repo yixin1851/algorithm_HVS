@@ -1,0 +1,235 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{FB7D771A-9719-4D3F-9DD4-3E823733E116}</ProjectGuid>
+    <Keyword>QtVS_v304</Keyword>
+    <WindowsTargetPlatformVersion Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">10.0.19041.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">10.0.19041.0</WindowsTargetPlatformVersion>
+    <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Condition="Exists('$(QtMsBuild)\qt_defaults.props')">
+    <Import Project="$(QtMsBuild)\qt_defaults.props" />
+  </ImportGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
+    <QtInstall>Qt_Qt-6.4.1</QtInstall>
+    <QtModules>core;gui;widgets</QtModules>
+    <QtBuildConfig>debug</QtBuildConfig>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
+    <QtInstall>Qt_Qt-6.4.1</QtInstall>
+    <QtModules>core;gui;widgets</QtModules>
+    <QtBuildConfig>release</QtBuildConfig>
+  </PropertyGroup>
+  <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
+    <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
+  </Target>
+  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="Shared" />
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <IncludePath>D:\Code\AlgorithmLibrary\AlgorithmLibrary;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\;C:\Qt\Qt-6.4.1\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <IncludePath>D:\Code\AlgorithmLibrary\AlgorithmLibrary;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Platform)\$(Configuration)\;C:\Qt\Qt-6.4.1\lib;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Link>
+      <AdditionalDependencies>Qt6PrintSupportd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Link>
+      <AdditionalDependencies>Qt6PrintSupport.lib;%(AdditionalDependencies);$(Qt_LIBS_)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
+    <ClCompile>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>Disabled</Optimization>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="Configuration">
+    <ClCompile>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <Optimization>MaxSpeed</Optimization>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="DialogAPSBadPixel.cpp" />
+    <ClCompile Include="DialogAPSBLC.cpp" />
+    <ClCompile Include="DialogAPSDataMean.cpp" />
+    <ClCompile Include="DialogAPSDSNU.cpp" />
+    <ClCompile Include="DialogAPSFunction.cpp" />
+    <ClCompile Include="DialogAPSHotPixel.cpp" />
+    <ClCompile Include="DialogAPSImportData.cpp" />
+    <ClCompile Include="DialogAPSInit.cpp" />
+    <ClCompile Include="DialogAPSLinearity.cpp" />
+    <ClCompile Include="DialogAPSOverallSystemGain.cpp" />
+    <ClCompile Include="DialogAPSSaturation.cpp" />
+    <ClCompile Include="DialogAPSShading.cpp" />
+    <ClCompile Include="DialogAPSShow.cpp" />
+    <ClCompile Include="DialogAPSSNoise.cpp" />
+    <ClCompile Include="DialogAPSTNoise.cpp" />
+    <ClCompile Include="DialogAPSDarkCurrent.cpp" />
+    <ClCompile Include="DialogDVSAccompaniedPeakAndDelayedPeak.cpp" />
+    <ClCompile Include="DialogDVSBadPixel.cpp" />
+    <ClCompile Include="DialogDVSHotPixel.cpp" />
+    <ClCompile Include="DialogDVSImageContrastSensitivity.cpp" />
+    <ClCompile Include="DialogDVSShow.cpp" />
+    <ClCompile Include="DialogDVSSpatialResponseUniformity.cpp" />
+    <ClCompile Include="DialogDVSStationaryUniformity.cpp" />
+    <ClCompile Include="DialogDVSFindPeak.cpp" />
+    <ClCompile Include="WidgetChartView.cpp" />
+    <ClCompile Include="DialogDVSCountEvents.cpp" />
+    <ClCompile Include="DialogDVSFunction.cpp" />
+    <ClCompile Include="DialogDVSImportData.cpp" />
+    <ClCompile Include="DialogDVSStationaryNoise.cpp" />
+    <ClCompile Include="qcustomplot.cpp" />
+    <ClCompile Include="WidgetDVSInit.cpp" />
+    <ClCompile Include="WidgetImageView.cpp" />
+    <ClCompile Include="WidgetTableView.cpp" />
+    <ClCompile Include="WidgetWelcome.cpp" />
+    <QtRcc Include="AlgorithmTest.qrc" />
+    <QtUic Include="AlgorithmTest.ui" />
+    <QtMoc Include="AlgorithmTest.h" />
+    <ClCompile Include="AlgorithmTest.cpp" />
+    <ClCompile Include="main.cpp" />
+    <QtUic Include="DialogAPSBadPixel.ui" />
+    <QtUic Include="DialogAPSBLC.ui" />
+    <QtUic Include="DialogAPSDarkCurrent.ui" />
+    <QtUic Include="DialogAPSDataMean.ui" />
+    <QtUic Include="DialogAPSDSNU.ui" />
+    <QtUic Include="DialogAPSFunction.ui" />
+    <QtUic Include="DialogAPSHotPixel.ui" />
+    <QtUic Include="DialogAPSImportData.ui" />
+    <QtUic Include="DialogAPSInit.ui" />
+    <QtUic Include="DialogAPSLinearity.ui" />
+    <QtUic Include="DialogAPSOverallSystemGain.ui" />
+    <QtUic Include="DialogAPSSaturation.ui" />
+    <QtUic Include="DialogAPSShading.ui" />
+    <QtUic Include="DialogAPSShow.ui" />
+    <QtUic Include="DialogAPSSNoise.ui" />
+    <QtUic Include="DialogAPSTNoise.ui" />
+    <QtUic Include="DialogDVSAccompaniedPeakAndDelayedPeak.ui" />
+    <QtUic Include="DialogDVSBadPixel.ui" />
+    <QtUic Include="DialogDVSCountEvents.ui" />
+    <QtUic Include="DialogDVSFunction.ui" />
+    <QtUic Include="DialogDVSHotPixel.ui" />
+    <QtUic Include="DialogDVSImageContrastSensitivity.ui" />
+    <QtUic Include="DialogDVSImportData.ui" />
+    <QtUic Include="DialogDVSInit.ui" />
+    <QtUic Include="DialogDVSShow.ui" />
+    <QtUic Include="DialogDVSSpatialResponseUniformity.ui" />
+    <QtUic Include="DialogDVSStationaryNoise.ui" />
+    <QtUic Include="DialogDVSStationaryUniformity.ui" />
+    <QtUic Include="DialogDVSFindPeak.ui" />
+    <QtUic Include="WidgetChartView.ui" />
+    <QtUic Include="WidgetImageView.ui" />
+    <QtUic Include="WidgetTableView.ui" />
+    <QtUic Include="WidgetWelcome.ui" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="WidgetWelcome.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="WidgetDVSInit.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DialogDVSFunction.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DialogDVSImportData.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DialogDVSCountEvents.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DialogDVSStationaryNoise.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="qcustomplot.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="DialogAPSFunction.h" />
+    <QtMoc Include="DialogAPSInit.h" />
+    <QtMoc Include="DialogDVSShow.h" />
+    <QtMoc Include="DialogDVSBadPixel.h" />
+    <QtMoc Include="DialogDVSSpatialResponseUniformity.h" />
+    <QtMoc Include="DialogDVSAccompaniedPeakAndDelayedPeak.h" />
+    <QtMoc Include="DialogDVSImageContrastSensitivity.h" />
+    <QtMoc Include="DialogDVSFindPeak.h" />
+    <QtMoc Include="DialogDVSHotPixel.h" />
+    <QtMoc Include="WidgetImageView.h" />
+    <QtMoc Include="DialogDVSStationaryUniformity.h" />
+    <QtMoc Include="WidgetTableView.h" />
+    <QtMoc Include="WidgetChartView.h" />
+    <QtMoc Include="DialogAPSImportData.h" />
+    <QtMoc Include="DialogAPSShow.h" />
+    <QtMoc Include="DialogAPSTNoise.h" />
+    <QtMoc Include="DialogAPSSNoise.h" />
+    <QtMoc Include="DialogAPSHotPixel.h" />
+    <QtMoc Include="DialogAPSBLC.h" />
+    <QtMoc Include="DialogAPSShading.h" />
+    <QtMoc Include="DialogAPSBadPixel.h" />
+    <QtMoc Include="DialogAPSDarkCurrent.h" />
+    <QtMoc Include="DialogAPSDSNU.h" />
+    <QtMoc Include="DialogAPSLinearity.h" />
+    <QtMoc Include="DialogAPSOverallSystemGain.h" />
+    <QtMoc Include="DialogAPSDataMean.h" />
+    <QtMoc Include="DialogAPSSaturation.h" />
+    <ClInclude Include="resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="AlgorithmTest.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
+    <Import Project="$(QtMsBuild)\qt.targets" />
+  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

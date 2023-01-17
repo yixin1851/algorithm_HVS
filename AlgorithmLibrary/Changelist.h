@@ -1,0 +1,4 @@
+#pragma once
+
+#define APS_MP_ALGORITHM_VERSION "01.00.00.00"
+#define DVS_MP_ALGORITHM_VERSION "01.00.00.00"
