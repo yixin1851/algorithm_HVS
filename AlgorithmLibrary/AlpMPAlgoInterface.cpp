@@ -1,7 +1,7 @@
 #include "AlpMPAlgoInterface.h"
 #include "AlpAPSMPAlgorithm.h"
 #include "AlpDVSMPAlgorithm.h"
-#include "vld.h"
+//#include "vld.h"
 
 uint32_t CAlpAPSMPAlgoInterface::m_nSiteNumber = 0;
 uint32_t CAlpDVSMPAlgoInterface::m_nSiteNumber = 0;

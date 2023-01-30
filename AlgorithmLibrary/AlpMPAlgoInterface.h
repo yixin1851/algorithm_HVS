@@ -287,6 +287,8 @@ public:
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath) = 0;
 	virtual ROIArea GetActiveArea() = 0;
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol) = 0;
+	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
+	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
 private:
 	static uint32_t m_nSiteNumber;

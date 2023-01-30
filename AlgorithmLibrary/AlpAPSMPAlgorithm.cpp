@@ -34,11 +34,19 @@ CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, RawType Rawtype, s
 	}
 	else if (Sensortype == SensorType::ALP_003BA)
 	{
+#if 0
 		m_ActiveArea = { 27, 611, 0, 815 };
 		m_nChannelRow = 612;
 		m_nChannelCol = 816;
 		m_nTotalRow = 2448;
 		m_nTotalCol = 1632;
+#else
+		m_ActiveArea = { 0, 584, 0, 815 };
+		m_nChannelRow = 585;
+		m_nChannelCol = 816;
+		m_nTotalRow = 2340;
+		m_nTotalCol = 1632;
+#endif
 	}
 
 	if (strLogDir != "")
@@ -1333,6 +1341,19 @@ void CAlpAPSMPAlgorithm::GetRawDataSize(uint32_t& nRow, uint32_t& nCol)
 	nCol = m_nChannelCol;
 }
 
+void CAlpAPSMPAlgorithm::SetActiveArea(ROIArea ActiveArea)
+{
+	m_ActiveArea = ActiveArea;
+}
+
+void CAlpAPSMPAlgorithm::SetRawDataSize(uint32_t nRow, uint32_t nCol)
+{
+	m_nTotalRow = nRow;
+	m_nTotalCol = nCol;
+	m_nChannelRow = m_nTotalRow / 4;
+	m_nChannelCol = m_nTotalCol / 2;
+}
+
 uint32_t CAlpAPSMPAlgorithm::GetDataNum()
 {
 	if (m_RawDataContainer.size() > 0 && m_RawDataContainer[0].size() > 0)
@@ -1700,7 +1721,7 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	if (nNumber < 2 || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -1794,7 +1815,7 @@ void CAlpAPSMPAlgorithm::SubFrameRowTNoise(uint32_t nIndexStart, uint32_t nNumbe
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	if (nNumber < 2 || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameRowTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -1843,7 +1864,7 @@ void CAlpAPSMPAlgorithm::SubFrameColTNoise(uint32_t nIndexStart, uint32_t nNumbe
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	if (nNumber < 2 || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameColTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);

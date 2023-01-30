@@ -40,6 +40,8 @@ public:
 	virtual APSAlgorithmThre GetAlgorithmThre();
 	virtual ROIArea GetActiveArea();
 	virtual void GetRawDataSize(uint32_t &nRow, uint32_t &nCol);
+	virtual void SetActiveArea(ROIArea ActiveArea);
+	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol);
 	virtual uint32_t GetDataNum();
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath);
 	virtual std::string GetVersion();
