@@ -1,205 +1,140 @@
 #include "AlpMPAlgoInterface.h"
+#include <fstream>
+#include <iostream>
 
 #pragma comment(lib, "AlgorithmLibrary.lib")
 
-unsigned char imagebuffer[8000 * 8000] = { 0 };
+static unsigned char imagebuffer[4000 * 3000] = { 0 };
 
-int ImageCapture_capture(unsigned char rawDataBuf[], unsigned long rawDataBufLen, unsigned long& rawDataRealLen, void* frameInfo)
+//ATE采图接口
+int ImageCapture_capture1(unsigned char rawDataBuf[], unsigned long rawDataBufLen, unsigned long& rawDataRealLen, void* frameInfo)
 {
-	return 0;
+	std::string rawFilePath = "D:/Data/image_raw_site0/2.5g_aps_12bit/FrameID55_W1632_H2340P12.raw";
+	std::ifstream infile;
+	infile.open(rawFilePath, std::ios::binary | std::ios::in);
+	if (!infile.fail())
+	{
+		infile.seekg(0, std::ios::end);
+		rawDataRealLen = infile.tellg();
+		infile.seekg(0, std::ios::beg);
+		infile.read((char*)rawDataBuf, rawDataRealLen);
+		infile.close();
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+int ImageCapture_capture2(unsigned char rawDataBuf[], unsigned long rawDataBufLen, unsigned long& rawDataRealLen, void* frameInfo)
+{
+	std::string rawFilePath = "D:/Data/image_raw_site0/2.5g_aps_12bit/FrameID56_W1632_H2340P12.raw";
+	std::ifstream infile;
+	infile.open(rawFilePath, std::ios::binary | std::ios::in);
+	if (!infile.fail())
+	{
+		infile.seekg(0, std::ios::end);
+		rawDataRealLen = infile.tellg();
+		infile.seekg(0, std::ios::beg);
+		infile.read((char*)rawDataBuf, rawDataRealLen);
+		infile.close();
+		return 0;
+	}
+	else
+	{
+		return -1;
+	}
 }
 
 static CAlpDVSMPAlgoInterface* gDVSInterface = nullptr;
 static CAlpAPSMPAlgoInterface* gAPSInterface = nullptr;
 
-void CPDVSTest()
+//初始化算法库接口，在程序启动时调用一次
+void Init()
 {
-	gDVSInterface = CreateDVSAlgoInterface(ALP_003BA, "D:/");
-	gDVSInterface->SetMultiThreadEnable(true);
-	gDVSInterface->SetLogEnable(true);
-	unsigned long rawDataRealLen = 0;
-	void* frameInfo = nullptr;
-	StationaryNoiseData StationaryNoise;
-	StationaryUniformityData StationaryUniformity;
-	HotpixelData HotpixelData;
+	//传入参数：芯片类型，RAW类型，算法log存储地址
+	gAPSInterface = CreateAPSAlgoInterface(ALP_003BA, RAW12, "D:/");
+	//启动算法log存储
+	gAPSInterface->SetLogEnable(true);
 
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集350帧数据弱光配置数据
-	gDVSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 350);
-	gDVSInterface->StationaryNoise(300, 50, StationaryNoise); //丢弃300帧
-	gDVSInterface->StationaryUniformity(300, 50, StationaryUniformity); //丢弃300帧
-	gDVSInterface->HotPixel(300, 50, HotpixelData); //丢弃300帧
-
-	ImageContrastSensitivityData WeakImageContrastSensitivityData, NormalImageContrastSensitivityData, StrongImageContrastSensitivityData;
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集160帧低变化量数据
-	gDVSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 160);
-	gDVSInterface->ImageContrastSensitivity(110, 50, nullptr, 3, On_OffEvents, WeakImageContrastSensitivityData);
-
-	SpatialResponseUniformityData NormalSpatialResponseUniformityData;
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集160帧中变化量数据
-	gDVSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 160);
-	PeakInfo PeakData;
-	gDVSInterface->FindPeak(110, 50, PeakData, On_OffEvents);
-	gDVSInterface->ImageContrastSensitivity(110, 50, &PeakData, 3, On_OffEvents, NormalImageContrastSensitivityData); //丢弃110帧数据
-	gDVSInterface->SpatialResponseUniformity(110, 50, &PeakData, 3, On_OffEvents, NormalSpatialResponseUniformityData); //丢弃110帧数据
-
-	AccompaniedPeakAndDelayedPeakData StrongAccompaniedPeakAndDelayedPeakData;
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集160帧高变化量数据
-	gDVSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 160);
-	gDVSInterface->FindPeak(110, 50, PeakData, On_OffEvents);
-	gDVSInterface->ImageContrastSensitivity(110, 50, &PeakData, 3, On_OffEvents, StrongImageContrastSensitivityData); //丢弃110帧数据
-	gDVSInterface->AccompaniedPeakAndDelayedPeak(110, 50, &PeakData, 3, On_OffEvents, StrongAccompaniedPeakAndDelayedPeakData); //丢弃110帧数据
-
-	DVSBadpixelData BadpixelData;
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集550帧数据
-	gDVSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 550);
-	gDVSInterface->BadPixel(40, 510, nullptr, 50, On_OffEvents, BadpixelData);
+	//获取算法库版本号
+	std::cout << "Algo Ver: " << gAPSInterface->GetVersion() << std::endl;
 }
 
-void CPAPSTest()
+//卸载算法库，在程序结束时调用
+void UnInit()
 {
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003BA, RAW10, "D:/");
-	gAPSInterface->SetMultiThreadEnable(true);
-	gAPSInterface->SetLogEnable(true);
+	delete gAPSInterface;
+}
+
+//一个测试项中算法库调用方法
+void OneTestItem()
+{
 	unsigned long rawDataRealLen = 0;
-	void* frameInfo = nullptr;
+	ImageCapture_capture1(imagebuffer, sizeof(imagebuffer), rawDataRealLen, nullptr);
 
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧dark 50ms数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 5);
+	//导入数据接口，参数为RAW数据指针，数据长度，首帧存储在算法中的位置，导入的帧数，RAW数据是否带帧头帧尾
+	bool bRet = gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 0, 1, false);
 
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧dark 150ms数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 5, 5);
-
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧Light 10ms数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 10, 5);
-
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧Light 25ms数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 15, 5);
-
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧Light 50ms数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 20, 5);
-
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧Light 75ms数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 25, 5);
-
-	std::vector<double> DarkMean, DarkTNoise, DarkRowTNoise, DarkColTNoise, DarkSNoise, DarkRowSNoise, DarkColSNoise;
-	gAPSInterface->DataMean(0, 5, nullptr, DarkMean);//计算dark均值(50ms)
-
-	std::vector<HotpixelData> DarkHotPixel;
-	gAPSInterface->HotPixel(5, 5, nullptr, DarkHotPixel);//计算dark HotPixel(150ms)
-
-	std::vector<BadPixelMaskData> DarkHotPixelMask;
-
-	for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
+	if (!bRet)
 	{
-		DarkHotPixelMask.push_back(DarkHotPixel[nChannel].HotPixelMask);
-	}
-	gAPSInterface->DPC(0, 10, nullptr, DarkHotPixelMask);//DPC
-	
-	gAPSInterface->TNoise(0, 5, nullptr, DarkTNoise);
-	gAPSInterface->RowTNoise(0, 5, nullptr, DarkRowTNoise);
-	gAPSInterface->ColTNoise(0, 5, nullptr, DarkColTNoise);
-
-	gAPSInterface->SNoise(0, 5, nullptr, DarkSNoise);
-	gAPSInterface->RowSNoise(0, 5, nullptr, DarkRowSNoise);
-	gAPSInterface->ColSNoise(0, 5, nullptr, DarkColSNoise);
-
-	std::vector<double> Dark150msMean, Dark150msTNoise;
-	gAPSInterface->TNoise(5, 5, nullptr, DarkTNoise);
-	gAPSInterface->DataMean(5, 5, nullptr, DarkMean);
-
-	std::vector<double> DarkExpTime;
-	DarkExpTime.push_back(50);
-	DarkExpTime.push_back(150);
-
-	std::vector<std::vector<double>> DarkMeanMethod;
-	DarkMeanMethod.push_back(DarkMean);
-	DarkMeanMethod.push_back(Dark150msMean);
-
-	std::vector<std::vector<double>> DarkTNoiseMethod;
-	DarkTNoiseMethod.push_back(DarkTNoise);
-	DarkTNoiseMethod.push_back(Dark150msTNoise);
-
-	std::vector<double> DarkCurrentMeanMethod, DarkCurrentTNoiseMethod;
-	gAPSInterface->DarkCurrent(DarkMeanMethod, DarkExpTime, true, DarkCurrentMeanMethod); //均值法
-	gAPSInterface->DarkCurrent(DarkTNoiseMethod, DarkExpTime, false, DarkCurrentTNoiseMethod); //方差法
-
-	DSNUData DSNU;
-	gAPSInterface->DSNU(0, 5, nullptr, DSNU);
-
-	gAPSInterface->BLC(10, 20, DarkMean); //全局Base做BLC
-	gAPSInterface->BLC(10, 20, 0, 5); //列均值Base做BLC
-
-	std::vector<BadpixelData> LightBadPixel;
-	gAPSInterface->BadPixel(20, 5, nullptr, LightBadPixel);
-
-	std::vector<BadPixelMaskData> LightBadPixelMask;
-
-	for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
-	{
-		LightBadPixelMask.push_back(LightBadPixel[nChannel].BadPixelMask);
+		std::cout << "ImportData Fail!" << std::endl;
+		return;
 	}
 
-	gAPSInterface->DPC(10, 20, nullptr, LightBadPixelMask);
+	ImageCapture_capture2(imagebuffer, sizeof(imagebuffer), rawDataRealLen, nullptr);
 
-	ShadingData Shading;
-	gAPSInterface->Shading(20, 5, nullptr, Shading);
+	//导入数据接口，参数为RAW数据指针，数据长度，首帧存储在算法中的位置，导入的帧数，RAW数据是否带帧头帧尾
+	bRet = gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 1, 1, false);
 
-	ROIArea OpticalArea = { Shading.CenterRow - 99, Shading.CenterRow + 100,  Shading.CenterCol - 99, Shading.CenterCol + 100 };
+	if (!bRet)
+	{
+		std::cout << "ImportData Fail!" << std::endl;
+		return;
+	}
 
-	std::vector<double> LightMean, LightTNoise, LightRowTNoise, LightColTNoise, LightSNoise, LightRowSNoise, LightColSNoise;
+	std::vector<double> DataMean;
+	//计算均值接口，参数为首帧存储在算法中的位置，导入的帧数，ROI(传入nullptr使用默认ROI)，数据结果
+	bRet = gAPSInterface->DataMean(0, 2, nullptr, DataMean);
 
-	gAPSInterface->DataMean(20, 5, &OpticalArea, LightMean);
-	gAPSInterface->TNoise(20, 5, &OpticalArea, LightTNoise);
-	gAPSInterface->RowTNoise(20, 5, &OpticalArea, LightRowTNoise);
-	gAPSInterface->ColTNoise(20, 5, &OpticalArea, LightColTNoise);
+	if (!bRet)
+	{
+		std::cout << "Mean Func Fail!" << std::endl;
+	}
+	else
+	{
+		std::cout << "DataMean:" << std::endl;
+		//子图顺序Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2
+		for (int n = 0; n < APSSubFrameIndex::SubFrameNum; n++)
+		{
+			std::cout << DataMean[n] << std::endl;
+		}
+	}
 
-	gAPSInterface->SNoise(20, 5, &OpticalArea, LightSNoise);
-	gAPSInterface->RowSNoise(20, 5, &OpticalArea, LightRowSNoise);
-	gAPSInterface->ColSNoise(20, 5, &OpticalArea, LightColSNoise);
+	std::vector<double> DataTNoise;
+	//计算时域噪声接口，参数为首帧存储在算法中的位置，导入的帧数，ROI(传入nullptr使用默认ROI)，数据结果
+	bRet = gAPSInterface->TNoise(0, 2, nullptr, DataTNoise);
 
-	std::vector<double> Light10Mean, Light25Mean, Light75Mean;
-	gAPSInterface->DataMean(10, 5, &OpticalArea, Light10Mean);
-	gAPSInterface->DataMean(15, 5, &OpticalArea, Light25Mean);
-	gAPSInterface->DataMean(25, 5, &OpticalArea, Light75Mean);
-
-	std::vector<std::vector<double>> LightAllMean;
-	LightAllMean.push_back(Light10Mean);
-	LightAllMean.push_back(Light25Mean);
-	LightAllMean.push_back(LightMean);
-	LightAllMean.push_back(Light75Mean);
-
-	std::vector<double> LightExpTime;
-	LightExpTime.push_back(10);
-	LightExpTime.push_back(25);
-	LightExpTime.push_back(50);
-	LightExpTime.push_back(75);
-
-	std::vector<LinearityData> LinearityRes;
-	gAPSInterface->Linearity(LightAllMean, LightExpTime, LinearityRes);
-
-	std::vector<double> Light10TNoise, Light25TNoise, Light75TNoise;
-	gAPSInterface->TNoise(10, 5, &OpticalArea, Light10TNoise);
-	gAPSInterface->TNoise(15, 5, &OpticalArea, Light25TNoise);
-	gAPSInterface->TNoise(25, 5, &OpticalArea, Light75TNoise);
-
-	std::vector<std::vector<double>> LightAllTNoise;
-	LightAllTNoise.push_back(Light10TNoise);
-	LightAllTNoise.push_back(Light25TNoise);
-	LightAllTNoise.push_back(LightTNoise);
-	LightAllTNoise.push_back(Light75TNoise);
-
-	std::vector<double> GainK;
-	gAPSInterface->OverallSystemGain(LightAllTNoise, LightAllMean, DarkTNoise, GainK);
-
-	ImageCapture_capture(imagebuffer, sizeof(imagebuffer), rawDataRealLen, frameInfo); // 采集5帧Saturation数据
-	gAPSInterface->ImportRawData(imagebuffer, rawDataRealLen, 30, 5);
-
-	SaturationData SaturationDataRes;
-	gAPSInterface->Saturation(30, 5, &OpticalArea, APSSubFrameIndex::Gb1, SaturationDataRes); //计算Saturation
-
+	if (!bRet)
+	{
+		std::cout << "TNoise Func Fail!" << std::endl;
+	}
+	else
+	{
+		std::cout << "DataTNoise:" << std::endl;
+		//子图顺序Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2
+		for (int n = 0; n < APSSubFrameIndex::SubFrameNum; n++)
+		{
+			std::cout << DataTNoise[n] << std::endl;
+		}
+	}
 }
 
 int main()
 {
-
+	Init();
+	OneTestItem();
+	UnInit();
+	return 0;
 }

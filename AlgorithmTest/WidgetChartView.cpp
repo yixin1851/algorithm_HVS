@@ -35,10 +35,11 @@ void CWidgetChartView::SetLine(std::string strLineName, QVector<double> &XData, 
 
     ui.widgetChartView->graph(m_nLineNum)->setLineStyle(QCPGraph::lsLine);
     ui.widgetChartView->graph(m_nLineNum)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssDisc, 2));
+    ui.widgetChartView->graph(m_nLineNum)->setVisible(false);
     QCheckBoxControl.resize(m_nLineNum + 1);
     QCheckBox* LineChose = new QCheckBox(QString::fromStdString(strLineName), this);
     QCheckBoxControl[m_nLineNum] = LineChose;
-    LineChose->setChecked(true);
+    LineChose->setChecked(false);
     ui.verticalLayoutLineChose->addWidget(LineChose);
     connect(LineChose, SIGNAL(stateChanged(int)), this, SLOT(LineVisibleCheck()), Qt::UniqueConnection);
     ui.widgetChartView->replot();
@@ -59,10 +60,11 @@ void CWidgetChartView::SetScatter(std::string strLineName, QVector<double>& XDat
 
     ui.widgetChartView->graph(m_nLineNum)->setLineStyle(QCPGraph::lsNone);
     ui.widgetChartView->graph(m_nLineNum)->setScatterStyle(QCPScatterStyle(QCPScatterStyle::ssCircle, 8));
+    ui.widgetChartView->graph(m_nLineNum)->setVisible(false);
     QCheckBoxControl.resize(m_nLineNum + 1);
     QCheckBox* LineChose = new QCheckBox(QString::fromStdString(strLineName), this);
     QCheckBoxControl[m_nLineNum] = LineChose;
-    LineChose->setChecked(true);
+    LineChose->setChecked(false);
     ui.verticalLayoutLineChose->addWidget(LineChose);
     connect(LineChose, SIGNAL(stateChanged(int)), this, SLOT(LineVisibleCheck()), Qt::UniqueConnection);
     ui.widgetChartView->replot();

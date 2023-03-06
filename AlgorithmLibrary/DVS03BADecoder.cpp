@@ -1,11 +1,11 @@
 #include "DVS03BADecoder.h"
 #include <thread>
+#include <iostream>
 
 #define PADDING_BLOCK_SECTION_INDEX 0x40
 #define DVS_HEADER_003BA 0xF8F1F8F1F8F1F8F1
 #define DVS_FOOTER_003BA 0xF4F2F4F2F4F2F4F2
 #define DVS_THREAD_POOL 4
-
 
 CBlockBase::CBlockBase() : m_BlockType(BlockType::PaddingBlock), m_SectionIndex(0), m_nBlockLens(0), m_pOffsetBlock(nullptr), m_pContentBlock(nullptr), m_pPaddingBlock(nullptr)
 {
@@ -60,6 +60,26 @@ CBlockBase::CBlockBase(uint8_t* RawData, uint64_t nRawLens)
 	{
 		return;
 	}
+
+	/*temporary method for data loss*/
+	//if (BlockDescriptor.LongBlockDescriptor.SectionIndex != PADDING_BLOCK_SECTION_INDEX)
+	//{
+	//	m_BlockType = BlockType::ContentBlock;
+	//	m_pContentBlock = std::make_shared<CContentBlock>(CContentBlock(RawData, nRawLens));
+	//	m_nBlockLens = m_pContentBlock->GetBlockLens();
+	//	m_SectionIndex = m_pContentBlock->GetSectionIndex();
+	//}
+	//else if (BlockDescriptor.LongBlockDescriptor.SectionIndex == PADDING_BLOCK_SECTION_INDEX)
+	//{
+	//	m_BlockType = BlockType::PaddingBlock;
+	//	m_pPaddingBlock = std::make_shared<CPaddingBlock>(CPaddingBlock(RawData, nRawLens));
+	//	m_nBlockLens = m_pPaddingBlock->GetBlockLens();
+	//	m_SectionIndex = m_pPaddingBlock->GetSectionIndex();
+	//}
+	//else
+	//{
+	//	return;
+	//}
 }
 
 BlockType CBlockBase::GetBlockType()
@@ -162,6 +182,13 @@ CContentBlock::CContentBlock(uint8_t* RawData, uint64_t nRawLens)
 
 	memcpy_s(&ContentBlockBase, sizeof(FrameTypeContentBlockBase), RawData, sizeof(FrameTypeContentBlockBase));
 
+	/*temporary method for data loss*/
+	//if (ContentBlockBase.DNPageLength == 8 || ContentBlockBase.UPPageLength == 8)
+	//{
+	//	ContentBlockBase.DNPageLength = 8;
+	//	ContentBlockBase.UPPageLength = 8;
+	//}
+
 	uint16_t nSize = sizeof(FrameTypeContentBlockBase) + ContentBlockBase.DNPageLength + ContentBlockBase.UPPageLength;
 
 	if (nSize > nRawLens)
@@ -257,7 +284,7 @@ void CDVS03BADecoder::Init()
 	m_nRowSectionNum = 1;
 	m_nColSectionNum = 17;
 	m_nSubFrameRow = 612;
-	m_nSubFrameCow = 816;
+	m_nSubFrameCol = 816;
 	m_nRowBlockNumInSection = 77;
 	m_nColBlockNumInSection = 6;
 	m_nRowGroupNumInBlock = 4;
@@ -269,7 +296,7 @@ void CDVS03BADecoder::Init()
 	m_nGroupCol = 2;
 	m_nFrameSize = 0;
 	m_nCrc = 0;
-	m_Roi = { 0, m_nSubFrameRow, 0, m_nSubFrameCow };
+	m_Roi = { 0, m_nSubFrameRow, 0, m_nSubFrameCol };
 	m_Stats.clear();
 	m_RawData = nullptr;
 }
@@ -327,7 +354,7 @@ bool CDVS03BADecoder::CheckFrameHeader(uint8_t* pucBinData, size_t nBinLens, uin
 		m_nRowSectionNum = FrameStatic.NumberOfSectionsInY;
 		m_nColSectionNum = FrameStatic.NumberOfSectionsInX;
 		m_nSubFrameRow = FrameStatic.NumberOfPixelsInY;
-		m_nSubFrameCow = FrameStatic.NumberOfPixelsInX;
+		m_nSubFrameCol = FrameStatic.NumberOfPixelsInX;
 		m_nRowBlockNumInSection = FrameStatic.NumberOfBlocksPerSectionInY;
 		m_nColBlockNumInSection = FrameStatic.NumberOfBlocksPerSectionInX;
 		m_nRowGroupNumInBlock = FrameStatic.GroupsPerBlockInY;
@@ -350,8 +377,10 @@ bool CDVS03BADecoder::CheckFrameHeader(uint8_t* pucBinData, size_t nBinLens, uin
 	}
 }
 
-bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens)
+bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens, bool &bFindFrameLens, bool & bFindCRC)
 {
+	bFindFrameLens = false;
+	bFindCRC = false;
 	if (nBinLens < sizeof(FrameTypeFrameFooter))
 	{
 		return false;
@@ -365,6 +394,17 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 	{
 		return false;
 	}
+
+	/*temporary method for data loss*/
+	FrameTypeFrameHeader FrameHeader;
+	memcpy_s(&FrameHeader, sizeof(FrameTypeFrameHeader), pucBinData + 8, sizeof(FrameTypeFrameHeader));
+
+	if (FrameHeader.HeaderCode == DVS_HEADER_003BA)
+	{
+		nFooterLens = 8;
+		return true;
+	}
+
 	nFooterLens = FrameFooter.FooterStatic.FooterSize; 
 	nIndex += sizeof(FrameTypeFrameFooter);
 	if (FrameFooter.FooterStatic.ST)
@@ -390,6 +430,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 		{
 			return false;
 		}
+		bFindFrameLens = true;
 		FrameTypeByteCount ByteCount;
 		memcpy_s(&ByteCount, sizeof(FrameTypeByteCount), pucBinData + nIndex, sizeof(FrameTypeByteCount));
 		m_nFrameSize = ByteCount.ByteCount;
@@ -402,6 +443,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 		{
 			return false;
 		}
+		bFindCRC = true;
 		FrameTypeCrc Crc;
 		memcpy_s(&Crc, sizeof(FrameTypeCrc), pucBinData + nIndex, sizeof(FrameTypeCrc));
 		m_nCrc = Crc.Crc;
@@ -454,10 +496,15 @@ bool CDVS03BADecoder::CheckBlock(uint8_t* pucBinData, size_t nBinLens, uint16_t&
 
 Local CDVS03BADecoder::LocalSwitch(uint8_t nSectionIndex, uint16_t nBlockIndex, uint16_t nGroupIndex, uint8_t nEventIndex, uint8_t nSubFrameIndex)
 {
+	/*
+		1 | 3
+		¡ª ¡ª
+		0 | 2
+	*/
 	Local res;
 
-	res.x = ((nSectionIndex / m_nColSectionNum * m_nRowBlockNumInSection + nBlockIndex / m_nColBlockNumInSection) * m_nRowGroupNumInBlock + nGroupIndex / m_nColGroupNumInBlock) * m_nGroupRow + nEventIndex / m_nGroupCol;
-	res.y = ((nSectionIndex % m_nColSectionNum * m_nColBlockNumInSection + nBlockIndex % m_nColBlockNumInSection) * m_nColGroupNumInBlock + nGroupIndex % m_nColGroupNumInBlock) * m_nGroupCol + nEventIndex % m_nGroupCol;
+	res.x = ((nSectionIndex / m_nColSectionNum * m_nRowBlockNumInSection + nBlockIndex / m_nColBlockNumInSection) * m_nRowGroupNumInBlock + nGroupIndex / m_nColGroupNumInBlock) * m_nGroupRow + (nEventIndex + 1) % m_nGroupCol;
+	res.y = ((nSectionIndex % m_nColSectionNum * m_nColBlockNumInSection + nBlockIndex % m_nColBlockNumInSection) * m_nColGroupNumInBlock + nGroupIndex % m_nColGroupNumInBlock) * m_nGroupCol + nEventIndex / m_nGroupCol;
 
 	res.x = res.x * 2 + nSubFrameIndex / 2;
 	res.y = res.y * 2 + nSubFrameIndex % 2;
@@ -496,42 +543,50 @@ void CDVS03BADecoder::SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd)
 							if (PackedGroup.G0E0)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 0, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G0E1)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 1, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G0E2)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 2, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G0E3)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 3, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E0)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 0, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E1)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 1, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E2)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 2, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E3)
 							{
 								 l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 3, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								 if ((l.x >= 56) && (l.x % 8 < 4))
+								 m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							uGroupIndex += 2;
 						}
@@ -546,22 +601,26 @@ void CDVS03BADecoder::SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd)
 							if (OffsetGroup.E0)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 0, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (OffsetGroup.E1)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 1, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (OffsetGroup.E0)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 2, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 							if (OffsetGroup.E3)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 3, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, OFF_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
 							}
 						}
 					}
@@ -580,42 +639,50 @@ void CDVS03BADecoder::SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd)
 							if (PackedGroup.G0E0)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 0, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G0E1)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 1, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G0E2)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 2, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G0E3)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex, 3, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E0)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 0, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E1)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 1, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E2)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 2, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (PackedGroup.G1E3)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, uGroupIndex + 1, 3, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							uGroupIndex += 2;
 						}
@@ -630,22 +697,26 @@ void CDVS03BADecoder::SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd)
 							if (OffsetGroup.E0)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 0, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (OffsetGroup.E1)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 1, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (OffsetGroup.E0)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 2, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 							if (OffsetGroup.E3)
 							{
 								l = LocalSwitch(nCurSection, nCurBlock, OffsetGroup.GroupIndex, 3, m_nSubFrameIndex);
-								m_RawData->SetData(l.x, l.y, ON_EVENT_FLAG);
+								if ((l.x >= 56) && (l.x % 8 < 4))
+								m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
 							}
 						}
 					}
@@ -655,6 +726,57 @@ void CDVS03BADecoder::SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd)
 		}
 	}
 }
+
+uint32_t CDVS03BADecoder::GetCrc32(uint8_t* data, size_t length)
+{
+	uint32_t crc = 0xffffffff; // same as previousCrc32 ^ 0xFFFFFFFF
+	const uint8_t* current = (const uint8_t*)data;
+
+	while (length-- != 0)
+	{
+		uint8_t s = uint8_t(crc) ^ *current++;
+
+		// Hagai Gold made me aware of this table-less algorithm and send me code
+
+		// polynomial 0xEDB88320 can be written in binary as 11101101101110001000001100100000b
+		// reverse the bits (or just assume bit 0 is the first one)
+		// and we have bits set at position 0, 1, 2, 4, 5, 7, 8, 10, 11, 12, 16, 22, 23, 26
+		// => those are the shift offsets:
+		//crc = (crc >> 8) ^
+		//       t ^
+		//      (t >>  1) ^ (t >>  2) ^ (t >>  4) ^ (t >>  5) ^  // == y
+		//      (t >>  7) ^ (t >>  8) ^ (t >> 10) ^ (t >> 11) ^  // == y >> 6
+		//      (t >> 12) ^ (t >> 16) ^                          // == z
+		//      (t >> 22) ^ (t >> 26) ^                          // == z >> 10
+		//      (t >> 23);
+
+		// the fastest I can come up with:
+		uint32_t low = (s ^ (s << 6)) & 0xFF;
+		uint32_t a = (low * ((1 << 23) + (1 << 14) + (1 << 2)));
+		crc = (crc >> 8) ^
+			(low * ((1 << 24) + (1 << 16) + (1 << 8))) ^
+			a ^
+			(a >> 1) ^
+			(low * ((1 << 20) + (1 << 12))) ^
+			(low << 19) ^
+			(low << 17) ^
+			(low >> 2);
+
+		// Hagai's code:
+		/*uint32_t t = (s ^ (s << 6)) << 24;
+		// some temporaries to optimize XOR
+		uint32_t x = (t >> 1) ^ (t >> 2);
+		uint32_t y = x ^ (x >> 3);
+		uint32_t z = (t >> 12) ^ (t >> 16);
+		crc = (crc >> 8) ^
+			   t ^ (t >> 23) ^
+			   y ^ (y >>  6) ^
+			   z ^ (z >> 10);*/
+	}
+
+	return ~crc; // same as crc ^ 0xFFFFFFFF
+}
+
 
 bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t & ntimeStamp)
 {
@@ -691,13 +813,22 @@ bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData
 	bool bFindFooter = false;
 	while (nBinLens > nCurIndex)
 	{
-		if (CheckFrameFooter(pucBinData + nCurIndex, nBinLens - nCurIndex, nFooterLens))
+		bool bFindFrameLens = false, bFindCRC = false;
+		if (CheckFrameFooter(pucBinData + nCurIndex, nBinLens - nCurIndex, nFooterLens, bFindFrameLens, bFindCRC))
 		{
 			nCurIndex += nFooterLens;
 			bFindFooter = true;
-			if (m_nFrameSize != 0)
+			if (bFindFrameLens)
 			{
 				if (m_nFrameSize != (nCurIndex - nFrameStart))
+				{
+					return false;
+				}
+			}
+			if (bFindCRC)
+			{
+				uint32_t uFrameCrc = GetCrc32(pucBinData + nFrameStart, nCurIndex - nFrameStart - sizeof(m_nCrc));
+				if(m_nCrc != uFrameCrc)
 				{
 					return false;
 				}

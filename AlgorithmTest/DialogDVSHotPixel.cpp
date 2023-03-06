@@ -64,6 +64,8 @@ void CDialogDVSHotPixel::HotPixel()
 		uint32_t nRow = 1224;
 		uint32_t nCol = 1632;
 
+		m_pDVSAlgoInterface->GetRawDataSize(nRow, nCol);
+
 		uint8_t* pImage = new uint8_t[nRow * nCol];
 		memset(pImage, 0, nRow * nCol);
 

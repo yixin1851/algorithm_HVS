@@ -108,7 +108,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>160</y>
+     <y>220</y>
      <width>77</width>
      <height>26</height>
     </rect>
@@ -121,7 +121,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>200</y>
+     <y>260</y>
      <width>71</width>
      <height>41</height>
     </rect>
@@ -161,6 +161,22 @@
    </property>
    <property name="text">
     <string>Data Format</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxFrameHeaderFooter">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>170</y>
+     <width>151</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>FrameHeader/Footer</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

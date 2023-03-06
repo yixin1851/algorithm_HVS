@@ -61,6 +61,8 @@ void CDialogDVSBadPixel::BadPixel()
 		uint32_t nRow = 1224;
 		uint32_t nCol = 1632;
 
+		m_pDVSAlgoInterface->GetRawDataSize(nRow, nCol);
+
 		if ((nLightType + 1) & 1)
 		{
 			RowName << "OffEvents";

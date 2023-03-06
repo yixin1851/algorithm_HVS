@@ -249,10 +249,11 @@ public:
 	void SetMultiThreadEnable(bool bEnable) { m_bMultiThreadEnable = bEnable; }
 protected:
 	bool CheckFrameHeader(uint8_t* pucBinData, size_t nBinLens, uint16_t& nHeaderLens);
-	bool CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens);
+	bool CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens, bool &bFindFrameLens, bool &bFindCRC);
 	bool CheckBlock(uint8_t* pucBinData, size_t nBinLens, uint16_t& nBlockLens, bool& bPaddingFlag);
 	Local LocalSwitch(uint8_t nSectionIndex, uint16_t nBlockIndex, uint16_t nGroupIndex, uint8_t nEventIndex, uint8_t nSubFrameIndex);
 	void SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd);
+	uint32_t GetCrc32(uint8_t* data, size_t length);
 private:
 	uint32_t m_nTotalRow;
 	uint32_t m_nTotalCol;
@@ -263,7 +264,7 @@ private:
 	uint8_t m_nRowSectionNum;
 	uint8_t m_nColSectionNum;
 	uint16_t m_nSubFrameRow;
-	uint16_t m_nSubFrameCow;
+	uint16_t m_nSubFrameCol;
 	uint16_t m_nRowBlockNumInSection;
 	uint16_t m_nColBlockNumInSection;
 	uint16_t m_nRowGroupNumInBlock;

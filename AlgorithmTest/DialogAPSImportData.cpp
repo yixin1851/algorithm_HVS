@@ -83,12 +83,12 @@ void CDialogAPSImportData::Browser()
 {
 	if (ui.comboBoxImportFormat->currentIndex() == 1)
 	{
-		QString strFileName = QFileDialog::getOpenFileName(nullptr, tr("Open APS File"), "../", tr("BIN File (*.bin)"));
+		QString strFileName = QFileDialog::getOpenFileName(nullptr, tr("Open APS File"), ui.lineEditDataFile->text(), tr("Bin File (*.bin) \n Raw File (*.raw) \n All Files (*.*)"));
 		ui.lineEditDataFile->setText(strFileName);
 	}
 	else
 	{
-		QString strFileName = QFileDialog::getExistingDirectory(nullptr, tr("Open APS File"), "../", QFileDialog::ShowDirsOnly);
+		QString strFileName = QFileDialog::getExistingDirectory(nullptr, tr("Open APS File"), ui.lineEditDataFile->text(), QFileDialog::ShowDirsOnly);
 		ui.lineEditDataFile->setText(strFileName);
 	}
 }
@@ -99,6 +99,7 @@ void CDialogAPSImportData::ImportData()
 	uint32_t nIndexStart = ui.lineEditIndexStart->text().toUInt();
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 	std::string strFileName = ui.lineEditDataFile->text().toStdString();
+	bool bHeaderFooter = ui.checkBoxFrameHeaderFooter->isChecked();
 	ui.label_Res->setText(tr(" "));
 	clock_t time = 0;
 	std::ifstream infile;
@@ -115,7 +116,7 @@ void CDialogAPSImportData::ImportData()
 			infile.close();
 
 			auto start = clock();
-			bRet = m_pAPSAlgoInterface->ImportRawData(pRawData, length, nIndexStart, nNumber, true);
+			bRet = m_pAPSAlgoInterface->ImportRawData(pRawData, length, nIndexStart, nNumber, bHeaderFooter);
 			auto end = clock();
 			time = end - start;
 			delete[] pRawData;

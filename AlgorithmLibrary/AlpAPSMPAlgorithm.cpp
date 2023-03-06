@@ -71,6 +71,45 @@ CAlpAPSMPAlgorithm::~CAlpAPSMPAlgorithm()
 bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, bool bHeader_Footer)
 {
 	uint32_t nOneFrameSize = 0;
+	uint32_t nHeaderSize = 0;
+	uint32_t nFooterSize = 0;
+
+	uint8_t Header[8] = { 0 };
+	uint8_t Footer[8] = { 0 };
+
+	uint8_t Header_003AA_8Bit[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf4 };
+	uint8_t Footer_003AA_8Bit[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf4 };
+
+	uint8_t Header_003AA_10Bit[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf7 };
+	uint8_t Footer_003AA_10Bit[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf7 };
+
+	uint8_t Header_003BA[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xe5 };
+	uint8_t Footer_003BA[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xe5 };
+
+
+	if (m_SensorType == ALP_003BA)
+	{
+		memcpy_s(Header, sizeof(Header), Header_003BA, sizeof(Header_003BA));
+		memcpy_s(Footer, sizeof(Footer), Footer_003BA, sizeof(Footer_003BA));
+		nHeaderSize = 64;
+		nFooterSize = 8;
+	}
+	else if (m_SensorType == ALP_003AA)
+	{
+		if (m_RawType == RAW8)
+		{
+			memcpy_s(Header, sizeof(Header), Header_003AA_8Bit, sizeof(Header_003AA_8Bit));
+			memcpy_s(Footer, sizeof(Footer), Footer_003AA_8Bit, sizeof(Footer_003AA_8Bit));
+		}
+		else if (m_RawType == RAW10)
+		{
+			memcpy_s(Header, sizeof(Header), Header_003AA_10Bit, sizeof(Header_003AA_10Bit));
+			memcpy_s(Footer, sizeof(Footer), Footer_003AA_10Bit, sizeof(Footer_003AA_10Bit));
+		}
+		nHeaderSize = 32;
+		nFooterSize = 32;
+	}
+
 	if (m_RawType == RAW8)
 	{
 		nOneFrameSize = m_nTotalRow * m_nTotalCol;
@@ -85,10 +124,9 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 	}
 	if (bHeader_Footer)
 	{
-		nOneFrameSize += 64 + 8;
+		nOneFrameSize += nHeaderSize + nFooterSize;
 	}
-	uint8_t Header[] = {0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xe5};
-	uint8_t Footer[] = {0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xe5};
+
 	if ((nLens / nOneFrameSize) < nNumber)
 	{
 		std::string strErr = "ImportRawData: RawData buffer Lens less than frames number: Lens: " + std::to_string(nLens) + ", Number: " + std::to_string(nNumber);
@@ -126,7 +164,7 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 			}
 			else
 			{
-				nIndex += 64;
+				nIndex += nHeaderSize;
 			}
 		}
 
@@ -145,15 +183,25 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 			}
 			else if (m_RawType == RAW10)
 			{
-				tempData[0] = ((uint16_t)(pRawData[nIndex])) << 2;
-				tempData[1] = ((uint16_t)(pRawData[nIndex + 1])) << 2;
-				tempData[2] = ((uint16_t)(pRawData[nIndex + 2])) << 2;
-				tempData[3] = ((uint16_t)(pRawData[nIndex + 3])) << 2;
+				if (m_SensorType == ALP_003BA)
+				{
+					tempData[0] = ((uint16_t)(pRawData[nIndex])) << 2;
+					tempData[1] = ((uint16_t)(pRawData[nIndex + 1])) << 2;
+					tempData[2] = ((uint16_t)(pRawData[nIndex + 2])) << 2;
+					tempData[3] = ((uint16_t)(pRawData[nIndex + 3])) << 2;
 
-				tempData[0] += (((uint16_t)(pRawData[nIndex + 4])) & 3);
-				tempData[1] += ((((uint16_t)(pRawData[nIndex + 4])) >> 2) & 3);
-				tempData[2] += ((((uint16_t)(pRawData[nIndex + 4])) >> 4) & 3);
-				tempData[3] += ((((uint16_t)(pRawData[nIndex + 4])) >> 6) & 3);
+					tempData[0] += (((uint16_t)(pRawData[nIndex + 4])) & 3);
+					tempData[1] += ((((uint16_t)(pRawData[nIndex + 4])) >> 2) & 3);
+					tempData[2] += ((((uint16_t)(pRawData[nIndex + 4])) >> 4) & 3);
+					tempData[3] += ((((uint16_t)(pRawData[nIndex + 4])) >> 6) & 3);
+				}
+				else if(m_SensorType == ALP_003AA)
+				{
+					tempData[0] = ((uint16_t)(pRawData[nIndex])) + (((uint16_t)(pRawData[nIndex + 1]) & 0x3) << 8);
+					tempData[1] = (((uint16_t)(pRawData[nIndex + 1])) >> 2) + (((uint16_t)(pRawData[nIndex + 2]) & 0x0F) << 6);
+					tempData[2] = (((uint16_t)(pRawData[nIndex + 2])) >> 4) + (((uint16_t)(pRawData[nIndex + 3]) & 0x3F) << 4);
+					tempData[3] = (((uint16_t)(pRawData[nIndex + 3])) >> 6) + (((uint16_t)(pRawData[nIndex + 4])) << 2);
+				}
 
 				nIndex += 5;
 			}
@@ -221,7 +269,7 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 			}
 			else
 			{
-				nIndex += 8;
+				nIndex += nFooterSize;
 			}
 
 			while (nIndex < nLens)
@@ -1208,15 +1256,15 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 					{
 						if (m_RawType == RawType::RAW8)
 						{
-							ImgData[nRows][nCols] = round(temp);
+							ImgData[nRows][nCols] = floor(temp);
 						}
 						else if (m_RawType == RawType::RAW10)
 						{
-							ImgData[nRows][nCols] = round(temp / 4);
+							ImgData[nRows][nCols] = floor(temp / 4);
 						}
 						else
 						{
-							ImgData[nRows][nCols] = round(temp / 16);
+							ImgData[nRows][nCols] = floor(temp / 16);
 						}
 					}
 				}
@@ -1297,8 +1345,9 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 				double temp = 0;
 				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 				{
-					ImgData[nRows][nCols] = m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
+					temp += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
 				}
+				ImgData[nRows][nCols] = temp / nNumber;
 			}
 			else
 			{

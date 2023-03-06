@@ -33,7 +33,7 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	}
 	else if (Sensortype == SensorType::ALP_003BA)
 	{
-		m_nTotalRow = 1224;
+		m_nTotalRow = (1224 - 56) / 2;
 		m_nTotalCol = 1632;
 	}
 	if (strLogDir != "")

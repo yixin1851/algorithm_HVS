@@ -256,7 +256,8 @@ class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
 {
 public:
 	static CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, RawType Rawtype, std::string strLogDir);
-	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
+	virtual ~CAlpAPSMPAlgoInterface();
+	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, bool bHeader_Footer = false) = 0;
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, APSSubFrameIndex nChannelIndex, uint32_t nIndexStart, uint32_t nNumber) = 0;
 	virtual bool TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& TNoiseData) = 0;
 	virtual bool SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& SNoiseData) = 0;
@@ -286,6 +287,8 @@ public:
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath) = 0;
 	virtual ROIArea GetActiveArea() = 0;
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol) = 0;
+	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
+	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
 private:
 	static uint32_t m_nSiteNumber;
@@ -296,6 +299,7 @@ class ALP_ALGO_DLL_API CAlpDVSMPAlgoInterface
 {
 public:
 	static CAlpDVSMPAlgoInterface * CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir);
+	virtual ~CAlpDVSMPAlgoInterface();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, EventsNumberCountData& EventsNumberCountRes) = 0;
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, StationaryNoiseData& StationaryNoiseRes) = 0;

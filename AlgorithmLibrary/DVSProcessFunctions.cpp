@@ -10,10 +10,17 @@ bool DVS_Decoder(uint8_t *pucBinData, uint8_t *pucRawData, size_t nRow, size_t n
     uint64_t ulTimestamp = 0;
     uint32_t unGapInfo = 0;
     uint8_t* pucBinHeader = pucBinData + *pnPos;
-    if ((nBinLens - sizeof(ucTail) <= *pnPos) || 0 != memcmp(ucHead, pucBinHeader, sizeof(ucHead)))
+    size_t nIndex = 0;
+    while (0 != memcmp(ucHead, pucBinHeader + nIndex, sizeof(ucHead)))
     {
-        return false;
+        nIndex += 8;
+
+        if (nBinLens - sizeof(ucTail)  <= *pnPos + nIndex)
+        {
+            return false;
+        }
     }
+    pucBinHeader += nIndex;
     ulTrigerTime = *((uint64_t*)&pucBinHeader[8]);
     unGapInfo = *((uint32_t*)&pucBinHeader[20]);
     ulTimestamp = ulTrigerTime + unGapInfo / 1000;
@@ -21,8 +28,7 @@ bool DVS_Decoder(uint8_t *pucBinData, uint8_t *pucRawData, size_t nRow, size_t n
     memset(pucRawData, 0, nRow * nCol);
     size_t nRowIndex = 0;
     size_t nColIndex = 0;
-    size_t nIndex = 0;
-    for (;nIndex < nBinLens - *pnPos - sizeof(ucTail); nIndex += 5)
+    for (nIndex = 0; nIndex < nBinLens - *pnPos - sizeof(ucTail); nIndex += 5)
     {
         if (0 == memcmp(ucTail, pucBinBody + nIndex, sizeof(ucTail)))
         {
