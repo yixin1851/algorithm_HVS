@@ -22,7 +22,7 @@ void CDialogDVSShow::Show(int nIndex)
 
 	clock_t time = 0;
 	auto start = clock();
-	bool bRet = m_pDVSAlgoInterface->Show(nIndex, OnEvents, OffEvents);
+	bool bRet = m_pDVSAlgoInterface->Show(nIndex, 0, 255, 0, OnEvents) && m_pDVSAlgoInterface->Show(nIndex, 0, 0, 255, OffEvents);
 	auto end = clock();
 	time = end - start;
 

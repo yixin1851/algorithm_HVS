@@ -32,7 +32,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>270</y>
+        <y>320</y>
         <width>71</width>
         <height>41</height>
        </rect>
@@ -45,7 +45,7 @@
       <property name="geometry">
        <rect>
         <x>110</x>
-        <y>230</y>
+        <y>280</y>
         <width>51</width>
         <height>26</height>
        </rect>
@@ -71,7 +71,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>230</y>
+        <y>280</y>
         <width>77</width>
         <height>26</height>
        </rect>
@@ -183,7 +183,7 @@
        <string>LightType</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEditBlockNum">
+     <widget class="QLineEdit" name="lineEditRowBlockNum">
       <property name="geometry">
        <rect>
         <x>80</x>
@@ -201,12 +201,38 @@
        <rect>
         <x>10</x>
         <y>190</y>
-        <width>61</width>
+        <width>71</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>BlockNum</string>
+       <string>RBlockNum</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_6">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>230</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>CBlockNum</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditColBlockNum">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>230</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
       </property>
      </widget>
     </widget>

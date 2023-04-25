@@ -161,8 +161,10 @@ typedef struct
 	double dErrorPixelThre;
 	uint32_t nFindPeakNum;
 	double dFindPeakThre;
-	uint32_t nStationaryUniformityBlockNum;
-	uint32_t nSpatialResponseUniformityBlockNum;
+	uint32_t nStationaryUniformityRowBlockNum;
+	uint32_t nStationaryUniformityColBlockNum;
+	uint32_t nSpatialResponseUniformityRowBlockNum;
+	uint32_t nSpatialResponseUniformityColBlockNum;
 }DVSAlgorithmThre;
 
 typedef struct
@@ -310,7 +312,7 @@ public:
 	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, AccompaniedPeakAndDelayedPeakData& AccompaniedPeakAndDelayedPeakRes) = 0;
 	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, SpatialResponseUniformityData& SpatialResponseUniformityRes) = 0;
 	virtual bool BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, DVSBadpixelData& BadpixelRes) = 0;
-	virtual bool Show(uint32_t nIndex, ImgType& ImgDataOnEvents, ImgType& ImgDataOffEvents) = 0;
+	virtual bool Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag, uint8_t OffEventFlag, ImgType& ImgData) = 0;
 	virtual void SetMultiThreadEnable(bool bEnable = true) = 0;
 	virtual void SetLogEnable(bool bEnable = true) = 0;
 	virtual void SetAlgorithmThre(DVSAlgorithmThre& AlgoThre) = 0;

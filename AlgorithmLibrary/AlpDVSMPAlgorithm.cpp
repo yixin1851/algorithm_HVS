@@ -19,8 +19,10 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	m_AlgorithmThre.dErrorPixelThre = 0.7;
 	m_AlgorithmThre.dHotLineThre = 0.5;
 	m_AlgorithmThre.dHotPixelThre = 0.7;
-	m_AlgorithmThre.nStationaryUniformityBlockNum = 8;
-	m_AlgorithmThre.nSpatialResponseUniformityBlockNum = 6;
+	m_AlgorithmThre.nStationaryUniformityRowBlockNum = 8;
+	m_AlgorithmThre.nStationaryUniformityColBlockNum = 8;
+	m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum = 6;
+	m_AlgorithmThre.nSpatialResponseUniformityColBlockNum = 6;
 	m_AlgorithmThre.nFindPeakNum = 3;
 	m_AlgorithmThre.dFindPeakThre = 0.75;
 
@@ -265,15 +267,15 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	}
 
 	CAPSDataContainer UniformityBlockData;
-	UniformityBlockData.Init(m_AlgorithmThre.nStationaryUniformityBlockNum, m_AlgorithmThre.nStationaryUniformityBlockNum, true);
+	UniformityBlockData.Init(m_AlgorithmThre.nStationaryUniformityRowBlockNum, m_AlgorithmThre.nStationaryUniformityColBlockNum, true);
 	UniformityRes.UniformityRatio = 0;
 
-	uint32_t nRowBlockSize = m_nTotalRow / m_AlgorithmThre.nStationaryUniformityBlockNum;
-	uint32_t nColBlockSize = m_nTotalCol / m_AlgorithmThre.nStationaryUniformityBlockNum;
+	uint32_t nRowBlockSize = m_nTotalRow / m_AlgorithmThre.nStationaryUniformityRowBlockNum;
+	uint32_t nColBlockSize = m_nTotalCol / m_AlgorithmThre.nStationaryUniformityColBlockNum;
 
-	for (uint32_t nRows = 0; nRows < nRowBlockSize * m_AlgorithmThre.nStationaryUniformityBlockNum; nRows++)
+	for (uint32_t nRows = 0; nRows < nRowBlockSize * m_AlgorithmThre.nStationaryUniformityRowBlockNum; nRows++)
 	{
-		for (uint32_t nCols = 0; nCols < nColBlockSize * m_AlgorithmThre.nStationaryUniformityBlockNum; nCols++)
+		for (uint32_t nCols = 0; nCols < nColBlockSize * m_AlgorithmThre.nStationaryUniformityColBlockNum; nCols++)
 		{
 			double dValue = 0;
 			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
@@ -670,16 +672,16 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		CAPSDataContainer OffEventsUniformityBlockData[DVSSubFrameIndex::All + 1];
 		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
 		{
-			OffEventsUniformityBlockData[nChannel].Init(m_AlgorithmThre.nSpatialResponseUniformityBlockNum, m_AlgorithmThre.nSpatialResponseUniformityBlockNum, true);
+			OffEventsUniformityBlockData[nChannel].Init(m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum, m_AlgorithmThre.nSpatialResponseUniformityColBlockNum, true);
 			SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = 0;
 		}
 
-		uint32_t nRowBlockSize = m_nTotalRow / m_AlgorithmThre.nSpatialResponseUniformityBlockNum;
-		uint32_t nColBlockSize = m_nTotalCol / m_AlgorithmThre.nSpatialResponseUniformityBlockNum;
+		uint32_t nRowBlockSize = m_nTotalRow / m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum;
+		uint32_t nColBlockSize = m_nTotalCol / m_AlgorithmThre.nSpatialResponseUniformityColBlockNum;
 
-		for (uint32_t nRows = 0; nRows < nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityBlockNum; nRows++)
+		for (uint32_t nRows = 0; nRows < nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
 		{
-			for (uint32_t nCols = 0; nCols < nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityBlockNum; nCols++)
+			for (uint32_t nCols = 0; nCols < nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
 			{
 				double dValue = 0;
 				uint32_t nChannel = 0;
@@ -735,16 +737,16 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		CAPSDataContainer OnEventsUniformityBlockData[DVSSubFrameIndex::All + 1];
 		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
 		{
-			OnEventsUniformityBlockData[nChannel].Init(m_AlgorithmThre.nSpatialResponseUniformityBlockNum, m_AlgorithmThre.nSpatialResponseUniformityBlockNum, true);
+			OnEventsUniformityBlockData[nChannel].Init(m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum, m_AlgorithmThre.nSpatialResponseUniformityColBlockNum, true);
 			SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = 0;
 		}
 
-		uint32_t nRowBlockSize = m_nTotalRow / m_AlgorithmThre.nSpatialResponseUniformityBlockNum;
-		uint32_t nColBlockSize = m_nTotalCol / m_AlgorithmThre.nSpatialResponseUniformityBlockNum;
+		uint32_t nRowBlockSize = m_nTotalRow / m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum;
+		uint32_t nColBlockSize = m_nTotalCol / m_AlgorithmThre.nSpatialResponseUniformityColBlockNum;
 
-		for (uint32_t nRows = 0; nRows < nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityBlockNum; nRows++)
+		for (uint32_t nRows = 0; nRows < nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
 		{
-			for (uint32_t nCols = 0; nCols < nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityBlockNum; nCols++)
+			for (uint32_t nCols = 0; nCols < nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
 			{
 				double dValue = 0;
 				for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
@@ -1030,7 +1032,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::Show(uint32_t nIndex, ImgType& ImgDataOnEvents, ImgType& ImgDataOffEvents)
+bool CAlpDVSMPAlgorithm::Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag, uint8_t OffEventFlag, ImgType& ImgData)
 {
 	if (nIndex >= m_RawDataContainer.size() || m_nTotalRow != m_RawDataContainer[nIndex].m_nRow || m_nTotalCol != m_RawDataContainer[nIndex].m_nCol)
 	{
@@ -1039,31 +1041,25 @@ bool CAlpDVSMPAlgorithm::Show(uint32_t nIndex, ImgType& ImgDataOnEvents, ImgType
 		return false;
 	}
 
-	ImgDataOnEvents.resize(m_nTotalRow);
-	ImgDataOffEvents.resize(m_nTotalRow);
+	ImgData.resize(m_nTotalRow);
 
 	for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
 	{
-		ImgDataOnEvents[nRows].resize(m_nTotalCol);
-		ImgDataOffEvents[nRows].resize(m_nTotalCol);
+		ImgData[nRows].resize(m_nTotalCol);
 		for (uint32_t nCols = 0; nCols < m_nTotalCol; nCols++)
 		{
 			uint32_t nValue = m_RawDataContainer[nIndex].GetData(nRows, nCols);
 			if (nValue == ON_EVENT_FLAG)
 			{
-				ImgDataOnEvents[nRows][nCols] = 0xFF;
+				ImgData[nRows][nCols] = OnEventFlag;
+			}
+			else if(nValue == OFF_EVENT_FLAG)
+			{
+				ImgData[nRows][nCols] = OffEventFlag;
 			}
 			else
 			{
-				ImgDataOnEvents[nRows][nCols] = 0;
-			}
-			if (nValue == OFF_EVENT_FLAG)
-			{
-				ImgDataOffEvents[nRows][nCols] = 0xFF;
-			}
-			else
-			{
-				ImgDataOffEvents[nRows][nCols] = 0;
+				ImgData[nRows][nCols] = NoEventFlag;
 			}
 		}
 	}

@@ -11,8 +11,10 @@ CDialogStationaryUniformity::CDialogStationaryUniformity(QDialog* parent, CAlpAP
 
 	ui.lineEditIndexStart->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditBlockNum->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nStationaryUniformityBlockNum));
+	ui.lineEditRowBlockNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditColBlockNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditRowBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nStationaryUniformityRowBlockNum));
+	ui.lineEditColBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nStationaryUniformityColBlockNum));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(StationaryUniformity()), Qt::QueuedConnection);
@@ -24,9 +26,11 @@ void CDialogStationaryUniformity::StationaryUniformity()
 	bool bRet = true;
 	uint32_t nIndexStart = ui.lineEditIndexStart->text().toUInt();
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
-	uint32_t nBlockNum = ui.lineEditBlockNum->text().toUInt();
+	uint32_t nRowBlockNum = ui.lineEditRowBlockNum->text().toUInt();
+	uint32_t nColBlockNum = ui.lineEditColBlockNum->text().toUInt();
 	auto temp = m_pDVSAlgoInterface->GetAlgorithmThre();
-	temp.nStationaryUniformityBlockNum = nBlockNum;
+	temp.nStationaryUniformityRowBlockNum = nRowBlockNum;
+	temp.nStationaryUniformityColBlockNum = nColBlockNum;
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
 	ui.widgetTableView->Clear();
 	ui.label_Res->setText(tr(" "));
@@ -43,15 +47,18 @@ void CDialogStationaryUniformity::StationaryUniformity()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		for (uint32_t nIndex = 0; nIndex < nBlockNum; nIndex++)
+		for (uint32_t nIndex = 0; nIndex < nRowBlockNum; nIndex++)
 		{
 			RowName << QString::number(nIndex);
+		}
+		for (uint32_t nIndex = 0; nIndex < nColBlockNum; nIndex++)
+		{
 			ColName << QString::number(nIndex);
 		}
 		RowName << "UniformityRatio";
 
 		auto Data = m_Data.UniformityBlockData;
-		std::vector<double> ratio(nBlockNum, 0);
+		std::vector<double> ratio(nColBlockNum, 0);
 		ratio[0] = m_Data.UniformityRatio;
 		Data.push_back(ratio);
 		ui.widgetTableView->SetData(RowName, ColName, Data);

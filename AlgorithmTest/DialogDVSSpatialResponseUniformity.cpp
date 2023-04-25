@@ -12,8 +12,10 @@ CDialogDVSSpatialResponseUniformity::CDialogDVSSpatialResponseUniformity(QDialog
 	ui.lineEditIndexStart->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditPeakNum->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditBlockNum->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nSpatialResponseUniformityBlockNum));
+	ui.lineEditRowBlockNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditColBlockNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditRowBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nSpatialResponseUniformityRowBlockNum));
+	ui.lineEditColBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nSpatialResponseUniformityColBlockNum));
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(SpatialResponseUniformity()), Qt::QueuedConnection);
 }
@@ -27,8 +29,10 @@ void CDialogDVSSpatialResponseUniformity::SpatialResponseUniformity()
 	uint32_t nPeakNum = ui.lineEditPeakNum->text().toUInt();
 	uint32_t nLigtType = ui.comboBoxLightType->currentIndex();
 	auto temp = m_pDVSAlgoInterface->GetAlgorithmThre();
-	uint32_t nBlockNum = ui.lineEditBlockNum->text().toUInt();
-	temp.nSpatialResponseUniformityBlockNum = nBlockNum;
+	uint32_t nRowBlockNum = ui.lineEditRowBlockNum->text().toUInt();
+	uint32_t nColBlockNum = ui.lineEditColBlockNum->text().toUInt();
+	temp.nSpatialResponseUniformityRowBlockNum = nRowBlockNum;
+	temp.nSpatialResponseUniformityColBlockNum = nColBlockNum;
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
 
 	ui.tabUniformityRes->Clear();
@@ -61,9 +65,12 @@ void CDialogDVSSpatialResponseUniformity::SpatialResponseUniformity()
 		ResColName << "Gb" << "B" << "R" << "Gr" << "All";
 
 		QStringList UniformRowName, UniformColName;
-		for (uint32_t nIndex = 0; nIndex < nBlockNum; nIndex++)
+		for (uint32_t nIndex = 0; nIndex < nRowBlockNum; nIndex++)
 		{
 			UniformRowName << QString::number(nIndex);
+		}
+		for (uint32_t nIndex = 0; nIndex < nColBlockNum; nIndex++)
+		{
 			UniformColName << QString::number(nIndex);
 		}
 
