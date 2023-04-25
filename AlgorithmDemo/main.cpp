@@ -136,5 +136,6 @@ int main()
 	Init();
 	OneTestItem();
 	UnInit();
+	system("pause");
 	return 0;
 }

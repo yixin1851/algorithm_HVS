@@ -247,6 +247,7 @@ public:
 	void Init();
 	bool DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t &nSubFrameIndex, uint64_t &nTimeStamp);
 	void SetMultiThreadEnable(bool bEnable) { m_bMultiThreadEnable = bEnable; }
+	void SetCheckSimpleFooter(bool bCheckSimpleFooter) { m_bCheckSimpleFooter = bCheckSimpleFooter; }
 protected:
 	bool CheckFrameHeader(uint8_t* pucBinData, size_t nBinLens, uint16_t& nHeaderLens);
 	bool CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens, bool &bFindFrameLens, bool &bFindCRC);
@@ -279,5 +280,6 @@ private:
 	uint32_t m_nCrc;
 	bool m_bMultiThreadEnable;
 	CDVSDataContainer *m_RawData;
+	bool m_bCheckSimpleFooter;
 };
 

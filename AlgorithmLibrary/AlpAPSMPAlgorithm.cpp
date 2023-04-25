@@ -107,7 +107,7 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 			memcpy_s(Footer, sizeof(Footer), Footer_003AA_10Bit, sizeof(Footer_003AA_10Bit));
 		}
 		nHeaderSize = 32;
-		nFooterSize = 32;
+		nFooterSize = 8;
 	}
 
 	if (m_RawType == RAW8)
@@ -156,9 +156,14 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 
 		if (bHeader_Footer)
 		{
-			if (0 != memcmp(pRawData + nIndex, Header, sizeof(Header)))
+			while (nIndex < nLens - sizeof(Header) && 0 != memcmp(pRawData + nIndex, Header, sizeof(Header)))
 			{
-				std::string strErr = "ImportRawData: Header Fail";
+				nIndex += 8;
+			}
+
+			if (nIndex >= nLens - sizeof(Header) || 0 != memcmp(pRawData + nIndex, Header, sizeof(Header)))
+			{
+				std::string strErr = "ImportRawData: Header Fail: Index " + std::to_string(i);
 				WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
 				return false;
 			}
@@ -228,10 +233,28 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 				m_RawDataContainer[B1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
 				break;
 			case 1:
-				m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-				m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
-				m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-				m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
+				if (m_SensorType == ALP_003BA)
+				{
+					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
+					m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[1];
+					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
+					if (nCols != m_nTotalCol - 4)
+					{
+						m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 2] = tempData[3];
+					}
+					else
+					{
+						//m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][0] = tempData[3];
+						m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][0] = m_RawDataContainer[Gb1][nIndexStart + i].m_RawData[nRows / 4][0];
+					}
+				}
+				else
+				{
+					m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
+					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
+					m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
+					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
+				}
 				break;
 			case 2:
 				m_RawDataContainer[R1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
@@ -240,10 +263,28 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 				m_RawDataContainer[Gr1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
 				break;
 			case 3:
-				m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-				m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
-				m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-				m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
+				if (m_SensorType == ALP_003BA)
+				{
+					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
+					m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[1];
+					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
+					if (nCols != m_nTotalCol - 4)
+					{
+						m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 2] = tempData[3];
+					}
+					else
+					{
+						//m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][0] = tempData[3];
+						m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][0] = m_RawDataContainer[R1][nIndexStart + i].m_RawData[nRows / 4][0];
+					}
+				}
+				else
+				{
+					m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
+					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
+					m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
+					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
+				}
 				break;
 			}
 			nCols += 4;
@@ -263,25 +304,13 @@ bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32
 		{
 			if (0 != memcmp(pRawData + nIndex, Footer, sizeof(Footer)))
 			{
-				std::string strErr = "ImportRawData: Footer Fail";
+				std::string strErr = "ImportRawData: Footer Fail: Index " + std::to_string(i);
 				WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
 				return false;
 			}
 			else
 			{
 				nIndex += nFooterSize;
-			}
-
-			while (nIndex < nLens)
-			{
-				if (pRawData[nIndex] == 0xFF)
-				{
-					nIndex++;
-				}
-				else
-				{
-					break;
-				}
 			}
 		}
 	}

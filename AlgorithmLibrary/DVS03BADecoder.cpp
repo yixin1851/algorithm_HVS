@@ -272,6 +272,7 @@ CDVS03BADecoder::CDVS03BADecoder()
 {
 	Init();
 	m_bMultiThreadEnable = false;
+	m_bCheckSimpleFooter = false;
 }
 
 void CDVS03BADecoder::Init()
@@ -381,7 +382,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 {
 	bFindFrameLens = false;
 	bFindCRC = false;
-	if (nBinLens < sizeof(FrameTypeFrameFooter))
+	if (nBinLens < sizeof(DVS_FOOTER_003BA))
 	{
 		return false;
 	}
@@ -395,11 +396,7 @@ bool CDVS03BADecoder::CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uin
 		return false;
 	}
 
-	/*temporary method for data loss*/
-	FrameTypeFrameHeader FrameHeader;
-	memcpy_s(&FrameHeader, sizeof(FrameTypeFrameHeader), pucBinData + 8, sizeof(FrameTypeFrameHeader));
-
-	if (FrameHeader.HeaderCode == DVS_HEADER_003BA)
+	if (m_bCheckSimpleFooter)
 	{
 		nFooterLens = 8;
 		return true;
@@ -497,13 +494,13 @@ bool CDVS03BADecoder::CheckBlock(uint8_t* pucBinData, size_t nBinLens, uint16_t&
 Local CDVS03BADecoder::LocalSwitch(uint8_t nSectionIndex, uint16_t nBlockIndex, uint16_t nGroupIndex, uint8_t nEventIndex, uint8_t nSubFrameIndex)
 {
 	/*
-		1 | 3
-		！ ！
-		0 | 2
+		1 | 3	 0 | 2
+		！ ！ -> ！ ！
+		0 | 2	 1 | 3
 	*/
 	Local res;
 
-	res.x = ((nSectionIndex / m_nColSectionNum * m_nRowBlockNumInSection + nBlockIndex / m_nColBlockNumInSection) * m_nRowGroupNumInBlock + nGroupIndex / m_nColGroupNumInBlock) * m_nGroupRow + (nEventIndex + 1) % m_nGroupCol;
+	res.x = ((nSectionIndex / m_nColSectionNum * m_nRowBlockNumInSection + nBlockIndex / m_nColBlockNumInSection) * m_nRowGroupNumInBlock + nGroupIndex / m_nColGroupNumInBlock) * m_nGroupRow + (nEventIndex + 0) % m_nGroupCol;
 	res.y = ((nSectionIndex % m_nColSectionNum * m_nColBlockNumInSection + nBlockIndex % m_nColBlockNumInSection) * m_nColGroupNumInBlock + nGroupIndex % m_nColGroupNumInBlock) * m_nGroupCol + nEventIndex / m_nGroupCol;
 
 	res.x = res.x * 2 + nSubFrameIndex / 2;
@@ -827,11 +824,11 @@ bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData
 			}
 			if (bFindCRC)
 			{
-				uint32_t uFrameCrc = GetCrc32(pucBinData + nFrameStart, nCurIndex - nFrameStart - sizeof(m_nCrc));
-				if(m_nCrc != uFrameCrc)
-				{
-					return false;
-				}
+				//uint32_t uFrameCrc = GetCrc32(pucBinData + nFrameStart, nCurIndex - nFrameStart - sizeof(m_nCrc));
+				//if(m_nCrc != uFrameCrc)
+				//{
+				//	return false;
+				//}
 			}
 			break;
 		}
