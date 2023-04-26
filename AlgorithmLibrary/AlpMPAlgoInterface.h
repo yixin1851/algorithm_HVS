@@ -254,6 +254,20 @@ typedef struct
 	BadPixelMaskData OnEventsBadPixelMask;
 }DVSBadpixelData;
 
+typedef enum
+{
+	TEST_NO_ERROR = 0,
+	ALGO_HANDLE_ERROR = 0x80000001,
+	EVS_DECODE_ERROR = 0x80000002,
+	DATA_INDEX_ERROR = 0x80000003,
+	FIND_PEAK_NUM_SET_ERROR = 0x80000004,
+	FIND_PEAK_ERROR = 0x80000005,
+	PEAK_NUM_ERROR = 0x80000006,
+	DATA_LENS_ERROR = 0x80000007,
+	DATA_ROI_SET_ERROR = 0x80000008,
+	SAVE_DATA_ERROR = 0x80000009,
+}DvsErrCode;
+
 class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
 {
 public:
@@ -321,6 +335,7 @@ public:
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath) = 0;
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol) = 0;
 	virtual std::string GetVersion() = 0;
+	virtual uint32_t GetErrCode() = 0;
 private:
 	static uint32_t m_nSiteNumber;
 };

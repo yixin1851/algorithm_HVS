@@ -86,6 +86,7 @@ bool CAlpDVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32
 				delete[] pRawData;
 				std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
 				WriteLog(strErr);
+				m_nErrCode = EVS_DECODE_ERROR;
 				return false;
 			}
 		}
@@ -110,6 +111,7 @@ bool CAlpDVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32
 				{
 					std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
 					WriteLog(strErr);
+					m_nErrCode = EVS_DECODE_ERROR;
 					return false;
 				}
 			}
@@ -142,6 +144,7 @@ bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumbe
 	{
 		std::string strErr = "EventsNumberCount: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 	EventsNumberCountRes.nDataNumber = 0;
@@ -207,6 +210,7 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 	{
 		std::string strErr = "StationaryNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 
@@ -263,6 +267,7 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	{
 		std::string strErr = "StationaryUniformity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 
@@ -304,6 +309,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, Hotpix
 	{
 		std::string strErr = "HotPixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 
@@ -364,6 +370,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	{
 		std::string strErr = "FindPeak: FindPeakNum error";
 		WriteLog(strErr);
+		m_nErrCode = FIND_PEAK_NUM_SET_ERROR;
 		return false;
 	}
 
@@ -371,6 +378,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	{
 		std::string strErr = "FindPeak: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 
@@ -449,6 +457,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 	{
 		std::string strErr = "ImageContrastSensitivity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 	PeakInfo tempPeak;
@@ -462,6 +471,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 		{
 			std::string strErr = "ImageContrastSensitivity: Find Peak error";
 			WriteLog(strErr);
+			m_nErrCode = FIND_PEAK_ERROR;
 			return false;
 		}
 	}
@@ -471,6 +481,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 		{
 			std::string strErr = "ImageContrastSensitivity: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 
@@ -507,6 +518,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 		{
 			std::string strErr = "ImageContrastSensitivity: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOnEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 
@@ -547,6 +559,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 	{
 		std::string strErr = "ImageContrastSensitivity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 	PeakInfo tempPeak;
@@ -560,6 +573,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 		{
 			std::string strErr = "AccompaniedPeakAndDelayedPeak: Find Peak error";
 			WriteLog(strErr);
+			m_nErrCode = FIND_PEAK_ERROR;
 			return false;
 		}
 	}
@@ -569,6 +583,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 		{
 			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 
@@ -606,6 +621,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 		{
 			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 
@@ -645,6 +661,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 	{
 		std::string strErr = "SpatialResponseUniformity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 	PeakInfo tempPeak;
@@ -658,6 +675,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		{
 			std::string strErr = "SpatialResponseUniformity: Find Peak error";
 			WriteLog(strErr);
+			m_nErrCode = FIND_PEAK_ERROR;
 			return false;
 		}
 	}
@@ -667,6 +685,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		{
 			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 		CAPSDataContainer OffEventsUniformityBlockData[DVSSubFrameIndex::All + 1];
@@ -732,6 +751,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		{
 			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOnEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 		CAPSDataContainer OnEventsUniformityBlockData[DVSSubFrameIndex::All + 1];
@@ -798,6 +818,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	{
 		std::string strErr = "BadPixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 	PeakInfo tempPeak;
@@ -811,6 +832,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		{
 			std::string strErr = "BadPixel: Find Peak error";
 			WriteLog(strErr);
+			m_nErrCode = FIND_PEAK_ERROR;
 			return false;
 		}
 	}
@@ -820,6 +842,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		{
 			std::string strErr = "BadPixel: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 
@@ -928,6 +951,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		{
 			std::string strErr = "BadPixel: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOnEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
 
@@ -1038,6 +1062,7 @@ bool CAlpDVSMPAlgorithm::Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEv
 	{
 		std::string strErr = "Show: Index error: nIndex: " + std::to_string(nIndex);
 		WriteLog(strErr);
+		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
 
@@ -1144,6 +1169,8 @@ double CAlpDVSMPAlgorithm::Mean(std::vector<double>& RawData, uint32_t nLens)
 	{
 		std::string strErr = "Mean: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
+
 		return 0.0;
 	}
 	double dMean = 0;
@@ -1160,6 +1187,7 @@ double CAlpDVSMPAlgorithm::Mean(std::vector<uint32_t>& RawData, uint32_t nLens)
 	{
 		std::string strErr = "Mean: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
 		return 0.0;
 	}
 	double dMean = 0;
@@ -1186,6 +1214,7 @@ double CAlpDVSMPAlgorithm::Mean(CAPSDataContainer& RawData, ROIArea* ROI)
 	{
 		std::string strErr = "Mean: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
 		WriteLog(strErr);
+		m_nErrCode = DATA_ROI_SET_ERROR;
 		return 0.0;
 	}
 	double dMean = 0;
@@ -1206,6 +1235,7 @@ double CAlpDVSMPAlgorithm::Std(std::vector<double>& RawData, uint32_t nLens)
 	{
 		std::string strErr = "Std: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
 		return 0.0;
 	}
 	double dMean = Mean(RawData, nLens);
@@ -1224,6 +1254,7 @@ double CAlpDVSMPAlgorithm::Std(std::vector<uint32_t>& RawData, uint32_t nLens)
 	{
 		std::string strErr = "Std: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
 		return 0.0;
 	}
 	double dMean = Mean(RawData, nLens);
@@ -1242,6 +1273,7 @@ void CAlpDVSMPAlgorithm::Max(double& dMaxValue, uint32_t& nMaxLocal, std::vector
 	{
 		std::string strErr = "Max: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
 		return;
 	}
 	dMaxValue = RawData[0];
@@ -1262,6 +1294,7 @@ void CAlpDVSMPAlgorithm::Max(double& dMaxValue, uint32_t& nMaxLocal, std::vector
 	{
 		std::string strErr = "Max: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
 		return;
 	}
 	dMaxValue = RawData[0];
@@ -1292,6 +1325,7 @@ void CAlpDVSMPAlgorithm::Max(double& dMaxValue, Local& MaxLocal, CAPSDataContain
 	{
 		std::string strErr = "Max: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
 		WriteLog(strErr);
+		m_nErrCode = DATA_ROI_SET_ERROR;
 		return;
 	}
 	dMaxValue = RawData.m_RawData[RealRoi.Up][RealRoi.Left];
@@ -1317,6 +1351,7 @@ void CAlpDVSMPAlgorithm::Min(double& dMinValue, uint32_t& nMinLocal, std::vector
 	{
 		std::string strErr = "Min: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
 		WriteLog(strErr);
+		m_nErrCode = DATA_LENS_ERROR;
 		return;
 	}
 	dMinValue = RawData[0];
@@ -1347,6 +1382,7 @@ void CAlpDVSMPAlgorithm::Min(double& dMinValue, Local& MinLocal, CAPSDataContain
 	{
 		std::string strErr = "Max: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
 		WriteLog(strErr);
+		m_nErrCode = DATA_ROI_SET_ERROR;
 		return;
 	}
 	dMinValue = RawData.m_RawData[RealRoi.Up][RealRoi.Left];
@@ -1381,6 +1417,10 @@ bool CAlpDVSMPAlgorithm::SaveBin(uint8_t* pRawData, uint64_t nLens, std::string 
 	{
 		bRet = false;
 	}
+	if (!bRet)
+	{
+		m_nErrCode = SAVE_DATA_ERROR;
+	}
 	return bRet;
 }
 
@@ -1393,4 +1433,9 @@ void CAlpDVSMPAlgorithm::GetRawDataSize(uint32_t& nRow, uint32_t& nCol)
 std::string CAlpDVSMPAlgorithm::GetVersion()
 {
 	return DVS_MP_ALGORITHM_VERSION;
+}
+
+uint32_t CAlpDVSMPAlgorithm::GetErrCode()
+{
+	return m_nErrCode;
 }

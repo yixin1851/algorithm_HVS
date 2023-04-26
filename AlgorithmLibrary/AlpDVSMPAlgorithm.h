@@ -32,6 +32,7 @@ public:
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath);
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol);
 	virtual std::string GetVersion();
+	virtual uint32_t GetErrCode();
 protected:
 	virtual void ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, EventsNumberCountData& EventsNumberCountRes);
 	virtual double Mean(std::vector<double>& RawData, uint32_t nLens);
@@ -57,4 +58,5 @@ private:
 	DVSAlgorithmThre m_AlgorithmThre;
 	uint32_t m_nSiteNum;
 	CDVS03BADecoder m_03BADVSDecoder;
+	uint32_t m_nErrCode;
 };
