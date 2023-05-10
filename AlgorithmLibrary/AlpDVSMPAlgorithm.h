@@ -40,6 +40,7 @@ protected:
 	virtual double Mean(CAPSDataContainer& RawData, ROIArea* ROI = nullptr);
 	virtual double Std(std::vector<double>& RawData, uint32_t nLens);
 	virtual double Std(std::vector<uint32_t>& RawData, uint32_t nLens);
+	virtual double Std(CAPSDataContainer& RawData, ROIArea* ROI);
 	virtual void Max(double& dMaxValue, uint32_t& nMaxLocal, std::vector<double>& RawData, uint32_t nLens);
 	virtual void Max(double& dMaxValue, uint32_t& nMaxLocal, std::vector<uint32_t>& RawData, uint32_t nLens);
 	virtual void Max(double& dMaxValue, Local& MaxLocal, CAPSDataContainer& RawData, ROIArea* ROI = nullptr);

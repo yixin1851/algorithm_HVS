@@ -31,7 +31,7 @@ void CDialogDVSImportData::ImportData()
 	bool bRet = true;
 	uint32_t nIndexStart = ui.lineEditIndexStart->text().toUInt();
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
-	std::string strFileName = ui.lineEditDataFile->text().toStdString();
+	std::string strFileName(ui.lineEditDataFile->text().toLocal8Bit());
 	ui.label_Res->setText(tr(" "));
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;

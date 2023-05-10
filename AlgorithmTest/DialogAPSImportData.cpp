@@ -98,7 +98,7 @@ void CDialogAPSImportData::ImportData()
 	bool bRet = true;
 	uint32_t nIndexStart = ui.lineEditIndexStart->text().toUInt();
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
-	std::string strFileName = ui.lineEditDataFile->text().toStdString();
+	std::string strFileName(ui.lineEditDataFile->text().toLocal8Bit());
 	bool bHeaderFooter = ui.checkBoxFrameHeaderFooter->isChecked();
 	ui.label_Res->setText(tr(" "));
 	clock_t time = 0;

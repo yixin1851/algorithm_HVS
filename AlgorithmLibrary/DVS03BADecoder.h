@@ -198,8 +198,8 @@ public:
 	uint8_t m_UpCompType;
 	uint8_t m_DownPageLength;
 	uint8_t m_UpPageLength;
-	std::vector<uint8_t> m_DownPage;
-	std::vector<uint8_t> m_UpPage;
+	uint8_t m_DownPage[16];
+	uint8_t m_UpPage[16];
 };
 
 typedef enum
@@ -235,9 +235,9 @@ public:
 	BlockType m_BlockType;
 	uint8_t m_SectionIndex;
 	uint16_t m_nBlockLens;
-	std::shared_ptr<COffsetBlock> m_pOffsetBlock;
-	std::shared_ptr<CContentBlock> m_pContentBlock;
-	std::shared_ptr<CPaddingBlock> m_pPaddingBlock;
+	COffsetBlock * m_pOffsetBlock;
+	CContentBlock * m_pContentBlock;
+	CPaddingBlock * m_pPaddingBlock;
 };
 
 class CDVS03BADecoder
@@ -246,19 +246,19 @@ public:
 	CDVS03BADecoder();
 	void Init();
 	bool DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t &nSubFrameIndex, uint64_t &nTimeStamp);
-	void SetMultiThreadEnable(bool bEnable) { m_bMultiThreadEnable = bEnable; }
 	void SetCheckSimpleFooter(bool bCheckSimpleFooter) { m_bCheckSimpleFooter = bCheckSimpleFooter; }
 protected:
 	bool CheckFrameHeader(uint8_t* pucBinData, size_t nBinLens, uint16_t& nHeaderLens);
 	bool CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens, bool &bFindFrameLens, bool &bFindCRC);
 	bool CheckBlock(uint8_t* pucBinData, size_t nBinLens, uint16_t& nBlockLens, bool& bPaddingFlag);
-	Local LocalSwitch(uint8_t nSectionIndex, uint16_t nBlockIndex, uint16_t nGroupIndex, uint8_t nEventIndex, uint8_t nSubFrameIndex);
-	void SectionProcess(uint8_t nSectionStart, uint8_t nSectionEnd);
+	inline Local LocalBlock(uint8_t nSectionIndex, uint16_t nBlockIndex);
+	inline Local LocalGroup(Local& BlockLocal, uint8_t nGroupIndex);
+	inline Local LocalPixel(Local &GroupLocal, uint8_t nEventIndex, uint8_t nSubFrameIndex);
+	void BlockProcess(uint8_t Section, CBlockBase & Block);
 	uint32_t GetCrc32(uint8_t* data, size_t length);
 private:
 	uint32_t m_nTotalRow;
 	uint32_t m_nTotalCol;
-	std::vector<std::vector<CBlockBase>> m_SectionBlockQueue;
 	uint8_t m_nSubFrameIndex;
 	uint64_t m_nTimeStamp;
 	ROIArea m_Roi;
@@ -276,9 +276,9 @@ private:
 	uint8_t m_nGroupRow;
 	uint8_t m_nGroupCol;
 	uint32_t m_nFrameSize;
+	std::vector<uint16_t> m_SectionBlock;
 	std::vector<FrameTypeStats> m_Stats;
 	uint32_t m_nCrc;
-	bool m_bMultiThreadEnable;
 	CDVSDataContainer *m_RawData;
 	bool m_bCheckSimpleFooter;
 };

@@ -94,7 +94,7 @@ bool CAlpDVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32
 	}
 	else if (m_SensorType == SensorType::ALP_003BA)
 	{
-		m_03BADVSDecoder.SetMultiThreadEnable(m_bMultiThreadEnable);
+		//m_03BADVSDecoder.SetCheckSimpleFooter(true);
 		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 		{
 			uint8_t nNeedSubFrameIndex = 0;
@@ -221,13 +221,13 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 		WriteLog(strErr);
 		return false;
 	}
-	StationaryNoiseRes.dStationaryNoiseMeanAll = Mean(EventsNumber.AllEventsNum[DVSSubFrameIndex::All], nNumber);
-	StationaryNoiseRes.dStationaryNoiseMeanOn = Mean(EventsNumber.OnEventsNum[DVSSubFrameIndex::All], nNumber);
-	StationaryNoiseRes.dStationaryNoiseMeanOff = Mean(EventsNumber.OffEventsNum[DVSSubFrameIndex::All], nNumber);
+	StationaryNoiseRes.dStationaryNoiseMeanAll = Mean(EventsNumber.AllEventsNum[DVSSubFrameIndex::All], nNumber) / (m_nTotalRow * m_nTotalCol) * 100;
+	StationaryNoiseRes.dStationaryNoiseMeanOn = Mean(EventsNumber.OnEventsNum[DVSSubFrameIndex::All], nNumber) / (m_nTotalRow * m_nTotalCol) * 100;
+	StationaryNoiseRes.dStationaryNoiseMeanOff = Mean(EventsNumber.OffEventsNum[DVSSubFrameIndex::All], nNumber) / (m_nTotalRow * m_nTotalCol) * 100;
 
-	StationaryNoiseRes.dStationaryNoiseStdAll = Std(EventsNumber.AllEventsNum[DVSSubFrameIndex::All], nNumber);
-	StationaryNoiseRes.dStationaryNoiseStdOn = Std(EventsNumber.OnEventsNum[DVSSubFrameIndex::All], nNumber);
-	StationaryNoiseRes.dStationaryNoiseStdOff = Std(EventsNumber.OffEventsNum[DVSSubFrameIndex::All], nNumber);
+	StationaryNoiseRes.dStationaryNoiseStdAll = Std(EventsNumber.AllEventsNum[DVSSubFrameIndex::All], nNumber) / (m_nTotalRow * m_nTotalCol) * 100;
+	StationaryNoiseRes.dStationaryNoiseStdOn = Std(EventsNumber.OnEventsNum[DVSSubFrameIndex::All], nNumber) / (m_nTotalRow * m_nTotalCol) * 100;
+	StationaryNoiseRes.dStationaryNoiseStdOff = Std(EventsNumber.OffEventsNum[DVSSubFrameIndex::All], nNumber) / (m_nTotalRow * m_nTotalCol) * 100;
 
 	std::vector<double> RowMeanAllEvents(m_nTotalRow, 0);
 	std::vector<double> ColMeanAllEvents(m_nTotalCol, 0);
@@ -287,18 +287,22 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 			{
 				if (0 != m_RawDataContainer[nIndexStart + nIndex].GetData(nRows, nCols))
 				{
-					++dValue;
+					++UniformityBlockData.m_RawData[nRows / nRowBlockSize][nCols / nColBlockSize];
 				}
 			}
-			UniformityBlockData.m_RawData[nRows / nRowBlockSize][nCols / nColBlockSize] += dValue / nNumber;
 		}
 	}
+	UniformityBlockData /= nRowBlockSize * nColBlockSize * nNumber;
+	UniformityBlockData *= 100;
+
 	double dMeanValue = Mean(UniformityBlockData);
 	double dMaxValue = 0, dMinValue = 0;
 	Local temp;
 	Max(dMaxValue, temp, UniformityBlockData);
 	Min(dMinValue, temp, UniformityBlockData);
-	UniformityRes.UniformityRatio = (dMaxValue - dMinValue) / dMeanValue * 100;
+	//UniformityRes.UniformityRatio = (dMaxValue - dMinValue) / dMeanValue * 100;
+	//UniformityRes.UniformityRatio = Std(UniformityBlockData, nullptr);
+	UniformityRes.UniformityRatio = dMaxValue - dMinValue;
 	UniformityRes.UniformityBlockData.swap(UniformityBlockData.m_RawData);
 	return true;
 }
@@ -735,12 +739,16 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 
 		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
 		{
+			OffEventsUniformityBlockData[nChannel] /= nRowBlockSize * nColBlockSize;
+			OffEventsUniformityBlockData[nChannel] *= 100;
+
 			double dMeanValue = Mean(OffEventsUniformityBlockData[nChannel]);
 			double dMaxValue = 0, dMinValue = 0;
 			Local temp;
 			Max(dMaxValue, temp, OffEventsUniformityBlockData[nChannel]);
 			Min(dMinValue, temp, OffEventsUniformityBlockData[nChannel]);
-			SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			//SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue);
 			SpatialResponseUniformityRes.OffEventsUniformityBlockData[nChannel].swap(OffEventsUniformityBlockData[nChannel].m_RawData);
 		}
 	}
@@ -798,14 +806,19 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 				OnEventsUniformityBlockData[nChannel].m_RawData[nRows / nRowBlockSize][nCols / nColBlockSize] += dValue / nPeakNum;
 			}
 		}
+
 		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
 		{
+			OnEventsUniformityBlockData[nChannel] /= nRowBlockSize * nColBlockSize;
+			OnEventsUniformityBlockData[nChannel] *= 100;
+
 			double dMeanValue = Mean(OnEventsUniformityBlockData[nChannel]);
 			double dMaxValue = 0, dMinValue = 0;
 			Local temp;
 			Max(dMaxValue, temp, OnEventsUniformityBlockData[nChannel]);
 			Min(dMinValue, temp, OnEventsUniformityBlockData[nChannel]);
-			SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			//SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = dMaxValue - dMinValue;
 			SpatialResponseUniformityRes.OnEventsUniformityBlockData[nChannel].swap(OnEventsUniformityBlockData[nChannel].m_RawData);
 		}
 	}
@@ -1245,6 +1258,37 @@ double CAlpDVSMPAlgorithm::Std(std::vector<double>& RawData, uint32_t nLens)
 		dStd += (RawData[nIndex] - dMean) * (RawData[nIndex] - dMean);
 	}
 	dStd = sqrt(dStd / (nLens - 1));
+	return dStd;
+}
+
+double CAlpDVSMPAlgorithm::Std(CAPSDataContainer& RawData, ROIArea* ROI)
+{
+	ROIArea RealRoi;
+	if (ROI == nullptr)
+	{
+		RealRoi = { 0, RawData.m_nRow - 1, 0, RawData.m_nCol - 1 };
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	uint32_t nSize = (RealRoi.Down - RealRoi.Up + 1) * (RealRoi.Right - RealRoi.Left + 1);
+	if (nSize < 2 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "Std: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
+		WriteLog(strErr);
+		return 0.0;
+	}
+	double dMean = Mean(RawData, &RealRoi);
+	double dStd = 0;
+	for (uint32_t nRows = RealRoi.Up; nRows <= RealRoi.Down; nRows++)
+	{
+		for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
+		{
+			dStd += (RawData.m_RawData[nRows][nCols] - dMean) * (RawData.m_RawData[nRows][nCols] - dMean);
+		}
+	}
+	dStd = sqrt(dStd / (nSize - 1));
 	return dStd;
 }
 
