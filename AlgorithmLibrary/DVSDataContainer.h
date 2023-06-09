@@ -24,7 +24,7 @@ public:
 	virtual ~CDVSDataContainer();
 	virtual void SetData(uint32_t nRows, uint32_t nCols, uint8_t nValue);
 	virtual uint8_t GetData(uint32_t nRows, uint32_t nCols);
-	virtual void CountEvents();
+	virtual void CountEvents(ROIArea &Roi);
 	uint32_t m_nRow;
 	uint32_t m_nCol;
 	uint32_t m_NoEventsNum[DVSSubFrameIndex::All + 1];

@@ -101,7 +101,7 @@ uint8_t CDVSDataContainer::GetData(uint32_t nRows, uint32_t nCols)
 	return nValue;
 }
 
-void CDVSDataContainer::CountEvents()
+void CDVSDataContainer::CountEvents(ROIArea& Roi)
 {
 	for (uint32_t nIndex = 0; nIndex <= DVSSubFrameIndex::All; nIndex++)
 	{
@@ -119,9 +119,9 @@ void CDVSDataContainer::CountEvents()
 		m_ColAllEventsNum[nCols] = 0;
 	}
 
-	for (uint32_t nRows = 0; nRows < m_nRow; nRows++)
+	for (uint32_t nRows = Roi.Up; nRows <= Roi.Down; nRows++)
 	{
-		for (uint32_t nCols = 0; nCols < m_nCol; nCols++)
+		for (uint32_t nCols = Roi.Left; nCols <= Roi.Right; nCols++)
 		{
 			uint8_t nValue = 0;
 			switch (nCols % m_nDataNumberInOneByte)
@@ -184,4 +184,3 @@ void CDVSDataContainer::CountEvents()
 		}
 	}
 }
-

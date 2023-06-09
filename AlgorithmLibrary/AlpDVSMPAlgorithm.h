@@ -30,7 +30,10 @@ public:
 	virtual DVSAlgorithmThre GetAlgorithmThre();
 	virtual uint32_t GetDataNum();
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath);
+	virtual ROIArea GetActiveArea();
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol);
+	virtual void SetActiveArea(ROIArea ActiveArea);
+	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol);
 	virtual std::string GetVersion();
 	virtual uint32_t GetErrCode();
 protected:
@@ -48,6 +51,7 @@ protected:
 	virtual void Min(double& dMinValue, Local& MinLocal, CAPSDataContainer& RawData, ROIArea* ROI = nullptr);
 	virtual bool WriteLog(std::string strMessage);
 private:
+	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;
 	uint32_t m_nTotalCol;
 	bool m_bMultiThreadEnable;

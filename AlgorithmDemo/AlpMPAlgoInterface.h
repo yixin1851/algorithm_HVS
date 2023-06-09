@@ -161,8 +161,10 @@ typedef struct
 	double dErrorPixelThre;
 	uint32_t nFindPeakNum;
 	double dFindPeakThre;
-	uint32_t nStationaryUniformityBlockNum;
-	uint32_t nSpatialResponseUniformityBlockNum;
+	uint32_t nStationaryUniformityRowBlockNum;
+	uint32_t nStationaryUniformityColBlockNum;
+	uint32_t nSpatialResponseUniformityRowBlockNum;
+	uint32_t nSpatialResponseUniformityColBlockNum;
 }DVSAlgorithmThre;
 
 typedef struct
@@ -252,6 +254,20 @@ typedef struct
 	BadPixelMaskData OnEventsBadPixelMask;
 }DVSBadpixelData;
 
+typedef enum
+{
+	TEST_NO_ERROR = 0,
+	ALGO_HANDLE_ERROR = 0x80000001,
+	EVS_DECODE_ERROR = 0x80000002,
+	DATA_INDEX_ERROR = 0x80000003,
+	FIND_PEAK_NUM_SET_ERROR = 0x80000004,
+	FIND_PEAK_ERROR = 0x80000005,
+	PEAK_NUM_ERROR = 0x80000006,
+	DATA_LENS_ERROR = 0x80000007,
+	DATA_ROI_SET_ERROR = 0x80000008,
+	SAVE_DATA_ERROR = 0x80000009,
+}DvsErrCode;
+
 class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
 {
 public:
@@ -310,7 +326,7 @@ public:
 	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, AccompaniedPeakAndDelayedPeakData& AccompaniedPeakAndDelayedPeakRes) = 0;
 	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, SpatialResponseUniformityData& SpatialResponseUniformityRes) = 0;
 	virtual bool BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, DVSBadpixelData& BadpixelRes) = 0;
-	virtual bool Show(uint32_t nIndex, ImgType& ImgDataOnEvents, ImgType& ImgDataOffEvents) = 0;
+	virtual bool Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag, uint8_t OffEventFlag, ImgType& ImgData) = 0;
 	virtual void SetMultiThreadEnable(bool bEnable = true) = 0;
 	virtual void SetLogEnable(bool bEnable = true) = 0;
 	virtual void SetAlgorithmThre(DVSAlgorithmThre& AlgoThre) = 0;
@@ -319,6 +335,7 @@ public:
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath) = 0;
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol) = 0;
 	virtual std::string GetVersion() = 0;
+	virtual uint32_t GetErrCode() = 0;
 private:
 	static uint32_t m_nSiteNumber;
 };

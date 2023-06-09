@@ -157,7 +157,7 @@
        <string>LightType</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEditFindPeakNum">
+     <widget class="QLineEdit" name="lineEditPeakCycle">
       <property name="geometry">
        <rect>
         <x>110</x>
@@ -167,7 +167,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>3</string>
+       <string>20</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_4">
@@ -180,33 +180,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>FindPeakNum</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEditFindPeakThre">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>190</y>
-        <width>71</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>0.75</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_5">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>190</y>
-        <width>81</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>FindPeakThre</string>
+       <string>PeakCycle</string>
       </property>
      </widget>
     </widget>

@@ -16,6 +16,7 @@ public:
 private slots:
     virtual void Init();
     virtual void Browser();
+    void RawDataInfoInit(int nIndex);
 private:
     Ui::DialogInit ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;

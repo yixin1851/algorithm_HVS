@@ -11,11 +11,9 @@ CDialogDVSFindPeak::CDialogDVSFindPeak(QDialog* parent, CAlpAPSMPAlgoInterface* 
 
 	ui.lineEditIndexStart->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditFindPeakNum->setValidator(new QIntValidator(0, 100000, this));
-	ui.lineEditFindPeakThre->setValidator(new QDoubleValidator(0, 1, 3, this));
+	ui.lineEditPeakCycle->setValidator(new QIntValidator(0, 100000, this));
 
-	ui.lineEditFindPeakNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nFindPeakNum));
-	ui.lineEditFindPeakThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dFindPeakThre));
+	ui.lineEditPeakCycle->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nPeakCycle));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(FindPeak()), Qt::QueuedConnection);
@@ -32,8 +30,7 @@ void CDialogDVSFindPeak::FindPeak()
 	uint32_t nLightType = ui.comboBoxLightType->currentIndex();
 
 	auto temp = m_pDVSAlgoInterface->GetAlgorithmThre();
-	temp.nFindPeakNum = ui.lineEditFindPeakNum->text().toUInt();
-	temp.dFindPeakThre = ui.lineEditFindPeakThre->text().toDouble();
+	temp.nPeakCycle = ui.lineEditPeakCycle->text().toUInt();
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
 
 	ui.label_Res->setText(tr(" "));

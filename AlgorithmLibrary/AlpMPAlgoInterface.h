@@ -159,8 +159,7 @@ typedef struct
 	double dHotLineThre;
 	double dDeadPixelThre;
 	double dErrorPixelThre;
-	uint32_t nFindPeakNum;
-	double dFindPeakThre;
+	uint32_t nPeakCycle;
 	uint32_t nStationaryUniformityRowBlockNum;
 	uint32_t nStationaryUniformityColBlockNum;
 	uint32_t nSpatialResponseUniformityRowBlockNum;
@@ -333,7 +332,10 @@ public:
 	virtual DVSAlgorithmThre GetAlgorithmThre() = 0;
 	virtual uint32_t GetDataNum() = 0;
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath) = 0;
+	virtual ROIArea GetActiveArea() = 0;
 	virtual void GetRawDataSize(uint32_t& nRow, uint32_t& nCol) = 0;
+	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
+	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
 	virtual uint32_t GetErrCode() = 0;
 private:
