@@ -62,4 +62,19 @@ void CWidgetDVSInit::RawDataInfoInit(int nIndex)
 		ui.lineEditLeft->setText(QString::number(0));
 		ui.lineEditRight->setText(QString::number(1631));
 	}
+	else if (nIndex == SensorType::ALP_003BB)
+	{
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(1169));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1631));
+	}
+	else if (nIndex == SensorType::ALP_003CA)
+	{
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(1223));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1631));
+	}
+
 }

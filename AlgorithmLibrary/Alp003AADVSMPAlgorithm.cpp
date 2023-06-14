@@ -1,8 +1,54 @@
-#include "DVSProcessFunctions.h"
-#include "memory.h"
+#include "Alp003AADVSMPAlgorithm.h"
 
-bool DVS_Decoder(uint8_t *pucBinData, uint8_t *pucRawData, size_t nRow, size_t nCol, size_t *pnPos, size_t nBinLens)
-{  
+CAlp003AADVSMPAlgorithm::CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum) :
+	CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum)
+{
+	m_nTotalRow = 1224;
+	m_nTotalCol = 1632;
+	m_ActiveArea = { 0, m_nTotalRow - 1, 0, m_nTotalCol - 1 };
+}
+
+CAlp003AADVSMPAlgorithm::~CAlp003AADVSMPAlgorithm()
+{
+}
+
+bool CAlp003AADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber)
+{
+	size_t pos = 0;
+	if (m_RawDataContainer.size() < nIndexStart + nNumber)
+	{
+		m_RawDataContainer.resize(nIndexStart + nNumber);
+	}
+
+	uint8_t* pRawData = new uint8_t[m_nTotalRow * m_nTotalCol];
+	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+	{
+		if (Decoder(pBinData, pRawData, m_nTotalRow, m_nTotalCol, &pos, nLens))
+		{
+			m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol);
+			for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
+			{
+				for (uint32_t nCols = 0; nCols < m_nTotalCol; nCols++)
+				{
+					m_RawDataContainer[nIndexStart + nIndex].SetData(nRows, nCols, pRawData[nRows * m_nTotalCol + nCols]);
+				}
+			}
+		}
+		else
+		{
+			delete[] pRawData;
+			std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
+			WriteLog(strErr);
+			m_nErrCode = EVS_DECODE_ERROR;
+			return false;
+		}
+	}
+	delete[] pRawData;
+	return true;
+}
+
+bool CAlp003AADVSMPAlgorithm::Decoder(uint8_t* pucBinData, uint8_t* pucRawData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens)
+{
     uint8_t ucHead[] = { 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xFD };
     uint8_t ucTail[] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
     uint8_t ucHeadLength = 32;
@@ -15,7 +61,7 @@ bool DVS_Decoder(uint8_t *pucBinData, uint8_t *pucRawData, size_t nRow, size_t n
     {
         nIndex += 8;
 
-        if (nBinLens - sizeof(ucTail)  <= *pnPos + nIndex)
+        if (nBinLens - sizeof(ucTail) <= *pnPos + nIndex)
         {
             return false;
         }
@@ -71,7 +117,7 @@ bool DVS_Decoder(uint8_t *pucBinData, uint8_t *pucRawData, size_t nRow, size_t n
         *pnPos += ucHeadLength + nIndex + sizeof(ucTail);
         while (*pnPos < nBinLens && pucBinData[*pnPos] == 0xFF)
         {
-            (* pnPos)++;
+            (*pnPos)++;
         }
         return true;
     }

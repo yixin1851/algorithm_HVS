@@ -1,5 +1,4 @@
 #include "AlpDVSMPAlgorithm.h"
-#include "DVSProcessFunctions.h"
 #include <algorithm>
 #include <thread>
 #include <stack>
@@ -15,10 +14,10 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	m_bLogEnable = false;
 	m_SensorType = Sensortype;
 	m_bMultiThreadEnable = false;
-	m_AlgorithmThre.dDeadPixelThre = 0.7;
-	m_AlgorithmThre.dErrorPixelThre = 0.7;
+	m_AlgorithmThre.dDeadPixelThre = 0.8;
+	m_AlgorithmThre.dErrorPixelThre = 0.8;
 	m_AlgorithmThre.dHotLineThre = 0.5;
-	m_AlgorithmThre.dHotPixelThre = 0.7;
+	m_AlgorithmThre.dHotPixelThre = 0.8;
 	m_AlgorithmThre.nStationaryUniformityRowBlockNum = 5;
 	m_AlgorithmThre.nStationaryUniformityColBlockNum = 5;
 	m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum = 5;
@@ -28,20 +27,8 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 
 	m_AlgorithmThre.nPeakCycle = 20;
 
-	m_RawDataContainer.resize(APSSubFrameIndex::SubFrameNum);
+	m_RawDataContainer.resize(DVSSubFrameIndex::All);
 
-	if (Sensortype == SensorType::ALP_003AA)
-	{
-		m_nTotalRow = 1224;
-		m_nTotalCol = 1632;
-		m_ActiveArea = { 0, m_nTotalRow - 1, 0, m_nTotalCol - 1 };
-	}
-	else if (Sensortype == SensorType::ALP_003BA)
-	{
-		m_nTotalRow = (1224 - 56) / 2;
-		m_nTotalCol = 1632;
-		m_ActiveArea = { 0, m_nTotalRow - 1, 0, m_nTotalCol - 1 };
-	}
 	if (strLogDir != "")
 	{
 		std::time_t t = std::time(nullptr);
@@ -59,87 +46,6 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 
 CAlpDVSMPAlgorithm::~CAlpDVSMPAlgorithm()
 {
-}
-
-bool CAlpDVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber)
-{
-	size_t pos = 0;
-	if (m_RawDataContainer.size() < nIndexStart + nNumber)
-	{
-		m_RawDataContainer.resize(nIndexStart + nNumber);
-	}
-#if 1
-	if (m_SensorType == SensorType::ALP_003AA)
-	{
-		uint8_t* pRawData = new uint8_t[m_nTotalRow * m_nTotalCol];
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			if (DVS_Decoder(pBinData, pRawData, m_nTotalRow, m_nTotalCol, &pos, nLens))
-			{
-				m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol);
-				for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
-				{
-					for (uint32_t nCols = 0; nCols < m_nTotalCol; nCols++)
-					{
-						m_RawDataContainer[nIndexStart + nIndex].SetData(nRows, nCols, pRawData[nRows * m_nTotalCol + nCols]);
-					}
-				}
-			}
-			else
-			{
-				delete[] pRawData;
-				std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
-				WriteLog(strErr);
-				m_nErrCode = EVS_DECODE_ERROR;
-				return false;
-			}
-		}
-		delete[] pRawData;
-	}
-	else if (m_SensorType == SensorType::ALP_003BA)
-	{
-		m_03BADVSDecoder.SetCheckSimpleFooter(true);
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			uint8_t nNeedSubFrameIndex = 0;
-			m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true);
-			uint8_t nSubFrameIndex = 0;
-			uint64_t nTimeStamp = 0;
-			while (nNeedSubFrameIndex != 4)
-			{
-				if (m_03BADVSDecoder.DVS_Decode(pBinData, &m_RawDataContainer[nIndexStart + nIndex], m_nTotalRow, m_nTotalCol, &pos, nLens, nSubFrameIndex, nTimeStamp) && nSubFrameIndex == nNeedSubFrameIndex)
-				{
-					++nNeedSubFrameIndex;
-				}
-				else
-				{
-					std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
-					WriteLog(strErr);
-					m_nErrCode = EVS_DECODE_ERROR;
-					return false;
-				}
-			}
-		}
-	}
-#else
-	m_nImportDataIndexStart = nIndexStart;
-	m_nImportDataTotalNum = nNumber;
-	m_nImportDataCurrentNum = 0;
-	ALP::ByteArrayPtr RawData = std::make_shared<ALP::ByteArray>((const char*)pBinData, nLens);
-	m_DVSDecoder->reset();
-	m_DVSDecoder->feed(RawData);
-	while (m_DVSDecoder->is_running())
-	{
-		Sleep(10);
-	}
-	if (m_nImportDataCurrentNum < m_nImportDataTotalNum)
-	{
-		std::string strErr = "ImportRawData: DVS Decoder error";
-		WriteLog(strErr);
-		return false;
-	}
-#endif
-	return true;
 }
 
 bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, EventsNumberCountData& EventsNumberCountRes)
@@ -319,7 +225,7 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, HotpixelData& HotpixelRes)
+bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelData& HotpixelRes)
 {
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -339,6 +245,14 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, Hotpix
 	HotpixelRes.HotPixelMask.LocalData.clear();
 	HotpixelRes.HotPixelMask.Flag.clear();
 	HotpixelRes.HotPixelMask.BadPixelNum = 0;
+	HotpixelRes.ClusterNum = 0;
+	HotpixelRes.HotLineNum = 0;
+
+	std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
+	for (uint32_t i = 0; i < m_nTotalRow; i++)
+	{
+		BadPixelMask[i].resize(m_nTotalCol, 0);
+	}
 
 	for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 	{
@@ -361,11 +275,11 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, Hotpix
 				HotpixelRes.HotPixelNum++;
 				++RowBadPixelNum[nRows];
 				++ColBadPixelNum[nCols];
+				BadPixelMask[nRows][nCols] = DVS_HOT_PIXEL_FLAG;
 			}
 		}
 	}
 
-	HotpixelRes.HotLineNum = 0;
 	for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 	{
 		if (RowBadPixelNum[nRows] > nColSize * m_AlgorithmThre.dHotLineThre)
@@ -378,6 +292,46 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, Hotpix
 		if (ColBadPixelNum[nCols] > nRowSize * m_AlgorithmThre.dHotLineThre)
 		{
 			++HotpixelRes.HotLineNum;
+		}
+	}
+
+	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
+
+	for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
+	{
+		for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
+		{
+			if (BadPixelMask[nRows][nCols] != 0 && BadPixelMask[nRows][nCols] < ConnectedAreaFlag)
+			{
+				uint32_t AreaSize = 0;
+				std::stack<Local> Search;
+				Search.push({ nRows, nCols });
+				while (!Search.empty())
+				{
+					Local temp = Search.top();
+					Search.pop();
+					BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
+					AreaSize++;
+					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					{
+						if (nTempRows < m_nTotalRow)
+						{
+							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							{
+								if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								{
+									Search.push({ nTempRows , nTempCols });
+								}
+							}
+						}
+					}
+				}
+				if (AreaSize > 1)
+				{
+					HotpixelRes.ClusterNum++;
+				}
+				ConnectedAreaFlag--;
+			}
 		}
 	}
 
@@ -1044,7 +998,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
 		{
-			BadPixelMask[i].resize(m_nTotalCol);
+			BadPixelMask[i].resize(m_nTotalCol, 0);
 		}
 
 		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
@@ -1084,10 +1038,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 					BadpixelRes.OffEventsBadPixelMask.Flag.push_back(DVS_ERROR_PIXEL_FLAG);
 					BadpixelRes.nOffEventsErrorPixelNum++;
 					BadPixelMask[nRows][nCols] = DVS_ERROR_PIXEL_FLAG;
-				}
-				else
-				{
-					BadPixelMask[nRows][nCols] = 0;
 				}
 			}
 		}
@@ -1153,7 +1103,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
 		{
-			BadPixelMask[i].resize(m_nTotalCol);
+			BadPixelMask[i].resize(m_nTotalCol, 0);
 		}
 
 		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
@@ -1193,10 +1143,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 					BadpixelRes.OnEventsBadPixelMask.Flag.push_back(DVS_ERROR_PIXEL_FLAG);
 					BadpixelRes.nOnEventsErrorPixelNum++;
 					BadPixelMask[nRows][nCols] = DVS_ERROR_PIXEL_FLAG;
-				}
-				else
-				{
-					BadPixelMask[nRows][nCols] = 0;
 				}
 			}
 		}

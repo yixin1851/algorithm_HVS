@@ -12,10 +12,13 @@ void CAPSDataContainer::Init(uint32_t nRow, uint32_t nCol, bool bInitialize)
     m_RawData.resize(nRow);
     for (uint32_t rows = 0; rows < nRow; rows++)
     {
-        m_RawData[rows].resize(nCol);
         if (bInitialize)
         {
-            memset(&m_RawData[rows][0], 0, sizeof(m_RawData[rows][0]) * nCol);
+            m_RawData[rows].resize(nCol, 0);
+        }
+        else
+        {
+            m_RawData[rows].resize(nCol);
         }
     }
     m_nRow = nRow;

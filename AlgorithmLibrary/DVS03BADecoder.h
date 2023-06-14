@@ -247,6 +247,7 @@ public:
 	void Init();
 	bool DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t &nSubFrameIndex, uint64_t &nTimeStamp);
 	void SetCheckSimpleFooter(bool bCheckSimpleFooter) { m_bCheckSimpleFooter = bCheckSimpleFooter; }
+	void SetHalfMode(bool bEnable) { m_bHalfMode = bEnable; }
 protected:
 	bool CheckFrameHeader(uint8_t* pucBinData, size_t nBinLens, uint16_t& nHeaderLens);
 	bool CheckFrameFooter(uint8_t* pucBinData, size_t nBinLens, uint16_t& nFooterLens, bool &bFindFrameLens, bool &bFindCRC);
@@ -254,6 +255,7 @@ protected:
 	inline Local LocalBlock(uint8_t nSectionIndex, uint16_t nBlockIndex);
 	inline Local LocalGroup(Local& BlockLocal, uint8_t nGroupIndex);
 	inline Local LocalPixel(Local &GroupLocal, uint8_t nEventIndex, uint8_t nSubFrameIndex);
+	void SetData(Local& PixelLocal, uint8_t nEventFlag);
 	void BlockProcess(uint8_t Section, CBlockBase & Block);
 	uint32_t GetCrc32(uint8_t* data, size_t length);
 private:
@@ -281,5 +283,6 @@ private:
 	uint32_t m_nCrc;
 	CDVSDataContainer *m_RawData;
 	bool m_bCheckSimpleFooter;
+	bool m_bHalfMode;
 };
 

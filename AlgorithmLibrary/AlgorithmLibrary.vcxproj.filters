@@ -18,9 +18,6 @@
     <ClInclude Include="AlpAPSMPAlgorithm.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="DVSProcessFunctions.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="APSDataContainer.h">
       <Filter>头文件</Filter>
     </ClInclude>
@@ -42,12 +39,21 @@
     <ClInclude Include="Changelist.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Alp003AADVSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alp003BADVSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alp003BBDVSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alp003CADVSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlpAPSMPAlgorithm.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="DVSProcessFunctions.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="APSDataContainer.cpp">
@@ -63,6 +69,18 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="DVS03BADecoder.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003AADVSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003BADVSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003BBDVSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003CADVSMPAlgorithm.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -141,24 +141,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Alp003AADVSMPAlgorithm.h" />
+    <ClInclude Include="Alp003BBDVSMPAlgorithm.h" />
+    <ClInclude Include="Alp003CADVSMPAlgorithm.h" />
     <ClInclude Include="AlpAPSMPAlgorithm.h" />
     <ClInclude Include="AlpDVSMPAlgorithm.h" />
     <ClInclude Include="AlpLib\include\AlpCodec\DVSDecoder\DVSDecoder.h" />
     <ClInclude Include="APSDataContainer.h" />
+    <ClInclude Include="Alp003BADVSMPAlgorithm.h" />
     <ClInclude Include="Changelist.h" />
     <ClInclude Include="DVS03BADecoder.h" />
     <ClInclude Include="DVSDataContainer.h" />
-    <ClInclude Include="DVSProcessFunctions.h" />
     <ClInclude Include="AlpMPAlgoInterface.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Alp003AADVSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp003BADVSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp003BBDVSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp003CADVSMPAlgorithm.cpp" />
     <ClCompile Include="AlpAPSMPAlgorithm.cpp" />
     <ClCompile Include="AlpDVSMPAlgorithm.cpp" />
     <ClCompile Include="AlpMPAlgoInterface.cpp" />
     <ClCompile Include="APSDataContainer.cpp" />
     <ClCompile Include="DVS03BADecoder.cpp" />
     <ClCompile Include="DVSDataContainer.cpp" />
-    <ClCompile Include="DVSProcessFunctions.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

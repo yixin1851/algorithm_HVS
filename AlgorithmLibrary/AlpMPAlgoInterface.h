@@ -106,6 +106,7 @@ typedef enum
 {
 	ALP_003AA,
 	ALP_003BA,
+	ALP_003BB,
 	ALP_003CA,
 	ALP_004AA,
 }SensorType;
@@ -253,6 +254,14 @@ typedef struct
 	BadPixelMaskData OnEventsBadPixelMask;
 }DVSBadpixelData;
 
+typedef struct
+{
+	uint32_t HotPixelNum;
+	uint32_t HotLineNum;
+	uint32_t ClusterNum;
+	BadPixelMaskData HotPixelMask;
+}DVSHotpixelData;
+
 typedef enum
 {
 	TEST_NO_ERROR = 0,
@@ -319,7 +328,7 @@ public:
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, EventsNumberCountData& EventsNumberCountRes) = 0;
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, StationaryNoiseData& StationaryNoiseRes) = 0;
 	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, StationaryUniformityData& UniformityRes) = 0;
-	virtual bool HotPixel(uint32_t nIndexStart, uint32_t nNumber, HotpixelData& HotpixelRes) = 0;
+	virtual bool HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelData& HotpixelRes) = 0;
 	virtual bool FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo& Peak, LightTrigerType Light) = 0;
 	virtual bool ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, ImageContrastSensitivityData& ImageContrastSensitivityRes) = 0;
 	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, AccompaniedPeakAndDelayedPeakData& AccompaniedPeakAndDelayedPeakRes) = 0;

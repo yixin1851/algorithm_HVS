@@ -25,22 +25,27 @@
     <widget class="QComboBox" name="comboBoxSensorType">
      <item>
       <property name="text">
-       <string>03AA</string>
+       <string>003AA</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>03BA</string>
+       <string>003BA</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>03CA</string>
+       <string>003BB</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>04AA</string>
+       <string>003CA</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>004AA</string>
       </property>
      </item>
     </widget>

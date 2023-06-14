@@ -52,12 +52,13 @@ void CDialogDVSHotPixel::HotPixel()
 
 		QStringList RowName, ColName;
 		RowName << "";
-		ColName << "HotPixelNum" << "HotLineNum";
+		ColName << "HotPixelNum" << "HotLineNum" << "ClusterNum";
 
 		std::vector<std::vector<double>> Data(1);
-		Data[0].resize(2);
+		Data[0].resize(3);
 		Data[0][0] = m_Data.HotPixelNum;
 		Data[0][1] = m_Data.HotLineNum;
+		Data[0][2] = m_Data.ClusterNum;
 
 		ui.tabHotPixelResult->SetData(RowName, ColName, Data);
 

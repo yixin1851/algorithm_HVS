@@ -275,6 +275,7 @@ CDVS03BADecoder::CDVS03BADecoder()
 {
 	Init();
 	m_bCheckSimpleFooter = false;
+	m_bHalfMode = true;
 }
 
 void CDVS03BADecoder::Init()
@@ -512,50 +513,42 @@ void CDVS03BADecoder::BlockProcess(uint8_t nCurSection, CBlockBase& Block)
 					if (PackedGroup->G0E0)
 					{
 						l = LocalPixel(GroupLocal1, 0, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G0E1)
 					{
 						l = LocalPixel(GroupLocal1, 1, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G0E2)
 					{
 						l = LocalPixel(GroupLocal1, 2, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G0E3)
 					{
 						l = LocalPixel(GroupLocal1, 3, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E0)
 					{
 						l = LocalPixel(GroupLocal2, 0, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E1)
 					{
 						l = LocalPixel(GroupLocal2, 1, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E2)
 					{
 						l = LocalPixel(GroupLocal2, 2, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E3)
 					{
 						l = LocalPixel(GroupLocal2, 3, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					uGroupIndex += 2;
 				}
@@ -572,26 +565,22 @@ void CDVS03BADecoder::BlockProcess(uint8_t nCurSection, CBlockBase& Block)
 					if (OffsetGroup->E0)
 					{
 						l = LocalPixel(GroupLocal, 0, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (OffsetGroup->E1)
 					{
 						l = LocalPixel(GroupLocal, 1, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (OffsetGroup->E0)
 					{
 						l = LocalPixel(GroupLocal, 2, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 					if (OffsetGroup->E3)
 					{
 						l = LocalPixel(GroupLocal, 3, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, OFF_EVENT_FLAG);
+						SetData(l, OFF_EVENT_FLAG);
 					}
 				}
 			}
@@ -612,50 +601,42 @@ void CDVS03BADecoder::BlockProcess(uint8_t nCurSection, CBlockBase& Block)
 					if (PackedGroup->G0E0)
 					{
 						l = LocalPixel(GroupLocal1, 0, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G0E1)
 					{
 						l = LocalPixel(GroupLocal1, 1, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G0E2)
 					{
 						l = LocalPixel(GroupLocal1, 2, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G0E3)
 					{
 						l = LocalPixel(GroupLocal1, 3, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E0)
 					{
 						l = LocalPixel(GroupLocal2, 0, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E1)
 					{
 						l = LocalPixel(GroupLocal2, 1, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E2)
 					{
 						l = LocalPixel(GroupLocal2, 2, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (PackedGroup->G1E3)
 					{
 						l = LocalPixel(GroupLocal2, 3, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					uGroupIndex += 2;
 				}
@@ -672,26 +653,22 @@ void CDVS03BADecoder::BlockProcess(uint8_t nCurSection, CBlockBase& Block)
 					if (OffsetGroup->E0)
 					{
 						l = LocalPixel(GroupLocal, 0, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (OffsetGroup->E1)
 					{
 						l = LocalPixel(GroupLocal, 1, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (OffsetGroup->E0)
 					{
 						l = LocalPixel(GroupLocal, 2, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 					if (OffsetGroup->E3)
 					{
 						l = LocalPixel(GroupLocal, 3, m_nSubFrameIndex);
-						if ((l.x >= 56) && (l.x % 8 < 4))
-							m_RawData->SetData(l.x / 8 * 4 + l.x % 8 - 28, l.y, ON_EVENT_FLAG);
+						SetData(l, ON_EVENT_FLAG);
 					}
 				}
 			}
@@ -729,13 +706,80 @@ Local CDVS03BADecoder::LocalPixel(Local& GroupLocal, uint8_t nEventIndex, uint8_
 	*/
 	Local res;
 
-	res.x = GroupLocal.x + nEventIndex % m_nGroupCol;
-	res.y = GroupLocal.y + nEventIndex / m_nGroupCol;
+	//res.x = GroupLocal.x + nEventIndex % m_nGroupCol;
+	//res.y = GroupLocal.y + nEventIndex / m_nGroupCol;
 
-	res.x = res.x * 2 + nSubFrameIndex / 2;
-	res.y = res.y * 2 + nSubFrameIndex % 2;
+	//res.x = res.x * 2 + nSubFrameIndex / 2;
+	//res.y = res.y * 2 + nSubFrameIndex % 2;
 
+	if (0 == nEventIndex)
+	{
+		res.x = GroupLocal.x;
+		res.y = GroupLocal.y;
+	}
+	else if (1 == nEventIndex)
+	{
+		res.x = GroupLocal.x + 1;
+		res.y = GroupLocal.y;
+	}
+	else if (2 == nEventIndex)
+	{
+		res.x = GroupLocal.x;
+		res.y = GroupLocal.y + 1;
+	}
+	else
+	{
+		res.x = GroupLocal.x + 1;
+		res.y = GroupLocal.y + 1;
+	}
+
+	res.x <<= 1;
+	res.y <<= 1;
+
+	if (0 == nSubFrameIndex)
+	{
+	}
+	else if (1 == nSubFrameIndex)
+	{
+		res.y += 1;
+	}
+	else if (2 == nSubFrameIndex)
+	{
+		res.x += 1;
+	}
+	else
+	{
+		res.x += 1;
+		res.y += 1;
+	}
 	return res;
+}
+
+void CDVS03BADecoder::SetData(Local& PixelLocal, uint8_t nEventFlag)
+{
+	if (m_bHalfMode)
+	{
+		if ((PixelLocal.x >= 56) && (PixelLocal.x % 8 < 4))
+			m_RawData->SetData(PixelLocal.x / 8 * 4 + PixelLocal.x % 8 - 28, PixelLocal.y, nEventFlag);
+	}
+	else
+	{
+		if (PixelLocal.x >= 54)
+		{
+			if (PixelLocal.x % 8 >= 4)
+			{
+				if ((PixelLocal.x / 2) % 2 == 0)
+				{
+					PixelLocal.x += 2;
+				}
+				else
+				{
+					PixelLocal.x -= 2;
+				}
+			}
+			m_RawData->SetData(PixelLocal.x - 54, PixelLocal.y, nEventFlag);
+		}
+	}
 }
 
 uint32_t CDVS03BADecoder::GetCrc32(uint8_t* data, size_t length)
