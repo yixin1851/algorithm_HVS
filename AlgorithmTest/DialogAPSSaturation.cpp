@@ -61,7 +61,7 @@ void CDialogAPSSaturation::Saturation()
 
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->Saturation(nIndexStart, nNumber, roi, APSSubFrameIndex(nChannel), m_Data);
+	bRet = m_pAPSAlgoInterface->Saturation(nIndexStart, nNumber, roi, SubFrameIndex(nChannel), m_Data);
 	auto end = clock();
 	time = end - start;
 	if (bRet)

@@ -11,7 +11,10 @@ CDialogAPSDSNU::CDialogAPSDSNU(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 
 	ui.lineEditIndexStart->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditDSNUBlockSize->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditDSNURowBlockNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditDSNUColBlockNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditDSNURowBlockSize->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditDSNUColBlockSize->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditROIUp->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditROIRight->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditROILeft->setValidator(new QIntValidator(0, 100000, this));
@@ -28,7 +31,10 @@ CDialogAPSDSNU::CDialogAPSDSNU(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	ui.lineEditROIDown->setText(QString::number(temp.Down));
 	ui.lineEditROIRight->setText(QString::number(temp.Right));
 
-	ui.lineEditDSNUBlockSize->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nDSNUBlockSize));
+	ui.lineEditDSNURowBlockNum->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nDSNURowBlockNum));
+	ui.lineEditDSNUColBlockNum->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nDSNUColBlockNum));
+	ui.lineEditDSNURowBlockSize->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nDSNURowBlockSize));
+	ui.lineEditDSNUColBlockSize->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nDSNUColBlockSize));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(DSNU()), Qt::QueuedConnection);
@@ -53,7 +59,11 @@ void CDialogAPSDSNU::DSNU()
 	ROIArea temp;
 
 	auto tempThre = m_pAPSAlgoInterface->GetAlgorithmThre();
-	tempThre.nDSNUBlockSize = ui.lineEditDSNUBlockSize->text().toUInt();
+	tempThre.nDSNURowBlockNum = ui.lineEditDSNURowBlockNum->text().toUInt();
+	tempThre.nDSNUColBlockNum = ui.lineEditDSNUColBlockNum->text().toUInt();
+	tempThre.nDSNURowBlockSize = ui.lineEditDSNURowBlockSize->text().toUInt();
+	tempThre.nDSNUColBlockSize = ui.lineEditDSNUColBlockSize->text().toUInt();
+
 	m_pAPSAlgoInterface->SetAlgorithmThre(tempThre);
 
 	if (ui.checkBoxROI->isChecked())
@@ -78,17 +88,23 @@ void CDialogAPSDSNU::DSNU()
 
 		QStringList RowName, ColName;
 		RowName << "";
-		ColName << "RangeR" << "RangeG" << "RangeB" << "SignalMax" << "DeltaSignalMax" << "DeltaSignalCentreMax" << "DeltaSignalEdgeMax" << "DeltaSignalCornerMax";
+		ColName << "RangeR" << "RangeG" << "RangeB" << "SignalMax" << "DeltaSignalCentreMax" << "DeltaSignalEdgeMax" << "DeltaSignalCornerMax" << "DeltaSignalMax" << "RMax" << "RMin" << "GMax" << "GMin" << "BMax" << "BMin";
 
 		std::vector<std::vector<double>> Data(1);
 		Data[0].push_back(m_DSNUData.RangeR);
 		Data[0].push_back(m_DSNUData.RangeG);
 		Data[0].push_back(m_DSNUData.RangeB);
 		Data[0].push_back(m_DSNUData.SignalMax);
-		Data[0].push_back(m_DSNUData.DeltaSignalMax);
 		Data[0].push_back(m_DSNUData.DeltaSignalCentreMax);
 		Data[0].push_back(m_DSNUData.DeltaSignalEdgeMax);
 		Data[0].push_back(m_DSNUData.DeltaSignalCornerMax);
+		Data[0].push_back(m_DSNUData.DeltaSignalMax);
+		Data[0].push_back(m_DSNUData.RMax);
+		Data[0].push_back(m_DSNUData.RMin);
+		Data[0].push_back(m_DSNUData.GMax);
+		Data[0].push_back(m_DSNUData.GMin);
+		Data[0].push_back(m_DSNUData.BMax);
+		Data[0].push_back(m_DSNUData.BMin);
 
 		ui.widgetTableView->SetData(RowName, ColName, Data);
 	}
@@ -111,16 +127,22 @@ void CDialogAPSDSNU::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "RangeR," << "RangeG," << "RangeB," << "SignalMax," << "DeltaSignalMax," << "DeltaSignalCentreMax," << "DeltaSignalEdgeMax," << "DeltaSignalCornerMax"<<std::endl;
+			outfile << "RangeR," << "RangeG," << "RangeB," << "SignalMax," << "DeltaSignalCentreMax," << "DeltaSignalEdgeMax," << "DeltaSignalCornerMax," << "DeltaSignalMax," << "RMax," << "RMin," << "GMax," << "GMin," << "BMax," << "BMin," <<std::endl;
 			outfile << std::to_string(m_DSNUData.RangeR) << ",";
 			outfile << std::to_string(m_DSNUData.RangeG) << ",";
 			outfile << std::to_string(m_DSNUData.RangeB) << ",";
 			outfile << std::to_string(m_DSNUData.SignalMax) << ",";
-			outfile << std::to_string(m_DSNUData.DeltaSignalMax) << ",";
 			outfile << std::to_string(m_DSNUData.DeltaSignalCentreMax) << ",";
 			outfile << std::to_string(m_DSNUData.DeltaSignalEdgeMax) << ",";
-			outfile << std::to_string(m_DSNUData.DeltaSignalCornerMax) <<std::endl;
-
+			outfile << std::to_string(m_DSNUData.DeltaSignalCornerMax) << ",";
+			outfile << std::to_string(m_DSNUData.DeltaSignalMax) << ",";
+			outfile << std::to_string(m_DSNUData.RMax) << ",";
+			outfile << std::to_string(m_DSNUData.RMin) << ",";
+			outfile << std::to_string(m_DSNUData.GMax) << ",";
+			outfile << std::to_string(m_DSNUData.GMin) << ",";
+			outfile << std::to_string(m_DSNUData.BMax) << ",";
+			outfile << std::to_string(m_DSNUData.BMin) << ",";
+			outfile << std::endl;
 			outfile.close();
 		}
 	}

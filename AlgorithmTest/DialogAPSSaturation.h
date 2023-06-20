@@ -16,5 +16,5 @@ private:
     Ui::DialogAPSSaturation ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    SaturationData m_Data;
+    APSSaturationType m_Data;
 };

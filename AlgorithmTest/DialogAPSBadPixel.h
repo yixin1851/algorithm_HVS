@@ -18,7 +18,7 @@ private:
     Ui::DialogAPSBadPixel ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<BadpixelData> m_BadPixel;
+    APSBadpixelType m_BadPixel;
     CWidgetTableView m_widgetTableView;
-    CWidgetImageView m_widgetImageView[APSSubFrameIndex::SubFrameNum];
+    CWidgetImageView m_widgetImageView[SubFrameIndex::All];
 };

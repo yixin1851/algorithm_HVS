@@ -68,9 +68,9 @@ void CDialogAPSLinearity::Linearity()
 	}
 	else
 	{
-		std::vector<std::vector<double>> LightData;
+		std::vector<APSDataMeanType> LightData;
 		std::vector<double> ExpTime;
-		std::vector<double>OneRes;
+		APSDataMeanType OneRes;
 
 		for (uint32_t i = 0; i < ExpList.size(); i++)
 		{
@@ -105,40 +105,36 @@ void CDialogAPSLinearity::Linearity()
 
 			QStringList RowName, ColName;
 			RowName << "K" << "B" << "LeMin" << "LeMax";
-			ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+			ColName << "Gb" << "B" << "R" << "Gr";
 
 			std::vector<std::vector<double>> Data(4);
 
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				Data[0].push_back(m_LinearityData[nIndex].k);
-				Data[1].push_back(m_LinearityData[nIndex].b);
-				Data[2].push_back(m_LinearityData[nIndex].LeMin);
-				Data[3].push_back(m_LinearityData[nIndex].LeMax);
+				Data[0].push_back(m_LinearityData.SubFrameLinearityData[nIndex].k);
+				Data[1].push_back(m_LinearityData.SubFrameLinearityData[nIndex].b);
+				Data[2].push_back(m_LinearityData.SubFrameLinearityData[nIndex].LeMin);
+				Data[3].push_back(m_LinearityData.SubFrameLinearityData[nIndex].LeMax);
 			}
 
 			m_widgetTableView.SetData(RowName, ColName, Data);
 
 			QVector<double> XData;
-			QVector<double> YData[APSSubFrameIndex::SubFrameNum];
+			QVector<double> YData[SubFrameIndex::All];
 
 			for (uint32_t nIndex = 0; nIndex < ExpTime.size(); nIndex++)
 			{
 				XData.push_back(ExpTime[nIndex]);
-				for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
+				for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
 				{
-					YData[nChannel].push_back(LightData[nIndex][nChannel]);
+					YData[nChannel].push_back(LightData[nIndex].SubFrameDataMean[nChannel]);
 				}
 			}
 
-			m_widgetChartView.SetLine("Gb1", XData, YData[Gb1]);
-			m_widgetChartView.SetLine("Gb2", XData, YData[Gb2]);
-			m_widgetChartView.SetLine("B1", XData, YData[B1]);
-			m_widgetChartView.SetLine("B2", XData, YData[B2]);
-			m_widgetChartView.SetLine("R1", XData, YData[R1]);
-			m_widgetChartView.SetLine("R2", XData, YData[R2]);
-			m_widgetChartView.SetLine("Gr1", XData, YData[Gr1]);
-			m_widgetChartView.SetLine("Gr2", XData, YData[Gr2]);
+			m_widgetChartView.SetLine("Gb", XData, YData[Gb]);
+			m_widgetChartView.SetLine("B", XData, YData[B]);
+			m_widgetChartView.SetLine("R", XData, YData[R]);
+			m_widgetChartView.SetLine("Gr", XData, YData[Gr]);
 		}
 		else
 		{
@@ -160,28 +156,28 @@ void CDialogAPSLinearity::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_LinearityData.size(); nIndex++)
+			outfile << "Gb,B,R,Gr" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < m_LinearityData.SubFrameLinearityData.size(); nIndex++)
 			{
-				outfile << std::to_string(m_LinearityData[nIndex].k) << ",";
+				outfile << std::to_string(m_LinearityData.SubFrameLinearityData[nIndex].k) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_LinearityData.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_LinearityData.SubFrameLinearityData.size(); nIndex++)
 			{
-				outfile << std::to_string(m_LinearityData[nIndex].b) << ",";
+				outfile << std::to_string(m_LinearityData.SubFrameLinearityData[nIndex].b) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_LinearityData.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_LinearityData.SubFrameLinearityData.size(); nIndex++)
 			{
-				outfile << std::to_string(m_LinearityData[nIndex].LeMin) << ",";
+				outfile << std::to_string(m_LinearityData.SubFrameLinearityData[nIndex].LeMin) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_LinearityData.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_LinearityData.SubFrameLinearityData.size(); nIndex++)
 			{
-				outfile << std::to_string(m_LinearityData[nIndex].LeMax) << ",";
+				outfile << std::to_string(m_LinearityData.SubFrameLinearityData[nIndex].LeMax) << ",";
 			}
 			outfile << std::endl;
 

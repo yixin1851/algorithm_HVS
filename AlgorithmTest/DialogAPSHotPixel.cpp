@@ -16,6 +16,7 @@ CDialogAPSHotPixel::CDialogAPSHotPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditROILeft->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditROIDown->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditBadPixelRadius->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditHotLineRadius->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditHotPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 	ui.lineEditHotLineThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 
@@ -31,18 +32,15 @@ CDialogAPSHotPixel::CDialogAPSHotPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditROIRight->setText(QString::number(temp.Right));
 
 	ui.lineEditBadPixelRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadPixelRadius));
+	ui.lineEditHotLineRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadLineRadius));
 	ui.lineEditHotPixelThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dHotPixelThre));
 	ui.lineEditHotLineThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dHotLineThre));
 
 	ui.tabWidgetView->insertTab(0, &m_widgetTableView, "HotPixelResult");
-	ui.tabWidgetView->insertTab(1, &m_widgetImageView[0], "Gb1");
-	ui.tabWidgetView->insertTab(2, &m_widgetImageView[1], "Gb2");
-	ui.tabWidgetView->insertTab(3, &m_widgetImageView[2], "B1");
-	ui.tabWidgetView->insertTab(4, &m_widgetImageView[3], "B2");
-	ui.tabWidgetView->insertTab(5, &m_widgetImageView[4], "R1");
-	ui.tabWidgetView->insertTab(6, &m_widgetImageView[5], "R2");
-	ui.tabWidgetView->insertTab(7, &m_widgetImageView[6], "Gr1");
-	ui.tabWidgetView->insertTab(8, &m_widgetImageView[7], "Gr2");
+	ui.tabWidgetView->insertTab(1, &m_widgetImageView[0], "Gb");
+	ui.tabWidgetView->insertTab(2, &m_widgetImageView[1], "B");
+	ui.tabWidgetView->insertTab(3, &m_widgetImageView[2], "R");
+	ui.tabWidgetView->insertTab(4, &m_widgetImageView[3], "Gr");
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(HotPixel()), Qt::QueuedConnection);
@@ -63,7 +61,7 @@ void CDialogAPSHotPixel::HotPixel()
 	ui.pushButtonStart->setEnabled(false);
 	m_widgetTableView.Clear();
 
-	for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+	for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 	{
 		m_widgetImageView[nIndex].Clear();
 	}
@@ -75,6 +73,8 @@ void CDialogAPSHotPixel::HotPixel()
 	tempThre.dHotPixelThre = ui.lineEditHotPixelThre->text().toDouble();
 	tempThre.dHotLineThre = ui.lineEditHotLineThre->text().toDouble();
 	tempThre.nBadPixelRadius = ui.lineEditBadPixelRadius->text().toUInt();
+	tempThre.nBadLineRadius = ui.lineEditHotLineRadius->text().toUInt();
+
 	m_pAPSAlgoInterface->SetAlgorithmThre(tempThre);
 
 	if (ui.checkBoxROI->isChecked())
@@ -99,13 +99,8 @@ void CDialogAPSHotPixel::HotPixel()
 		bRet = m_pAPSAlgoInterface->HotPixel(nIndexStart, nNumber, roi, m_HotPixel);
 		if (bRet)
 		{
-			std::vector<BadPixelMaskData> MaskData(APSSubFrameIndex::SubFrameNum);
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
-			{
-				MaskData[nIndex] = m_HotPixel[nIndex].HotPixelMask;
-			}
 			auto start = clock();
-			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, MaskData);
+			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, m_HotPixel);
 			auto end = clock();
 			time = end - start;
 		}
@@ -117,35 +112,46 @@ void CDialogAPSHotPixel::HotPixel()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		RowName << "HotPixel" << "HotLine";
-		ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+		RowName << "BadPixelNum" << "SingletNum" << "CoupletNum" << "ClusterNum" << "LadderNum" << "DefectRowNum" << "DefectColNum";
+		ColName << "Gb" << "B" << "R" << "Gr" << "Total";
 
-		std::vector<std::vector<double>> Data(2);
+		std::vector<std::vector<double>> Data(7);
 
-		for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 		{
-			Data[0].push_back(m_HotPixel[nIndex].HotPixelNum);
-			Data[1].push_back(m_HotPixel[nIndex].HotLineNum);
+			Data[0].push_back(m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelNum);
+			Data[1].push_back(m_HotPixel.SubFrameBadpixelData[nIndex].SingletNum);
+			Data[2].push_back(m_HotPixel.SubFrameBadpixelData[nIndex].CoupletNum);
+			Data[3].push_back(m_HotPixel.SubFrameBadpixelData[nIndex].ClusterNum);
+			Data[4].push_back(0);
+			Data[5].push_back(m_HotPixel.SubFrameBadpixelData[nIndex].DefectRowNum);
+			Data[6].push_back(m_HotPixel.SubFrameBadpixelData[nIndex].DefectColNum);
 		}
+		Data[0].push_back(m_HotPixel.BadPixelNum);
+		Data[1].push_back(m_HotPixel.SingletNum);
+		Data[2].push_back(m_HotPixel.CoupletNum);
+		Data[3].push_back(m_HotPixel.ClusterNum);
+		Data[4].push_back(m_HotPixel.LadderNum);
+		Data[5].push_back(0);
+		Data[6].push_back(0);
 
 		m_widgetTableView.SetData(RowName, ColName, Data);
 
 		uint32_t nRow = 0, nCol = 0;
 		m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
-
+		nRow /= 2;
+		nCol /= 2;
 		uint8_t* pImage = new uint8_t[nRow * nCol];
-		for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
+		for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
 		{
 			memset(pImage, 0, nRow * nCol);
 
-			for (uint32_t nIndex = 0; nIndex < m_HotPixel[nChannel].HotPixelMask.BadPixelNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_HotPixel.SubFrameBadpixelData[nChannel].BadPixelMask.BadPixelNum; nIndex++)
 			{
-				pImage[m_HotPixel[nChannel].HotPixelMask.LocalData[nIndex].x * nCol + m_HotPixel[nChannel].HotPixelMask.LocalData[nIndex].y] = 255;
+				pImage[m_HotPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_HotPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
 			}
 			m_widgetImageView[nChannel].SetGrayData(pImage, nCol, nRow);
 		}
-		delete[] pImage;
-
 	}
 	else
 	{
@@ -166,34 +172,89 @@ void CDialogAPSHotPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_HotPixel.size(); nIndex++)
+			outfile << "Gb,B,R,Gr,Total" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_HotPixel[nIndex].HotPixelNum) << ",";
+				outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelNum) << ",";
+			}
+			outfile << std::to_string(m_HotPixel.BadPixelNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].SingletNum) << ",";
+			}
+			outfile << std::to_string(m_HotPixel.SingletNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].CoupletNum) << ",";
+			}
+			outfile << std::to_string(m_HotPixel.CoupletNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].ClusterNum) << ",";
+			}
+			outfile << std::to_string(m_HotPixel.ClusterNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].DefectRowNum) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_HotPixel.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_HotPixel[nIndex].HotLineNum) << ",";
+				outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].DefectColNum) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_HotPixel.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				for (uint32_t i = 0; i < m_HotPixel[nIndex].HotPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_HotPixel[nIndex].HotPixelMask.LocalData[i].x) << ",";
+					outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].x) << ",";
 				}
 				outfile << std::endl;
-				for (uint32_t i = 0; i < m_HotPixel[nIndex].HotPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_HotPixel[nIndex].HotPixelMask.LocalData[i].y) << ",";
+					outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].y) << ",";
 				}
 				outfile << std::endl;
-				for (uint32_t i = 0; i < m_HotPixel[nIndex].HotPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_HotPixel[nIndex].HotPixelMask.Flag[i]) << ",";
+					outfile << std::to_string(m_HotPixel.SubFrameBadpixelData[nIndex].BadPixelMask.Flag[i]) << ",";
+				}
+				outfile << std::endl;
+			}
+
+			for (uint32_t i = 0; i < m_HotPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_HotPixel.BadPixelMask.LocalData[i].x) << ",";
+			}
+			outfile << std::endl;
+			for (uint32_t i = 0; i < m_HotPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_HotPixel.BadPixelMask.LocalData[i].y) << ",";
+			}
+			outfile << std::endl;
+			for (uint32_t i = 0; i < m_HotPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_HotPixel.BadPixelMask.Flag[i]) << ",";
+			}
+			outfile << std::endl;
+
+			std::vector<uint8_t> OtpData;
+
+			if (m_pAPSAlgoInterface->BadPixelLocalToOtpType(m_HotPixel.BadPixelMask.LocalData, OtpData))
+			{
+				for (uint32_t i = 0; i < OtpData.size(); i++)
+				{
+					outfile << QString::number(OtpData[i], 16).toStdString() << ",";
 				}
 				outfile << std::endl;
 			}

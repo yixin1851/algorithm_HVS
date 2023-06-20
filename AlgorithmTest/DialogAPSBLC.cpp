@@ -31,7 +31,14 @@ void CDialogAPSBLC::BLC()
 	clock_t time = 0;
 	if (ui.comboBoxBLCType->currentIndex() == 0)
 	{
-		std::vector<double> BaseMean(8, 0);
+		auto start = clock();
+		bRet = m_pAPSAlgoInterface->BLC(nIndexStart, nNumber);
+		auto end = clock();
+		time = end - start;
+	}
+	else if (ui.comboBoxBLCType->currentIndex() == 1)
+	{
+		APSDataMeanType BaseMean;
 		auto start = clock();
 		bRet = m_pAPSAlgoInterface->DataMean(nBaseIndexStart, nBaseNumber, nullptr, BaseMean)
 			&& m_pAPSAlgoInterface->BLC(nIndexStart, nNumber, BaseMean);

@@ -459,7 +459,7 @@ bool CDVS03BADecoder::CheckBlock(uint8_t* pucBinData, size_t nBinLens, uint16_t&
 	CBlockBase BlockBase(pucBinData, nBinLens);
 
 	nBlockLens = BlockBase.GetBlockLens();
-	uint16_t nSectionIndex = BlockBase.GetSectionIndex();
+	uint8_t nSectionIndex = BlockBase.GetSectionIndex();
 	BlockType Type = BlockBase.GetBlockType();
 
 	if (nBlockLens == 0)
@@ -759,16 +759,16 @@ void CDVS03BADecoder::SetData(Local& PixelLocal, uint8_t nEventFlag)
 {
 	if (m_bHalfMode)
 	{
-		if ((PixelLocal.x >= 56) && (PixelLocal.x % 8 < 4))
-			m_RawData->SetData(PixelLocal.x / 8 * 4 + PixelLocal.x % 8 - 28, PixelLocal.y, nEventFlag);
+		if ((PixelLocal.x >= 56) && ((PixelLocal.x & 7) < 4))
+			m_RawData->SetData(((PixelLocal.x >> 3) << 2) + (PixelLocal.x & 7) - 28, PixelLocal.y, nEventFlag);
 	}
 	else
 	{
-		if (PixelLocal.x >= 54)
-		{
-			if (PixelLocal.x % 8 >= 4)
+		//if (PixelLocal.x >= 54)
+		//{
+			if ((PixelLocal.x & 7) >= 4)
 			{
-				if ((PixelLocal.x / 2) % 2 == 0)
+				if ((PixelLocal.x & 7) <= 5)
 				{
 					PixelLocal.x += 2;
 				}
@@ -777,8 +777,8 @@ void CDVS03BADecoder::SetData(Local& PixelLocal, uint8_t nEventFlag)
 					PixelLocal.x -= 2;
 				}
 			}
-			m_RawData->SetData(PixelLocal.x - 54, PixelLocal.y, nEventFlag);
-		}
+			m_RawData->SetData(PixelLocal.x, PixelLocal.y, nEventFlag);
+		//}
 	}
 }
 
@@ -833,7 +833,7 @@ uint32_t CDVS03BADecoder::GetCrc32(uint8_t* data, size_t length)
 }
 
 
-bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t & ntimeStamp)
+bool CDVS03BADecoder::DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t & ntimeStamp)
 {
 	Init();
 	m_nTotalRow = nRow;

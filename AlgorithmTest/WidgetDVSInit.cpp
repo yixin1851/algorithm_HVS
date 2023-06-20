@@ -31,13 +31,14 @@ void CWidgetDVSInit::Init()
 	std::string strLogDir = ui.lineEditLogDir->text().toStdString();
 	bool bMultiThreadEnable = ui.checkBoxMultiThreadEnable->isChecked();
 	bool bLogEnable = ui.checkBoxLogEnable->isChecked();
+	PixelFormatType PixelFormat = PixelFormatType(ui.comboBoxPixelFormat->currentIndex());
 
 	if (m_pDVSAlgoInterface != nullptr)
 	{
 		delete m_pDVSAlgoInterface;
 	}
 
-	m_pDVSAlgoInterface = CreateDVSAlgoInterface(SensorType(nSensorType), strLogDir);
+	m_pDVSAlgoInterface = CreateDVSAlgoInterface(SensorType(nSensorType), strLogDir, PixelFormat);
 	m_pDVSAlgoInterface->SetLogEnable(bLogEnable);
 	m_pDVSAlgoInterface->SetMultiThreadEnable(bMultiThreadEnable);
 
@@ -65,7 +66,7 @@ void CWidgetDVSInit::RawDataInfoInit(int nIndex)
 	else if (nIndex == SensorType::ALP_003BB)
 	{
 		ui.lineEditUp->setText(QString::number(0));
-		ui.lineEditDown->setText(QString::number(1169));
+		ui.lineEditDown->setText(QString::number(1223));
 		ui.lineEditLeft->setText(QString::number(0));
 		ui.lineEditRight->setText(QString::number(1631));
 	}

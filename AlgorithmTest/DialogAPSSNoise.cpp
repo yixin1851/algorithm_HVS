@@ -60,9 +60,7 @@ void CDialogAPSSNoise::SNoise()
 
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->SNoise(nIndexStart, nNumber, roi, m_SNoiseData)
-		&& m_pAPSAlgoInterface->RowSNoise(nIndexStart, nNumber, roi, m_RowSNoiseData)
-		&& m_pAPSAlgoInterface->ColSNoise(nIndexStart, nNumber, roi, m_ColSNoiseData);
+	bRet = m_pAPSAlgoInterface->SNoise(nIndexStart, nNumber, roi, m_SNoiseData);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -73,12 +71,19 @@ void CDialogAPSSNoise::SNoise()
 
 		QStringList RowName, ColName;
 		RowName << "SNoise" << "RowSNoise" << "ColSNoise";
-		ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+		ColName << "Gb" << "B" << "R" << "Gr" << "Total";
 
-		std::vector<std::vector<double>> Data;
-		Data.push_back(m_SNoiseData);
-		Data.push_back(m_RowSNoiseData);
-		Data.push_back(m_ColSNoiseData);
+		std::vector<std::vector<double>> Data(3);
+
+		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+		{
+			Data[0].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].SNoise);
+			Data[1].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].RowSNoise);
+			Data[2].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].ColSNoise);
+		}
+		Data[0].push_back(m_SNoiseData.SNoiseFrame);
+		Data[1].push_back(0);
+		Data[2].push_back(0);
 		ui.widgetTableView->SetData(RowName, ColName, Data);
 	}
 	else
@@ -100,25 +105,15 @@ void CDialogAPSSNoise::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_SNoiseData.size(); nIndex++)
+			outfile << "SNoise, RowSNoise, ColSNoise" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_SNoiseData[nIndex]) << ",";
+				outfile << std::to_string(m_SNoiseData.SubFrameSNoiseData[nIndex].SNoise) << ",";
+				outfile << std::to_string(m_SNoiseData.SubFrameSNoiseData[nIndex].RowSNoise) << ",";
+				outfile << std::to_string(m_SNoiseData.SubFrameSNoiseData[nIndex].ColSNoise) << ",";
+				outfile << std::endl;
 			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_RowSNoiseData.size(); nIndex++)
-			{
-				outfile << std::to_string(m_RowSNoiseData[nIndex]) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_ColSNoiseData.size(); nIndex++)
-			{
-				outfile << std::to_string(m_ColSNoiseData[nIndex]) << ",";
-			}
-			outfile << std::endl;
-
+			outfile << std::to_string(m_SNoiseData.SNoiseFrame) << std::endl;
 			outfile.close();
 		}
 	}

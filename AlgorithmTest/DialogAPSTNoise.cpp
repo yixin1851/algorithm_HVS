@@ -60,9 +60,7 @@ void CDialogAPSTNoise::TNoise()
 
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->TNoise(nIndexStart, nNumber, roi, m_TNoiseData)
-		&& m_pAPSAlgoInterface->RowTNoise(nIndexStart, nNumber, roi, m_RowTNoiseData)
-		&& m_pAPSAlgoInterface->ColTNoise(nIndexStart, nNumber, roi, m_ColTNoiseData);
+	bRet = m_pAPSAlgoInterface->TNoise(nIndexStart, nNumber, roi, m_TNoiseData);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -72,13 +70,21 @@ void CDialogAPSTNoise::TNoise()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		RowName << "TNoise" << "RowTNoise" << "ColTNoise";
-		ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+		RowName << "TempNoise" << "RowTemp" << "ColTemp" << "PixelTemp" << "TempRNRatio" << "TempCNRatio";
+		ColName << "Gb" << "B" << "R" << "Gr";
 
-		std::vector<std::vector<double>> Data;
-		Data.push_back(m_TNoiseData);
-		Data.push_back(m_RowTNoiseData);
-		Data.push_back(m_ColTNoiseData);
+		std::vector<std::vector<double>> Data(6);
+
+		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+		{
+			Data[0].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].TempNoise);
+			Data[1].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].RowTemp);
+			Data[2].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].ColTemp);
+			Data[3].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].PixelTemp);
+			Data[4].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].TempRNRatio);
+			Data[5].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].TempCNRatio);
+
+		}
 		ui.widgetTableView->SetData(RowName, ColName, Data);
 	}
 	else
@@ -100,25 +106,17 @@ void CDialogAPSTNoise::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_TNoiseData.size(); nIndex++)
+			outfile << "TempNoise,RowTemp,ColTemp,PixelTemp,TempRNRatio,TempCNRatio" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_TNoiseData[nIndex]) << ",";
+				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].TempNoise) << ",";
+				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].RowTemp) << ",";
+				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].ColTemp) << ",";
+				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].PixelTemp) << ",";
+				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].TempRNRatio) << ",";
+				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].TempCNRatio) << ",";
+				outfile << std::endl;
 			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_RowTNoiseData.size(); nIndex++)
-			{
-				outfile << std::to_string(m_RowTNoiseData[nIndex]) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_ColTNoiseData.size(); nIndex++)
-			{
-				outfile << std::to_string(m_ColTNoiseData[nIndex]) << ",";
-			}
-			outfile << std::endl;
-
 			outfile.close();
 		}
 	}

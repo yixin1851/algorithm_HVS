@@ -16,5 +16,5 @@ private:
     Ui::DialogDVSImageContrastSensitivityiformity ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    ImageContrastSensitivityData m_Data;
+    DVSImageContrastSensitivityType m_Data;
 };

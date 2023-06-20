@@ -20,21 +20,22 @@ class CDVSDataContainer
 {
 public:
 	CDVSDataContainer();
-	void Init(uint32_t nRow, uint32_t nCol, bool bInitialize = false);
+	void Init(uint32_t nRow, uint32_t nCol, bool bInitialize = false, PixelFormatType PixelFormat = BayerGBRG);
 	virtual ~CDVSDataContainer();
 	virtual void SetData(uint32_t nRows, uint32_t nCols, uint8_t nValue);
 	virtual uint8_t GetData(uint32_t nRows, uint32_t nCols);
 	virtual void CountEvents(ROIArea &Roi);
+	virtual void GetChannel(uint32_t nRows, uint32_t nCols, SubFrameIndex& nChannel);
 	uint32_t m_nRow;
 	uint32_t m_nCol;
-	uint32_t m_NoEventsNum[DVSSubFrameIndex::All + 1];
-	uint32_t m_AllEventsNum[DVSSubFrameIndex::All + 1];
-	uint32_t m_OnEventsNum[DVSSubFrameIndex::All + 1];
-	uint32_t m_OffEventsNum[DVSSubFrameIndex::All + 1];
+	uint32_t m_NoEventsNum[SubFrameIndex::All + 1];
+	uint32_t m_AllEventsNum[SubFrameIndex::All + 1];
+	uint32_t m_OnEventsNum[SubFrameIndex::All + 1];
+	uint32_t m_OffEventsNum[SubFrameIndex::All + 1];
 	std::vector<uint32_t> m_RowAllEventsNum;
 	std::vector<uint32_t> m_ColAllEventsNum;
 	uint64_t m_TimeStamp;
 	uint64_t m_TriggerTime;
 	DVSType m_RawData;
-	const uint32_t m_nDataNumberInOneByte = 4;
+	PixelFormatType m_PixelFormat;
 };

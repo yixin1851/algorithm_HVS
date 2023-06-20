@@ -8,7 +8,7 @@
 
 constexpr uint32_t DVS_MaxThreadNum = 8;
 
-CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum)
+CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
 {
 	m_nSiteNum = nSiteNum;
 	m_bLogEnable = false;
@@ -26,8 +26,9 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	//m_AlgorithmThre.dFindPeakThre = 0.75;
 
 	m_AlgorithmThre.nPeakCycle = 20;
+	m_PixelFormat = Pixelformat;
 
-	m_RawDataContainer.resize(DVSSubFrameIndex::All);
+	m_RawDataContainer.resize(SubFrameIndex::All);
 
 	if (strLogDir != "")
 	{
@@ -48,7 +49,7 @@ CAlpDVSMPAlgorithm::~CAlpDVSMPAlgorithm()
 {
 }
 
-bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, EventsNumberCountData& EventsNumberCountRes)
+bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes)
 {
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -58,7 +59,7 @@ bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumbe
 		return false;
 	}
 	EventsNumberCountRes.nDataNumber = 0;
-	for (uint32_t i = 0; i <= DVSSubFrameIndex::All; i++)
+	for (uint32_t i = 0; i <= SubFrameIndex::All; i++)
 	{
 		EventsNumberCountRes.NoEventsNum[i].resize(nNumber);
 		EventsNumberCountRes.OnEventsNum[i].resize(nNumber);
@@ -101,7 +102,7 @@ bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumbe
 		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 		{
 			m_RawDataContainer[nIndexStart + nIndex].CountEvents(m_ActiveArea);
-			for (uint32_t i = 0; i <= DVSSubFrameIndex::All; i++)
+			for (uint32_t i = 0; i <= SubFrameIndex::All; i++)
 			{
 				EventsNumberCountRes.NoEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_NoEventsNum[i];
 				EventsNumberCountRes.OnEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_OnEventsNum[i];
@@ -114,7 +115,7 @@ bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumbe
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, StationaryNoiseData& StationaryNoiseRes)
+bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes)
 {
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -124,7 +125,7 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 		return false;
 	}
 
-	EventsNumberCountData EventsNumber;
+	DVSEventsNumberCountType EventsNumber;
 	if (!EventsNumberCount(nIndexStart, nNumber, EventsNumber))
 	{
 		std::string strErr = "StationaryNoise: EventsNumberCount error";
@@ -135,13 +136,13 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 	uint32_t nRowSize = m_ActiveArea.Down - m_ActiveArea.Up + 1;
 	uint32_t nColSize = m_ActiveArea.Right - m_ActiveArea.Left + 1;
 	uint32_t nAllSize = nRowSize * nColSize;
-	StationaryNoiseRes.dStationaryNoiseMeanAll = Mean(EventsNumber.AllEventsNum[DVSSubFrameIndex::All], nNumber) / nAllSize * 100;
-	StationaryNoiseRes.dStationaryNoiseMeanOn = Mean(EventsNumber.OnEventsNum[DVSSubFrameIndex::All], nNumber) / nAllSize * 100;
-	StationaryNoiseRes.dStationaryNoiseMeanOff = Mean(EventsNumber.OffEventsNum[DVSSubFrameIndex::All], nNumber) / nAllSize * 100;
+	StationaryNoiseRes.dStationaryNoiseMeanAll = Mean(EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
+	StationaryNoiseRes.dStationaryNoiseMeanOn = Mean(EventsNumber.OnEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
+	StationaryNoiseRes.dStationaryNoiseMeanOff = Mean(EventsNumber.OffEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 
-	StationaryNoiseRes.dStationaryNoiseStdAll = Std(EventsNumber.AllEventsNum[DVSSubFrameIndex::All], nNumber) / nAllSize * 100;
-	StationaryNoiseRes.dStationaryNoiseStdOn = Std(EventsNumber.OnEventsNum[DVSSubFrameIndex::All], nNumber) / nAllSize * 100;
-	StationaryNoiseRes.dStationaryNoiseStdOff = Std(EventsNumber.OffEventsNum[DVSSubFrameIndex::All], nNumber) / nAllSize * 100;
+	StationaryNoiseRes.dStationaryNoiseStdAll = Std(EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
+	StationaryNoiseRes.dStationaryNoiseStdOn = Std(EventsNumber.OnEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
+	StationaryNoiseRes.dStationaryNoiseStdOff = Std(EventsNumber.OffEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 
 	std::vector<double> RowMeanAllEvents(nRowSize, 0);
 	std::vector<double> ColMeanAllEvents(nColSize, 0);
@@ -175,7 +176,7 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, StationaryUniformityData& UniformityRes)
+bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes)
 {
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -225,7 +226,7 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelData& HotpixelRes)
+bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelType& HotpixelRes)
 {
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -369,7 +370,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		std::vector<int32_t> Gradient(nNumber - 1);
 		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		{
-			Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex]));
+			Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
 		}
 		std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
 
@@ -383,7 +384,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		{
-			double Gradient = ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex]));
+			double Gradient = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
 
 			if (Gradient >= GradientThre)
 			{
@@ -398,7 +399,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		std::vector<int32_t> Gradient(nNumber - 1);
 		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		{
-			Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex]));
+			Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
 		}
 		std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
 
@@ -412,7 +413,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		{
-			double Gradient = ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex]));
+			double Gradient = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
 
 			if (Gradient >= GradientThre)
 			{
@@ -425,7 +426,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	return true;
 }
 #endif
-bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo& Peak, LightTrigerType Light)
+bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo& Peak, DVSLightTrigerType Light)
 {
 	if (0 == m_AlgorithmThre.nPeakCycle)
 	{
@@ -443,7 +444,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		return false;
 	}
 
-	EventsNumberCountData EventsNumberCountRes;
+	DVSEventsNumberCountType EventsNumberCountRes;
 	EventsNumberCount(nIndexStart, nNumber, EventsNumberCountRes);
 
 	Peak.nOffEventsPeakNumber = 0;
@@ -453,12 +454,12 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 	uint32_t nCycle = m_AlgorithmThre.nPeakCycle;
 
-	if (Light & LightTrigerType::OffEventsOnly)
+	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		//std::vector<int32_t> Gradient(nNumber - 1);
 		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		//{
-		//	Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex]));
+		//	Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
 		//}
 		//std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
 
@@ -472,7 +473,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		//{
-		//	double Gradient = ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex]));
+		//	double Gradient = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
 
 		//	if (Gradient >= GradientThre)
 		//	{
@@ -485,7 +486,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 		{
-			EventsData[(nIndexStart + nIndex) % nCycle] += EventsNumberCountRes.OffEventsNum[DVSSubFrameIndex::All][nIndex];
+			EventsData[(nIndexStart + nIndex) % nCycle] += EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex];
 			NumberData[(nIndexStart + nIndex) % nCycle]++;
 		}
 
@@ -509,12 +510,12 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		}
 	}
 
-	if (Light & LightTrigerType::OnEventsOnly)
+	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		//std::vector<int32_t> Gradient(nNumber - 1);
 		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		//{
-		//	Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex]));
+		//	Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
 		//}
 		//std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
 
@@ -528,7 +529,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
 		//{
-		//	double Gradient = ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex]));
+		//	double Gradient = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
 
 		//	if (Gradient >= GradientThre)
 		//	{
@@ -542,7 +543,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 
 		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 		{
-			EventsData[(nIndexStart + nIndex) % nCycle] += EventsNumberCountRes.OnEventsNum[DVSSubFrameIndex::All][nIndex];
+			EventsData[(nIndexStart + nIndex) % nCycle] += EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex];
 			NumberData[(nIndexStart + nIndex) % nCycle]++;
 		}
 
@@ -569,7 +570,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, ImageContrastSensitivityData& ImageContrastSensitivityRes)
+bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSImageContrastSensitivityType& ImageContrastSensitivityRes)
 {
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -578,7 +579,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
-	PeakInfo tempPeak;
+	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
 		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
@@ -598,7 +599,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 	uint32_t nColSize = m_ActiveArea.Right - m_ActiveArea.Left + 1;
 	uint32_t nAllSize = nRowSize * nColSize;
 
-	if (Light & LightTrigerType::OffEventsOnly)
+	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		if (Peak->nOffEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -608,7 +609,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			return false;
 		}
 
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			ImageContrastSensitivityRes.OffEventsRatio[nChannel] = 0;
 
@@ -618,7 +619,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			}
 
 			ImageContrastSensitivityRes.OffEventsRatio[nChannel] /= nPeakNum;
-			if (nChannel == DVSSubFrameIndex::All)
+			if (nChannel == SubFrameIndex::All)
 			{
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] /= nAllSize;
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] *= 100;
@@ -630,12 +631,12 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			}
 		}
 
-		ImageContrastSensitivityRes.R_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[DVSSubFrameIndex::R] / ImageContrastSensitivityRes.OffEventsRatio[DVSSubFrameIndex::Gb];
-		ImageContrastSensitivityRes.B_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[DVSSubFrameIndex::B] / ImageContrastSensitivityRes.OffEventsRatio[DVSSubFrameIndex::Gb];
-		ImageContrastSensitivityRes.Gr_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[DVSSubFrameIndex::Gr] / ImageContrastSensitivityRes.OffEventsRatio[DVSSubFrameIndex::Gb];
+		ImageContrastSensitivityRes.R_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+		ImageContrastSensitivityRes.B_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+		ImageContrastSensitivityRes.Gr_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
 	}
 
-	if (Light & LightTrigerType::OnEventsOnly)
+	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		if (Peak->nOnEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -645,7 +646,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			return false;
 		}
 
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			ImageContrastSensitivityRes.OnEventsRatio[nChannel] = 0;
 
@@ -655,7 +656,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			}
 
 			ImageContrastSensitivityRes.OnEventsRatio[nChannel] /= nPeakNum;
-			if (nChannel == DVSSubFrameIndex::All)
+			if (nChannel == SubFrameIndex::All)
 			{
 				ImageContrastSensitivityRes.OnEventsRatio[nChannel] /= nAllSize;
 				ImageContrastSensitivityRes.OnEventsRatio[nChannel] *= 100;
@@ -667,16 +668,16 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			}
 		}
 
-		ImageContrastSensitivityRes.R_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[DVSSubFrameIndex::R] / ImageContrastSensitivityRes.OnEventsRatio[DVSSubFrameIndex::Gb];
-		ImageContrastSensitivityRes.B_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[DVSSubFrameIndex::B] / ImageContrastSensitivityRes.OnEventsRatio[DVSSubFrameIndex::Gb];
-		ImageContrastSensitivityRes.Gr_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[DVSSubFrameIndex::Gr] / ImageContrastSensitivityRes.OnEventsRatio[DVSSubFrameIndex::Gb];
+		ImageContrastSensitivityRes.R_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
+		ImageContrastSensitivityRes.B_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
+		ImageContrastSensitivityRes.Gr_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
 
 	}
 
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, AccompaniedPeakAndDelayedPeakData& AccompaniedPeakAndDelayedPeakRes)
+bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSAccompaniedPeakAndDelayedPeakType& AccompaniedPeakAndDelayedPeakRes)
 {
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -685,7 +686,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
-	PeakInfo tempPeak;
+	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
 		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
@@ -700,7 +701,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			return false;
 		}
 	}
-	if (Light & LightTrigerType::OffEventsOnly)
+	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		if (Peak->nOffEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -721,7 +722,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			nPeakStartNum = Peak->nOffEventsPeakNumber - 1;
 		}
 
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			double OffEventsPeakNumber = 0;
 			double NextOffEventsPeakNumber = 0;
@@ -738,7 +739,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 		}
 	}
 
-	if (Light & LightTrigerType::OnEventsOnly)
+	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		if (Peak->nOnEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -759,7 +760,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			nPeakStartNum = Peak->nOnEventsPeakNumber - 1;
 		}
 
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			double OnEventsPeakNumber = 0;
 			double NextOffEventsPeakNumber = 0;
@@ -778,7 +779,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, SpatialResponseUniformityData& SpatialResponseUniformityRes)
+bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes)
 {
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -787,7 +788,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
-	PeakInfo tempPeak;
+	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
 		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
@@ -807,7 +808,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 	uint32_t nColSize = m_ActiveArea.Right - m_ActiveArea.Left + 1;
 	uint32_t nAllSize = nRowSize * nColSize;
 
-	if (Light & LightTrigerType::OffEventsOnly)
+	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		if (Peak->nOffEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -816,8 +817,8 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
-		CAPSDataContainer OffEventsUniformityBlockData[DVSSubFrameIndex::All + 1];
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		CAPSDataContainer OffEventsUniformityBlockData[SubFrameIndex::All + 1];
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			OffEventsUniformityBlockData[nChannel].Init(m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum, m_AlgorithmThre.nSpatialResponseUniformityColBlockNum, true);
 			SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = 0;
@@ -831,23 +832,9 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			for (uint32_t nCols = m_ActiveArea.Left; nCols < m_ActiveArea.Left + nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
 			{
 				double dValue = 0;
-				uint32_t nChannel = 0;
-				if (0 == (nRows % 2) && 0 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::Gb;
-				}
-				else if (0 == (nRows % 2) && 1 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::B;
-				}
-				else if (1 == (nRows % 2) && 0 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::R;
-				}
-				else if (1 == (nRows % 2) && 1 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::Gr;
-				}
+				SubFrameIndex nChannel = All;
+
+				GetChannel(nRows, nCols, nChannel);
 
 				for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
 				{
@@ -856,12 +843,12 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 						++dValue;
 					}
 				}
-				OffEventsUniformityBlockData[DVSSubFrameIndex::All].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
+				OffEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
 				OffEventsUniformityBlockData[nChannel].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
 			}
 		}
 
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			OffEventsUniformityBlockData[nChannel] /= nRowBlockSize * nColBlockSize;
 			OffEventsUniformityBlockData[nChannel] *= 100;
@@ -877,7 +864,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		}
 	}
 
-	if (Light & LightTrigerType::OnEventsOnly)
+	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		if (Peak->nOnEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -886,8 +873,8 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
-		CAPSDataContainer OnEventsUniformityBlockData[DVSSubFrameIndex::All + 1];
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		CAPSDataContainer OnEventsUniformityBlockData[SubFrameIndex::All + 1];
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			OnEventsUniformityBlockData[nChannel].Init(m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum, m_AlgorithmThre.nSpatialResponseUniformityColBlockNum, true);
 			SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = 0;
@@ -908,30 +895,15 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 						++dValue;
 					}
 				}
-				uint32_t nChannel = 0;
-				if (0 == (nRows % 2) && 0 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::Gb;
-				}
-				else if (0 == (nRows % 2) && 1 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::B;
-				}
-				else if (1 == (nRows % 2) && 0 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::R;
-				}
-				else if (1 == (nRows % 2) && 1 == (nCols % 2))
-				{
-					nChannel = DVSSubFrameIndex::Gr;
-				}
+				SubFrameIndex nChannel = All;
+				GetChannel(nRows, nCols, nChannel);
 
-				OnEventsUniformityBlockData[DVSSubFrameIndex::All].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
+				OnEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
 				OnEventsUniformityBlockData[nChannel].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
 			}
 		}
 
-		for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			OnEventsUniformityBlockData[nChannel] /= nRowBlockSize * nColBlockSize;
 			OnEventsUniformityBlockData[nChannel] *= 100;
@@ -949,7 +921,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, DVSBadpixelData& BadpixelRes)
+bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSBadpixelType& BadpixelRes)
 {
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -958,7 +930,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
-	PeakInfo tempPeak;
+	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
 		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
@@ -978,7 +950,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 	uint32_t nColSize = m_ActiveArea.Right - m_ActiveArea.Left + 1;
 	uint32_t nAllSize = nRowSize * nColSize;
 
-	if (Light & LightTrigerType::OffEventsOnly)
+	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		if (Peak->nOffEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -1083,7 +1055,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakIn
 		}
 	}
 
-	if (Light & LightTrigerType::OnEventsOnly)
+	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		if (Peak->nOnEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
@@ -1250,12 +1222,12 @@ uint32_t CAlpDVSMPAlgorithm::GetDataNum()
 	return m_RawDataContainer.size();
 }
 
-void CAlpDVSMPAlgorithm::ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, EventsNumberCountData& EventsNumberCountRes)
+void CAlpDVSMPAlgorithm::ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, DVSEventsNumberCountType& EventsNumberCountRes)
 {
 	for (uint32_t nIndex = nNumberStart; nIndex < nNumberEnd; nIndex++)
 	{
 		m_RawDataContainer[nIndexStart + nIndex].CountEvents(m_ActiveArea);
-		for (uint32_t i = 0; i <= DVSSubFrameIndex::All; i++)
+		for (uint32_t i = 0; i <= SubFrameIndex::All; i++)
 		{
 			EventsNumberCountRes.NoEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_NoEventsNum[i];
 			EventsNumberCountRes.OnEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_OnEventsNum[i];
@@ -1295,6 +1267,85 @@ bool CAlpDVSMPAlgorithm::WriteLog(std::string strMessage)
 	}
 	m_LogMutex.unlock();
 	return bRet;
+}
+
+void CAlpDVSMPAlgorithm::GetChannel(uint32_t nRows, uint32_t nCols, SubFrameIndex& nChannel)
+{
+	switch (m_PixelFormat)
+	{
+	case BayerGBRG:
+		if (0 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gb;
+		}
+		else if (0 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::B;
+		}
+		else if (1 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::R;
+		}
+		else if (1 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gr;
+		}
+		break;
+	case BayerBGGR:
+		if (0 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::B;
+		}
+		else if (0 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gb;
+		}
+		else if (1 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gr;
+		}
+		else if (1 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::R;
+		}
+		break;
+	case BayerRGGB:
+		if (0 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::R;
+		}
+		else if (0 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gr;
+		}
+		else if (1 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gb;
+		}
+		else if (1 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::B;
+		}
+		break;
+	case BayerGRBG:
+		if (0 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gr;
+		}
+		else if (0 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::R;
+		}
+		else if (1 == (nRows & 1) && 0 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::B;
+		}
+		else if (1 == (nRows & 1) && 1 == (nCols & 1))
+		{
+			nChannel = SubFrameIndex::Gb;
+		}
+		break;
+	}
 }
 
 double CAlpDVSMPAlgorithm::Mean(std::vector<double>& RawData, uint32_t nLens)

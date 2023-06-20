@@ -16,5 +16,5 @@ private:
     Ui::DialogFindPeak ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    PeakInfo m_Data;
+    DVSPeakInfo m_Data;
 };

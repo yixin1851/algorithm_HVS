@@ -17,5 +17,5 @@ private:
     Ui::DialogCountEvents ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    EventsNumberCountData m_Data;
+    DVSEventsNumberCountType m_Data;
 };

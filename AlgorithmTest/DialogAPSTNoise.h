@@ -16,7 +16,5 @@ private:
     Ui::DialogAPSTNoise ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<double> m_TNoiseData;
-    std::vector<double> m_RowTNoiseData;
-    std::vector<double> m_ColTNoiseData;
+    APSTNoiseType m_TNoiseData;
 };

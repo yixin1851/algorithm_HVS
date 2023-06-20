@@ -16,9 +16,9 @@ CDialogAPSBadPixel::CDialogAPSBadPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditROILeft->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditROIDown->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditBadPixelRadius->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditBadLineRadius->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditBadPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
-	ui.lineEditDeadPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
-	ui.lineEditDeadLineThre->setValidator(new QDoubleValidator(0, 1, 3, this));
+	ui.lineEditBadLineThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 
 	ui.lineEditROIUp->setEnabled(false);
 	ui.lineEditROIRight->setEnabled(false);
@@ -33,18 +33,14 @@ CDialogAPSBadPixel::CDialogAPSBadPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 
 	ui.lineEditBadPixelRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadPixelRadius));
 	ui.lineEditBadPixelThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dBadPixelThre));
-	ui.lineEditDeadPixelThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dDeadPixelThre));
-	ui.lineEditDeadLineThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dDeadLineThre));
+	ui.lineEditBadLineRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadLineRadius));
+	ui.lineEditBadLineThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dBadLineThre));
 
 	ui.tabWidgetView->insertTab(0, &m_widgetTableView, "BadPixelResult");
-	ui.tabWidgetView->insertTab(1, &m_widgetImageView[0], "Gb1");
-	ui.tabWidgetView->insertTab(2, &m_widgetImageView[1], "Gb2");
-	ui.tabWidgetView->insertTab(3, &m_widgetImageView[2], "B1");
-	ui.tabWidgetView->insertTab(4, &m_widgetImageView[3], "B2");
-	ui.tabWidgetView->insertTab(5, &m_widgetImageView[4], "R1");
-	ui.tabWidgetView->insertTab(6, &m_widgetImageView[5], "R2");
-	ui.tabWidgetView->insertTab(7, &m_widgetImageView[6], "Gr1");
-	ui.tabWidgetView->insertTab(8, &m_widgetImageView[7], "Gr2");
+	ui.tabWidgetView->insertTab(1, &m_widgetImageView[0], "Gb");
+	ui.tabWidgetView->insertTab(2, &m_widgetImageView[1], "B");
+	ui.tabWidgetView->insertTab(3, &m_widgetImageView[2], "R");
+	ui.tabWidgetView->insertTab(4, &m_widgetImageView[3], "Gr");
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(BadPixel()), Qt::QueuedConnection);
@@ -65,7 +61,7 @@ void CDialogAPSBadPixel::BadPixel()
 	ui.pushButtonStart->setEnabled(false);
 	m_widgetTableView.Clear();
 
-	for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+	for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 	{
 		m_widgetImageView[nIndex].Clear();
 	}
@@ -75,8 +71,8 @@ void CDialogAPSBadPixel::BadPixel()
 
 	auto tempThre = m_pAPSAlgoInterface->GetAlgorithmThre();
 	tempThre.dBadPixelThre = ui.lineEditBadPixelThre->text().toDouble();
-	tempThre.dDeadPixelThre = ui.lineEditDeadPixelThre->text().toDouble();
-	tempThre.dDeadLineThre = ui.lineEditDeadLineThre->text().toDouble();
+	tempThre.dBadLineThre = ui.lineEditBadLineThre->text().toDouble();
+	tempThre.nBadLineRadius = ui.lineEditBadLineRadius->text().toUInt();
 	tempThre.nBadPixelRadius = ui.lineEditBadPixelRadius->text().toUInt();
 	m_pAPSAlgoInterface->SetAlgorithmThre(tempThre);
 
@@ -102,13 +98,8 @@ void CDialogAPSBadPixel::BadPixel()
 		bRet = m_pAPSAlgoInterface->BadPixel(nIndexStart, nNumber, roi, m_BadPixel);
 		if (bRet)
 		{
-			std::vector<BadPixelMaskData> MaskData(APSSubFrameIndex::SubFrameNum);
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
-			{
-				MaskData[nIndex] = m_BadPixel[nIndex].BadPixelMask;
-			}
 			auto start = clock();
-			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, MaskData);
+			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, m_BadPixel);
 			auto end = clock();
 			time = end - start;
 		}
@@ -120,39 +111,47 @@ void CDialogAPSBadPixel::BadPixel()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		RowName << "BadPixelNum" << "SingletNum" << "CoupletNum" << "ClusterNum" << "DeadPixelNum" << "DeadLineNum";
-		ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+		RowName << "BadPixelNum" << "SingletNum" << "CoupletNum" << "ClusterNum" << "LadderNum" << "DefectRowNum" << "DefectColNum";
+		ColName << "Gb" << "B" << "R" << "Gr" << "Total";
 
-		std::vector<std::vector<double>> Data(6);
+		std::vector<std::vector<double>> Data(7);
 
-		for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 		{
-			Data[0].push_back(m_BadPixel[nIndex].BadPixelNum);
-			Data[1].push_back(m_BadPixel[nIndex].SingletNum);
-			Data[2].push_back(m_BadPixel[nIndex].CoupletNum);
-			Data[3].push_back(m_BadPixel[nIndex].ClusterNum);
-			Data[4].push_back(m_BadPixel[nIndex].DeadPixelNum);
-			Data[5].push_back(m_BadPixel[nIndex].DeadLineNum);
+			Data[0].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelNum);
+			Data[1].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].SingletNum);
+			Data[2].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].CoupletNum);
+			Data[3].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].ClusterNum);
+			Data[4].push_back(0);
+			Data[5].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].DefectRowNum);
+			Data[6].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].DefectColNum);
 		}
-
+		Data[0].push_back(m_BadPixel.BadPixelNum);
+		Data[1].push_back(m_BadPixel.SingletNum);
+		Data[2].push_back(m_BadPixel.CoupletNum);
+		Data[3].push_back(m_BadPixel.ClusterNum);
+		Data[4].push_back(m_BadPixel.LadderNum);
+		Data[5].push_back(0);
+		Data[6].push_back(0);
 		m_widgetTableView.SetData(RowName, ColName, Data);
 
 		uint32_t nRow = 0, nCol = 0;
 		m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
+		nRow /= 2;
+		nCol /= 2;
 
 		uint8_t* pImage = new uint8_t[nRow * nCol];
-		for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
+		for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
 		{
 			memset(pImage, 0, nRow * nCol);
 
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel[nChannel].BadPixelMask.BadPixelNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.BadPixelNum; nIndex++)
 			{
-				pImage[m_BadPixel[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
+				pImage[m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
 			}
 			m_widgetImageView[nChannel].SetGrayData(pImage, nCol, nRow);
 		}
 		delete[] pImage;
-
 	}
 	else
 	{
@@ -173,61 +172,81 @@ void CDialogAPSBadPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
+			outfile << "Gb,B,R,Gr,Total" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_BadPixel[nIndex].BadPixelNum) << ",";
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelNum) << ",";
+			}
+			outfile << std::to_string(m_BadPixel.BadPixelNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].SingletNum) << ",";
+			}
+			outfile << std::to_string(m_BadPixel.SingletNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].CoupletNum) << ",";
+			}
+			outfile << std::to_string(m_BadPixel.CoupletNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].ClusterNum) << ",";
+			}
+			outfile << std::to_string(m_BadPixel.ClusterNum) << ",";
+			outfile << std::endl;
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].DefectRowNum) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_BadPixel[nIndex].SingletNum) << ",";
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].DefectColNum) << ",";
 			}
 			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				outfile << std::to_string(m_BadPixel[nIndex].CoupletNum) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel[nIndex].ClusterNum) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel[nIndex].DeadPixelNum) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel[nIndex].DeadLineNum) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.size(); nIndex++)
-			{
-				for (uint32_t i = 0; i < m_BadPixel[nIndex].BadPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_BadPixel[nIndex].BadPixelMask.LocalData[i].x) << ",";
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].x) << ",";
 				}
 				outfile << std::endl;
-				for (uint32_t i = 0; i < m_BadPixel[nIndex].BadPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_BadPixel[nIndex].BadPixelMask.LocalData[i].y) << ",";
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].y) << ",";
 				}
 				outfile << std::endl;
-				for (uint32_t i = 0; i < m_BadPixel[nIndex].BadPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_BadPixel[nIndex].BadPixelMask.Flag[i]) << ",";
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.Flag[i]) << ",";
 				}
 				outfile << std::endl;
 			}
+
+			for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].x) << ",";
+			}
+			outfile << std::endl;
+			for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].y) << ",";
+			}
+			outfile << std::endl;
+			for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_BadPixel.BadPixelMask.Flag[i]) << ",";
+			}
+			outfile << std::endl;
 
 			outfile.close();
 		}

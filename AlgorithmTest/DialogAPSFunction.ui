@@ -20,33 +20,18 @@
    <bool>false</bool>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="3" column="4">
-    <widget class="QPushButton" name="pushButtonBadPixel">
-     <property name="text">
-      <string>BadPixel</string>
+   <item row="0" column="2">
+    <spacer name="verticalSpacer_3">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
      </property>
-    </widget>
-   </item>
-   <item row="2" column="4">
-    <widget class="QPushButton" name="pushButtonShading">
-     <property name="text">
-      <string>Shading</string>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>52</height>
+      </size>
      </property>
-    </widget>
-   </item>
-   <item row="7" column="4">
-    <widget class="QPushButton" name="pushButtonShow">
-     <property name="text">
-      <string>Show</string>
-     </property>
-    </widget>
-   </item>
-   <item row="4" column="4">
-    <widget class="QPushButton" name="pushButtonLinearity">
-     <property name="text">
-      <string>Linearity</string>
-     </property>
-    </widget>
+    </spacer>
    </item>
    <item row="1" column="0">
     <spacer name="horizontalSpacer_3">
@@ -61,81 +46,14 @@
      </property>
     </spacer>
    </item>
-   <item row="8" column="2">
-    <widget class="QPushButton" name="pushButtonSNoise">
+   <item row="1" column="1">
+    <widget class="QPushButton" name="pushButtonInit">
      <property name="text">
-      <string>SNoise</string>
+      <string>Init</string>
      </property>
     </widget>
    </item>
-   <item row="9" column="2">
-    <spacer name="verticalSpacer">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>51</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="4" column="2">
-    <widget class="QPushButton" name="pushButtonDataMean">
-     <property name="text">
-      <string>DataMean</string>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="3">
-    <spacer name="verticalSpacer_3">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>52</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="7" column="2">
-    <widget class="QPushButton" name="pushButtonTNoise">
-     <property name="text">
-      <string>TNoise</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="2">
-    <widget class="QPushButton" name="pushButtonDarkCurrent">
-     <property name="text">
-      <string>DarkCurrent</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="2">
-    <widget class="QPushButton" name="pushButtonHotPixel">
-     <property name="text">
-      <string>HotPixel</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="4" rowspan="2">
-    <spacer name="verticalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>51</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="1" column="3">
+   <item row="1" column="2">
     <spacer name="horizontalSpacer">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -148,42 +66,14 @@
      </property>
     </spacer>
    </item>
-   <item row="1" column="1" colspan="2">
-    <widget class="QPushButton" name="pushButtonInit">
+   <item row="1" column="3">
+    <widget class="QPushButton" name="pushButtonReadNoise">
      <property name="text">
-      <string>Init</string>
+      <string>ReadNoise</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="4">
-    <widget class="QPushButton" name="pushButtonSaturation">
-     <property name="text">
-      <string>Saturation</string>
-     </property>
-    </widget>
-   </item>
-   <item row="2" column="1" colspan="2">
-    <widget class="QPushButton" name="pushButtonImportData">
-     <property name="text">
-      <string>ImportData</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="4">
-    <widget class="QPushButton" name="pushButtonOverallSystemGain">
-     <property name="text">
-      <string>OverallSystemGain</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="2">
-    <widget class="QPushButton" name="pushButtonDSNU">
-     <property name="text">
-      <string>DSNU</string>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="5">
+   <item row="1" column="4">
     <spacer name="horizontalSpacer_2">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -196,14 +86,151 @@
      </property>
     </spacer>
    </item>
-   <item row="1" column="4">
+   <item row="1" column="5">
+    <widget class="QPushButton" name="pushButtonPedestal">
+     <property name="text">
+      <string>Pedestal</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="6">
+    <spacer name="horizontalSpacer_4">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>39</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="2" column="1">
+    <widget class="QPushButton" name="pushButtonImportData">
+     <property name="text">
+      <string>ImportData</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="3">
     <widget class="QPushButton" name="pushButtonBLC">
      <property name="text">
       <string>BLC</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="0" colspan="6">
+   <item row="3" column="1">
+    <widget class="QPushButton" name="pushButtonHotPixel">
+     <property name="text">
+      <string>HotPixel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="3">
+    <widget class="QPushButton" name="pushButtonShading">
+     <property name="text">
+      <string>Shading</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1">
+    <widget class="QPushButton" name="pushButtonDataMean">
+     <property name="text">
+      <string>DataMean</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="3">
+    <widget class="QPushButton" name="pushButtonBadPixel">
+     <property name="text">
+      <string>BadPixel</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1">
+    <widget class="QPushButton" name="pushButtonDSNU">
+     <property name="text">
+      <string>DSNU</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="3">
+    <widget class="QPushButton" name="pushButtonLinearity">
+     <property name="text">
+      <string>Linearity</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1">
+    <widget class="QPushButton" name="pushButtonDarkCurrent">
+     <property name="text">
+      <string>DarkCurrent</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="3" colspan="2">
+    <widget class="QPushButton" name="pushButtonOverallSystemGain">
+     <property name="text">
+      <string>OverallSystemGain</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="QPushButton" name="pushButtonTNoise">
+     <property name="text">
+      <string>TNoise</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="3">
+    <widget class="QPushButton" name="pushButtonSaturation">
+     <property name="text">
+      <string>Saturation</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="1">
+    <widget class="QPushButton" name="pushButtonSNoise">
+     <property name="text">
+      <string>SNoise</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="3">
+    <widget class="QPushButton" name="pushButtonShow">
+     <property name="text">
+      <string>Show</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="1">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>51</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="9" column="3">
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>51</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="10" column="0" colspan="7">
     <widget class="QLabel" name="labelVersion">
      <property name="text">
       <string>Algo Version：</string>

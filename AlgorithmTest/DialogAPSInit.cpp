@@ -17,6 +17,8 @@ CDialogAPSInit::CDialogAPSInit(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	connect(this, SIGNAL(accepted()), this, SLOT(Init()));
 	connect(ui.pushButtonBrowser, SIGNAL(clicked()), this, SLOT(Browser()));
 	connect(ui.comboBoxSensorType, SIGNAL(currentIndexChanged(int)), this, SLOT(RawDataInfoInit(int)), Qt::QueuedConnection);
+	connect(ui.lineEditTotalRowNumber, SIGNAL(editingFinished()), this, SLOT(ChangeUpDown()), Qt::QueuedConnection);
+	connect(ui.lineEditTotalColNumber, SIGNAL(editingFinished()), this, SLOT(ChangeLeftRight()), Qt::QueuedConnection);
 	emit(ui.comboBoxSensorType->currentIndexChanged(0));
 }
 
@@ -32,20 +34,52 @@ void CDialogAPSInit::RawDataInfoInit(int nIndex)
 	{
 		ui.lineEditTotalRowNumber->setText(QString::number(2488));
 		ui.lineEditTotalColNumber->setText(QString::number(3312));
-		ui.lineEditUp->setText(QString::number(5));
-		ui.lineEditDown->setText(QString::number(620));
-		ui.lineEditLeft->setText(QString::number(4));
-		ui.lineEditRight->setText(QString::number(799));
+		ui.lineEditUp->setText(QString::number(10));
+		ui.lineEditDown->setText(QString::number(1241));
+		ui.lineEditLeft->setText(QString::number(8));
+		ui.lineEditRight->setText(QString::number(1599));
 	}
 	else if (nIndex == SensorType::ALP_003BA)
 	{
 		ui.lineEditTotalRowNumber->setText(QString::number(2340));
 		ui.lineEditTotalColNumber->setText(QString::number(3264));
 		ui.lineEditUp->setText(QString::number(0));
-		ui.lineEditDown->setText(QString::number(584));
+		ui.lineEditDown->setText(QString::number(1169));
 		ui.lineEditLeft->setText(QString::number(0));
-		ui.lineEditRight->setText(QString::number(815));
+		ui.lineEditRight->setText(QString::number(1631));
 	}
+	else if (nIndex == SensorType::ALP_003BB)
+	{
+		ui.lineEditTotalRowNumber->setText(QString::number(2340));
+		ui.lineEditTotalColNumber->setText(QString::number(3264));
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(1169));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1631));
+	}
+	else if (nIndex == SensorType::ALP_003CA)
+	{
+		ui.lineEditTotalRowNumber->setText(QString::number(2448));
+		ui.lineEditTotalColNumber->setText(QString::number(3264));
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(1223));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1631));
+	}
+}
+
+void CDialogAPSInit::ChangeUpDown()
+{
+	uint32_t nRow = ui.lineEditTotalRowNumber->text().toUInt();
+	ui.lineEditUp->setText(QString::number(0));
+	ui.lineEditDown->setText(QString::number(nRow / 2 - 1));
+}
+
+void CDialogAPSInit::ChangeLeftRight()
+{
+	uint32_t nCol = ui.lineEditTotalColNumber->text().toUInt();
+	ui.lineEditLeft->setText(QString::number(0));
+	ui.lineEditRight->setText(QString::number(nCol / 2 - 1));
 }
 
 void CDialogAPSInit::Init()
@@ -55,17 +89,18 @@ void CDialogAPSInit::Init()
 	std::string strLogDir = ui.lineEditLogDir->text().toStdString();
 	bool bMultiThreadEnable = ui.checkBoxMultiThreadEnable->isChecked();
 	bool bLogEnable = ui.checkBoxLogEnable->isChecked();
+	int32_t nPixelFormat = ui.comboBoxPixelFormat->currentIndex();
 
 	if (m_pAPSAlgoInterface != nullptr)
 	{
 		delete m_pAPSAlgoInterface;
 	}
 
-	m_pAPSAlgoInterface = CreateAPSAlgoInterface(SensorType(nSensorType), RawType(nRawType), strLogDir);
+	m_pAPSAlgoInterface = CreateAPSAlgoInterface(SensorType(nSensorType), APSRawType(nRawType), strLogDir, PixelFormatType(nPixelFormat));
 	m_pAPSAlgoInterface->SetLogEnable(bLogEnable);
 	m_pAPSAlgoInterface->SetMultiThreadEnable(bMultiThreadEnable);
 
-	m_pAPSAlgoInterface->SetRawDataSize(ui.lineEditTotalRowNumber->text().toUInt(), ui.lineEditTotalColNumber->text().toUInt() / 2);
+	m_pAPSAlgoInterface->SetRawDataSize(ui.lineEditTotalRowNumber->text().toUInt(), ui.lineEditTotalColNumber->text().toUInt());
 	ROIArea ActiveArea = { ui.lineEditUp->text().toUInt(),ui.lineEditDown->text().toUInt(), ui.lineEditLeft->text().toUInt(), ui.lineEditRight->text().toUInt() };
 	m_pAPSAlgoInterface->SetActiveArea(ActiveArea);
 }

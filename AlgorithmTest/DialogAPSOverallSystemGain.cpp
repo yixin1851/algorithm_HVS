@@ -71,10 +71,11 @@ void CDialogAPSOverallSystemGain::OverallSystemGain()
 	}
 	else
 	{
-		std::vector<std::vector<double>> LightTNoise;
-		std::vector<std::vector<double>> LightMean;
-		std::vector<double> BaseTNoise;
-		std::vector<double>OneRes;
+		std::vector<APSTNoiseType> LightTNoise;
+		std::vector<APSDataMeanType> LightMean;
+		APSTNoiseType BaseTNoise;
+		APSTNoiseType OneRes;
+		APSDataMeanType OneDataRes;
 
 		for (uint32_t i = 0; i < IndexList.size() / 2; i++)
 		{
@@ -89,9 +90,9 @@ void CDialogAPSOverallSystemGain::OverallSystemGain()
 			{
 				bRet = false;
 			}
-			if (m_pAPSAlgoInterface->DataMean(nIndexStart, nNumber, roi, OneRes))
+			if (m_pAPSAlgoInterface->DataMean(nIndexStart, nNumber, roi, OneDataRes))
 			{
-				LightMean.push_back(OneRes);
+				LightMean.push_back(OneDataRes);
 			}
 			else
 			{
@@ -118,38 +119,34 @@ void CDialogAPSOverallSystemGain::OverallSystemGain()
 
 			QStringList RowName, ColName;
 			RowName << " ";
-			ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+			ColName << "Gb" << "B" << "R" << "Gr";
 
 			std::vector<std::vector<double>> Data(1);
 
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				Data[0].push_back(m_GainK[nIndex]);
+				Data[0].push_back(m_GainK.SubFrameGainK[nIndex]);
 			}
 
 			m_widgetTableView.SetData(RowName, ColName, Data);
 
-			QVector<double> XData[APSSubFrameIndex::SubFrameNum];
-			QVector<double> YData[APSSubFrameIndex::SubFrameNum];
+			QVector<double> XData[SubFrameIndex::All];
+			QVector<double> YData[SubFrameIndex::All];
 
 			for (uint32_t nIndex = 0; nIndex < LightTNoise.size(); nIndex++)
 			{
-				for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
+				for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
 				{
-					XData[nChannel].push_back(LightMean[nIndex][nChannel]);
+					XData[nChannel].push_back(LightMean[nIndex].SubFrameDataMean[nChannel]);
 
-					YData[nChannel].push_back(LightTNoise[nIndex][nChannel] * LightTNoise[nIndex][nChannel] - BaseTNoise[nChannel]* BaseTNoise[nChannel]);
+					YData[nChannel].push_back(LightTNoise[nIndex].SubFrameTNoiseData[nChannel].TempNoise * LightTNoise[nIndex].SubFrameTNoiseData[nChannel].TempNoise - BaseTNoise.SubFrameTNoiseData[nChannel].TempNoise * BaseTNoise.SubFrameTNoiseData[nChannel].TempNoise);
 				}
 			}
 
-			m_widgetChartView.SetLine("Gb1", XData[Gb1], YData[Gb1]);
-			m_widgetChartView.SetLine("Gb2", XData[Gb2], YData[Gb2]);
-			m_widgetChartView.SetLine("B1",  XData[B1], YData[B1]);
-			m_widgetChartView.SetLine("B2",  XData[B2], YData[B2]);
-			m_widgetChartView.SetLine("R1",  XData[R1], YData[R1]);
-			m_widgetChartView.SetLine("R2",  XData[R2], YData[R2]);
-			m_widgetChartView.SetLine("Gr1", XData[Gr1], YData[Gr1]);
-			m_widgetChartView.SetLine("Gr2", XData[Gr2], YData[Gr2]);
+			m_widgetChartView.SetLine("Gb", XData[Gb], YData[Gb]);
+			m_widgetChartView.SetLine("B",  XData[B], YData[B]);
+			m_widgetChartView.SetLine("R",  XData[R], YData[R]);
+			m_widgetChartView.SetLine("Gr", XData[Gr], YData[Gr]);
 		}
 		else
 		{
@@ -171,10 +168,10 @@ void CDialogAPSOverallSystemGain::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_GainK.size(); nIndex++)
+			outfile << "Gb,B,R,Gr" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < m_GainK.SubFrameGainK.size(); nIndex++)
 			{
-				outfile << std::to_string(m_GainK[nIndex]) << ",";
+				outfile << std::to_string(m_GainK.SubFrameGainK[nIndex]) << ",";
 			}
 			outfile << std::endl;
 

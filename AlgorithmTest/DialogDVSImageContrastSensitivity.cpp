@@ -30,7 +30,7 @@ void CDialogDVSImageContrastSensitivity::ImageContrastSensitivity()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->ImageContrastSensitivity(nIndexStart, nNumber, nullptr, nPeakNum, LightTrigerType(nLigtType + 1), m_Data);
+	bRet = m_pDVSAlgoInterface->ImageContrastSensitivity(nIndexStart, nNumber, nullptr, nPeakNum, DVSLightTrigerType(nLigtType + 1), m_Data);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -47,11 +47,11 @@ void CDialogDVSImageContrastSensitivity::ImageContrastSensitivity()
 		{
 			std::vector<double> OffData;
 			RowName << "OffEvents";
-			OffData.push_back(m_Data.OffEventsRatio[DVSSubFrameIndex::All]);
-			OffData.push_back(m_Data.OffEventsRatio[DVSSubFrameIndex::Gb]);
-			OffData.push_back(m_Data.OffEventsRatio[DVSSubFrameIndex::B]);
-			OffData.push_back(m_Data.OffEventsRatio[DVSSubFrameIndex::R]);
-			OffData.push_back(m_Data.OffEventsRatio[DVSSubFrameIndex::Gr]);
+			OffData.push_back(m_Data.OffEventsRatio[SubFrameIndex::All]);
+			OffData.push_back(m_Data.OffEventsRatio[SubFrameIndex::Gb]);
+			OffData.push_back(m_Data.OffEventsRatio[SubFrameIndex::B]);
+			OffData.push_back(m_Data.OffEventsRatio[SubFrameIndex::R]);
+			OffData.push_back(m_Data.OffEventsRatio[SubFrameIndex::Gr]);
 			OffData.push_back(m_Data.R_Gb_OffEventsRatio);
 			OffData.push_back(m_Data.B_Gb_OffEventsRatio);
 			OffData.push_back(m_Data.Gr_Gb_OffEventsRatio);
@@ -62,11 +62,11 @@ void CDialogDVSImageContrastSensitivity::ImageContrastSensitivity()
 		{
 			std::vector<double> OnData;
 			RowName << "OnEvents";
-			OnData.push_back(m_Data.OnEventsRatio[DVSSubFrameIndex::All]);
-			OnData.push_back(m_Data.OnEventsRatio[DVSSubFrameIndex::Gb]);
-			OnData.push_back(m_Data.OnEventsRatio[DVSSubFrameIndex::B]);
-			OnData.push_back(m_Data.OnEventsRatio[DVSSubFrameIndex::R]);
-			OnData.push_back(m_Data.OnEventsRatio[DVSSubFrameIndex::Gr]);
+			OnData.push_back(m_Data.OnEventsRatio[SubFrameIndex::All]);
+			OnData.push_back(m_Data.OnEventsRatio[SubFrameIndex::Gb]);
+			OnData.push_back(m_Data.OnEventsRatio[SubFrameIndex::B]);
+			OnData.push_back(m_Data.OnEventsRatio[SubFrameIndex::R]);
+			OnData.push_back(m_Data.OnEventsRatio[SubFrameIndex::Gr]);
 			OnData.push_back(m_Data.R_Gb_OnEventsRatio);
 			OnData.push_back(m_Data.B_Gb_OnEventsRatio);
 			OnData.push_back(m_Data.Gr_Gb_OnEventsRatio);
@@ -95,20 +95,20 @@ void CDialogDVSImageContrastSensitivity::Export()
 		if (!outfile.fail())
 		{
 			outfile << "EventsRatio(All)," << "EventsRatio(Gb)," << "EventsRatio(B)," << "EventsRatio(R)," << "EventsRatio(Gr)," << "R/Gb," << "B/Gb," << "Gr/Gb" << std::endl;
-			outfile << std::to_string(m_Data.OffEventsRatio[DVSSubFrameIndex::All]) << ",";
-			outfile << std::to_string(m_Data.OffEventsRatio[DVSSubFrameIndex::Gb]) << ",";
-			outfile << std::to_string(m_Data.OffEventsRatio[DVSSubFrameIndex::B]) << ",";
-			outfile << std::to_string(m_Data.OffEventsRatio[DVSSubFrameIndex::R]) << ",";
-			outfile << std::to_string(m_Data.OffEventsRatio[DVSSubFrameIndex::Gr]) << ",";
+			outfile << std::to_string(m_Data.OffEventsRatio[SubFrameIndex::All]) << ",";
+			outfile << std::to_string(m_Data.OffEventsRatio[SubFrameIndex::Gb]) << ",";
+			outfile << std::to_string(m_Data.OffEventsRatio[SubFrameIndex::B]) << ",";
+			outfile << std::to_string(m_Data.OffEventsRatio[SubFrameIndex::R]) << ",";
+			outfile << std::to_string(m_Data.OffEventsRatio[SubFrameIndex::Gr]) << ",";
 			outfile << std::to_string(m_Data.R_Gb_OffEventsRatio) << ",";
 			outfile << std::to_string(m_Data.B_Gb_OffEventsRatio) << ",";
 			outfile << std::to_string(m_Data.Gr_Gb_OffEventsRatio) << std::endl;
 
-			outfile << std::to_string(m_Data.OnEventsRatio[DVSSubFrameIndex::All]) << ",";
-			outfile << std::to_string(m_Data.OnEventsRatio[DVSSubFrameIndex::Gb]) << ",";
-			outfile << std::to_string(m_Data.OnEventsRatio[DVSSubFrameIndex::B]) << ",";
-			outfile << std::to_string(m_Data.OnEventsRatio[DVSSubFrameIndex::R]) << ",";
-			outfile << std::to_string(m_Data.OnEventsRatio[DVSSubFrameIndex::Gr]) << ",";
+			outfile << std::to_string(m_Data.OnEventsRatio[SubFrameIndex::All]) << ",";
+			outfile << std::to_string(m_Data.OnEventsRatio[SubFrameIndex::Gb]) << ",";
+			outfile << std::to_string(m_Data.OnEventsRatio[SubFrameIndex::B]) << ",";
+			outfile << std::to_string(m_Data.OnEventsRatio[SubFrameIndex::R]) << ",";
+			outfile << std::to_string(m_Data.OnEventsRatio[SubFrameIndex::Gr]) << ",";
 			outfile << std::to_string(m_Data.R_Gb_OnEventsRatio) << ",";
 			outfile << std::to_string(m_Data.B_Gb_OnEventsRatio) << ",";
 			outfile << std::to_string(m_Data.Gr_Gb_OnEventsRatio) << std::endl;

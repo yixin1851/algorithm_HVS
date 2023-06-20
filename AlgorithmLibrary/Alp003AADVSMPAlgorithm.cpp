@@ -1,7 +1,7 @@
 #include "Alp003AADVSMPAlgorithm.h"
 
-CAlp003AADVSMPAlgorithm::CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum) :
-	CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum)
+CAlp003AADVSMPAlgorithm::CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat) :
+	CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat)
 {
 	m_nTotalRow = 1224;
 	m_nTotalCol = 1632;
@@ -25,7 +25,7 @@ bool CAlp003AADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	{
 		if (Decoder(pBinData, pRawData, m_nTotalRow, m_nTotalCol, &pos, nLens))
 		{
-			m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol);
+			m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, m_PixelFormat);
 			for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
 			{
 				for (uint32_t nCols = 0; nCols < m_nTotalCol; nCols++)

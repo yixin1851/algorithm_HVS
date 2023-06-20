@@ -18,7 +18,7 @@ private:
     Ui::DialogAPSLinearity ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<LinearityData> m_LinearityData;
+    APSLinearityType m_LinearityData;
     CWidgetTableView m_widgetTableView;
     CWidgetChartView m_widgetChartView;
 };

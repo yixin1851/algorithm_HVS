@@ -17,5 +17,5 @@ private:
     Ui::DialogStationaryNoise ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    StationaryNoiseData m_Data;
+    DVSStationaryNoiseType m_Data;
 };

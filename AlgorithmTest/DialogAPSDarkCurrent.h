@@ -18,7 +18,7 @@ private:
     Ui::DialogAPSDarkCurrent ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<double> m_DarkCurrent;
+    APSDarkCurrentType m_DarkCurrent;
     CWidgetTableView m_widgetTableView;
     CWidgetChartView m_widgetChartView;
 };

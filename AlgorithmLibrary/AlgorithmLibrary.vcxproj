@@ -33,7 +33,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -79,6 +79,9 @@
     <ExecutablePath>$(VC_ExecutablePath_x64);$(CommonExecutablePath)</ExecutablePath>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <TargetName>$(ProjectName)d</TargetName>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>$(ProjectName)d</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -141,8 +144,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Alp003AAAPSMPAlgorithm.h" />
     <ClInclude Include="Alp003AADVSMPAlgorithm.h" />
+    <ClInclude Include="Alp003BAAPSMPAlgorithm.h" />
     <ClInclude Include="Alp003BBDVSMPAlgorithm.h" />
+    <ClInclude Include="Alp003CAAPSMPAlgorithm.h" />
     <ClInclude Include="Alp003CADVSMPAlgorithm.h" />
     <ClInclude Include="AlpAPSMPAlgorithm.h" />
     <ClInclude Include="AlpDVSMPAlgorithm.h" />
@@ -153,11 +159,16 @@
     <ClInclude Include="DVS03BADecoder.h" />
     <ClInclude Include="DVSDataContainer.h" />
     <ClInclude Include="AlpMPAlgoInterface.h" />
+    <ClInclude Include="Alp003BBAPSMPAlgorithm.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Alp003AAAPSMPAlgorithm.cpp" />
     <ClCompile Include="Alp003AADVSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp003BAAPSMPAlgorithm.cpp" />
     <ClCompile Include="Alp003BADVSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp003BBAPSMPAlgorithm.cpp" />
     <ClCompile Include="Alp003BBDVSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp003CAAPSMPAlgorithm.cpp" />
     <ClCompile Include="Alp003CADVSMPAlgorithm.cpp" />
     <ClCompile Include="AlpAPSMPAlgorithm.cpp" />
     <ClCompile Include="AlpDVSMPAlgorithm.cpp" />

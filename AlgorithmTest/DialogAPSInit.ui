@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>498</width>
+    <width>512</width>
     <height>357</height>
    </rect>
   </property>
@@ -35,41 +35,66 @@
      </item>
      <item>
       <property name="text">
-       <string>03CA</string>
+       <string>03BB</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>04AA</string>
+       <string>03CA</string>
       </property>
      </item>
     </widget>
    </item>
    <item row="0" column="2">
-    <spacer name="horizontalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+    <widget class="QLabel" name="label_10">
+     <property name="text">
+      <string>PixelFormat</string>
      </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>80</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
+    </widget>
    </item>
    <item row="0" column="3" colspan="2">
-    <spacer name="horizontalSpacer_3">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>80</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
+    <widget class="QComboBox" name="comboBoxPixelFormat">
+     <item>
+      <property name="text">
+       <string>BayerGBRG</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>BayerBGGR</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>BayerRGGB</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>BayerGRBG</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>QuadBayerGBRG</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>QuadBayerBGGR</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>QuadBayerRGGB</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>QuadBayerGRBG</string>
+      </property>
+     </item>
+    </widget>
    </item>
    <item row="0" column="5">
     <spacer name="horizontalSpacer_4">
@@ -106,6 +131,16 @@
      <item>
       <property name="text">
        <string>Raw12</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>UNPACK10</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>UNPACK12</string>
       </property>
      </item>
     </widget>
@@ -391,7 +426,7 @@
      </property>
     </spacer>
    </item>
-   <item row="7" column="5" colspan="2">
+   <item row="7" column="4" colspan="3">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

@@ -1,7 +1,7 @@
 #include "Alp003BADVSMPAlgorithm.h"
 
-CAlp003BADVSMPAlgorithm::CAlp003BADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum)
-	:CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum)
+CAlp003BADVSMPAlgorithm::CAlp003BADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
+	:CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat)
 {
 	m_nTotalRow = (1224 - 56) / 2;
 	m_nTotalCol = 1632;
@@ -26,7 +26,7 @@ bool CAlp003BADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 	{
 		uint8_t nNeedSubFrameIndex = 0;
-		m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true);
+		m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true, m_PixelFormat);
 		uint8_t nSubFrameIndex = 0;
 		uint64_t nTimeStamp = 0;
 		while (nNeedSubFrameIndex != 4)

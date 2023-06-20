@@ -73,7 +73,26 @@
     </widget>
    </item>
    <item>
-    <widget class="CWidgetImageView" name="widgetImageView" native="true"/>
+    <widget class="QTabWidget" name="tabWidget">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     <widget class="CWidgetImageView" name="widgetImageView">
+      <attribute name="title">
+       <string>Image</string>
+      </attribute>
+     </widget>
+     <widget class="QWidget" name="widgetTableView">
+      <attribute name="title">
+       <string>Data</string>
+      </attribute>
+      <layout class="QGridLayout" name="gridLayout">
+       <item row="0" column="0">
+        <widget class="QTableView" name="tableView"/>
+       </item>
+      </layout>
+     </widget>
+    </widget>
    </item>
   </layout>
  </widget>

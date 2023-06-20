@@ -30,7 +30,7 @@ void CDialogDVSAccompaniedPeakAndDelayedPeak::AccompaniedPeakAndDelayedPeak()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->AccompaniedPeakAndDelayedPeak(nIndexStart, nNumber, nullptr, nPeakNum, LightTrigerType(nLigtType + 1), m_Data);
+	bRet = m_pDVSAlgoInterface->AccompaniedPeakAndDelayedPeak(nIndexStart, nNumber, nullptr, nPeakNum, DVSLightTrigerType(nLigtType + 1), m_Data);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -46,20 +46,20 @@ void CDialogDVSAccompaniedPeakAndDelayedPeak::AccompaniedPeakAndDelayedPeak()
 		{
 			std::vector<double> AccompaniedPeakEventsRatioOff;
 			RowName << "AccompaniedPeakEventsRatio(Off)";
-			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::All]);
-			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::Gb]);
-			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::B]);
-			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::R]);
-			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::Gr]);
+			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::All]);
+			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::Gb]);
+			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::B]);
+			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::R]);
+			AccompaniedPeakEventsRatioOff.push_back(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::Gr]);
 			Data.push_back(AccompaniedPeakEventsRatioOff);
 
 			std::vector<double> DelayedPeakEventsRatioOff;
 			RowName << "DelayedPeakEventsRatio(Off)";
-			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::All]);
-			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::Gb]);
-			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::B]);
-			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::R]);
-			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::Gr]);
+			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::All]);
+			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::Gb]);
+			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::B]);
+			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::R]);
+			DelayedPeakEventsRatioOff.push_back(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::Gr]);
 			Data.push_back(DelayedPeakEventsRatioOff);
 
 		}
@@ -68,20 +68,20 @@ void CDialogDVSAccompaniedPeakAndDelayedPeak::AccompaniedPeakAndDelayedPeak()
 		{
 			std::vector<double> AccompaniedPeakEventsRatioOn;
 			RowName << "AccompaniedPeakEventsRatio(On)";
-			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::All]);
-			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::Gb]);
-			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::B]);
-			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::R]);
-			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::Gr]);
+			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::All]);
+			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::Gb]);
+			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::B]);
+			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::R]);
+			AccompaniedPeakEventsRatioOn.push_back(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::Gr]);
 			Data.push_back(AccompaniedPeakEventsRatioOn);
 
 			std::vector<double> DelayedPeakEventsRatioOn;
 			RowName << "DelayedPeakEventsRatio(On)";
-			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::All]);
-			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::Gb]);
-			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::B]);
-			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::R]);
-			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::Gr]);
+			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::All]);
+			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::Gb]);
+			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::B]);
+			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::R]);
+			DelayedPeakEventsRatioOn.push_back(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::Gr]);
 			Data.push_back(DelayedPeakEventsRatioOn);
 		}
 		ui.widgetTableView->SetData(RowName, ColName, Data);
@@ -108,29 +108,29 @@ void CDialogDVSAccompaniedPeakAndDelayedPeak::Export()
 		{
 			outfile << "All" << "Gb" << "B" << "R" << "Gr"<<std::endl;
 
-			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::All]) << ",";
-			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::Gb]) << ",";
-			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::B]) << ",";
-			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::R]) << ",";
-			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[DVSSubFrameIndex::Gr]) << std::endl;
+			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::All]) << ",";
+			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::Gb]) << ",";
+			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::B]) << ",";
+			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::R]) << ",";
+			outfile << std::to_string(m_Data.dAccompaniedPeakOffEventsRatio[SubFrameIndex::Gr]) << std::endl;
 
-			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::All]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::Gb]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::B]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::R]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[DVSSubFrameIndex::Gr]) << std::endl;
+			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::All]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::Gb]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::B]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::R]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOffEventsRatio[SubFrameIndex::Gr]) << std::endl;
 
-			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::All])<<",";
-			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::Gb]) << ",";
-			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::B]) << ",";
-			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::R]) << ",";
-			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[DVSSubFrameIndex::Gr]) << std::endl;
+			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::All])<<",";
+			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::Gb]) << ",";
+			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::B]) << ",";
+			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::R]) << ",";
+			outfile<<std::to_string(m_Data.dAccompaniedPeakOnEventsRatio[SubFrameIndex::Gr]) << std::endl;
 
-			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::All]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::Gb]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::B]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::R]) << ",";
-			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[DVSSubFrameIndex::Gr]) << std::endl;
+			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::All]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::Gb]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::B]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::R]) << ",";
+			outfile << std::to_string(m_Data.dDelayedPeakOnEventsRatio[SubFrameIndex::Gr]) << std::endl;
 
 			outfile.close();
 		}

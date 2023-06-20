@@ -16,5 +16,5 @@ private:
     Ui::DialogAPSDataMean ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<double> m_DataMean;
+    APSDataMeanType m_DataMean;
 };

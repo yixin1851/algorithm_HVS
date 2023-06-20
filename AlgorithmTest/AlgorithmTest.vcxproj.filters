@@ -142,6 +142,12 @@
     <ClCompile Include="DialogAPSSaturation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DialogAPSPedestal.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSReadNoise.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="WidgetTableView.ui">
@@ -241,6 +247,12 @@
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="DialogAPSSaturation.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSPedestal.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSReadNoise.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>
@@ -345,6 +357,12 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="DialogAPSSaturation.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSPedestal.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSReadNoise.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

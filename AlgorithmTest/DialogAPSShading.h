@@ -2,6 +2,7 @@
 #include <qdialog.h>
 #include "ui_DialogAPSShading.h"
 #include "AlpMPAlgoInterface.h"
+#include "WidgetTableView.h"
 
 class CDialogAPSShading :
     public QDialog
@@ -16,5 +17,8 @@ private:
     Ui::DialogAPSShading ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    ShadingData m_Data;
+    APSYShadingType m_YShadingData;
+    APSColorShadingType m_ColorShadingData;
+    APSOpticalCenterType m_OpticalCenterData;
+    CWidgetTableView m_widgetTableView[4];
 };

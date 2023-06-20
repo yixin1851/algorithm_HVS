@@ -16,5 +16,5 @@ private:
     Ui::DialogHotPixel ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    DVSHotpixelData m_Data;
+    DVSHotpixelType m_Data;
 };

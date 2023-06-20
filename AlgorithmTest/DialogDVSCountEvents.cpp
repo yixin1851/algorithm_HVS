@@ -60,21 +60,21 @@ void CDialogCountEvents::CountEvents()
 		for (uint32_t nIndex = 0; nIndex < m_Data.nDataNumber; nIndex++)
 		{
 			XData[nIndex] = nIndex;
-			YDataOnAll[nIndex] = m_Data.OnEventsNum[DVSSubFrameIndex::All][nIndex];
-			YDataOffAll[nIndex] = m_Data.OffEventsNum[DVSSubFrameIndex::All][nIndex];
-			YDataAllAll[nIndex] = m_Data.AllEventsNum[DVSSubFrameIndex::All][nIndex];
-			YDataOnGb[nIndex] = m_Data.OnEventsNum[DVSSubFrameIndex::Gb][nIndex];
-			YDataOffGb[nIndex] = m_Data.OffEventsNum[DVSSubFrameIndex::Gb][nIndex];
-			YDataAllGb[nIndex] = m_Data.AllEventsNum[DVSSubFrameIndex::Gb][nIndex];
-			YDataOnB[nIndex] = m_Data.OnEventsNum[DVSSubFrameIndex::B][nIndex];
-			YDataOffB[nIndex] = m_Data.OffEventsNum[DVSSubFrameIndex::B][nIndex];
-			YDataAllB[nIndex] = m_Data.AllEventsNum[DVSSubFrameIndex::B][nIndex];
-			YDataOnR[nIndex] = m_Data.OnEventsNum[DVSSubFrameIndex::R][nIndex];
-			YDataOffR[nIndex] = m_Data.OffEventsNum[DVSSubFrameIndex::R][nIndex];
-			YDataAllR[nIndex] = m_Data.AllEventsNum[DVSSubFrameIndex::R][nIndex];
-			YDataOnGr[nIndex] = m_Data.OnEventsNum[DVSSubFrameIndex::Gr][nIndex];
-			YDataOffGr[nIndex] = m_Data.OffEventsNum[DVSSubFrameIndex::Gr][nIndex];
-			YDataAllGr[nIndex] = m_Data.AllEventsNum[DVSSubFrameIndex::Gr][nIndex];
+			YDataOnAll[nIndex] = m_Data.OnEventsNum[SubFrameIndex::All][nIndex];
+			YDataOffAll[nIndex] = m_Data.OffEventsNum[SubFrameIndex::All][nIndex];
+			YDataAllAll[nIndex] = m_Data.AllEventsNum[SubFrameIndex::All][nIndex];
+			YDataOnGb[nIndex] = m_Data.OnEventsNum[SubFrameIndex::Gb][nIndex];
+			YDataOffGb[nIndex] = m_Data.OffEventsNum[SubFrameIndex::Gb][nIndex];
+			YDataAllGb[nIndex] = m_Data.AllEventsNum[SubFrameIndex::Gb][nIndex];
+			YDataOnB[nIndex] = m_Data.OnEventsNum[SubFrameIndex::B][nIndex];
+			YDataOffB[nIndex] = m_Data.OffEventsNum[SubFrameIndex::B][nIndex];
+			YDataAllB[nIndex] = m_Data.AllEventsNum[SubFrameIndex::B][nIndex];
+			YDataOnR[nIndex] = m_Data.OnEventsNum[SubFrameIndex::R][nIndex];
+			YDataOffR[nIndex] = m_Data.OffEventsNum[SubFrameIndex::R][nIndex];
+			YDataAllR[nIndex] = m_Data.AllEventsNum[SubFrameIndex::R][nIndex];
+			YDataOnGr[nIndex] = m_Data.OnEventsNum[SubFrameIndex::Gr][nIndex];
+			YDataOffGr[nIndex] = m_Data.OffEventsNum[SubFrameIndex::Gr][nIndex];
+			YDataAllGr[nIndex] = m_Data.AllEventsNum[SubFrameIndex::Gr][nIndex];
 
 		}
 		ui.widgetChartView->SetLine("OnEvents(All)", XData, YDataOnAll);
@@ -119,21 +119,21 @@ void CDialogCountEvents::Export()
 			outfile << "On Events(All), Off Events(All), All Events(All), On Events(Gb), Off Events(Gb), All Events(Gb), On Events(B), Off Events(B), All Events(B), On Events(R), Off Events(R), All Events(R), On Events(Gr), Off Events(Gr), All Events(Gr)" << std::endl;
 			for (uint32_t nIndex = 0; nIndex < m_Data.nDataNumber; nIndex++)
 			{
-				outfile << std::to_string(m_Data.OnEventsNum[DVSSubFrameIndex::All][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OffEventsNum[DVSSubFrameIndex::All][nIndex]) << ",";
-				outfile << std::to_string(m_Data.AllEventsNum[DVSSubFrameIndex::All][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OnEventsNum[DVSSubFrameIndex::Gb][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OffEventsNum[DVSSubFrameIndex::Gb][nIndex]) << ",";
-				outfile << std::to_string(m_Data.AllEventsNum[DVSSubFrameIndex::Gb][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OnEventsNum[DVSSubFrameIndex::B][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OffEventsNum[DVSSubFrameIndex::B][nIndex]) << ",";
-				outfile << std::to_string(m_Data.AllEventsNum[DVSSubFrameIndex::B][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OnEventsNum[DVSSubFrameIndex::R][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OffEventsNum[DVSSubFrameIndex::R][nIndex]) << ",";
-				outfile << std::to_string(m_Data.AllEventsNum[DVSSubFrameIndex::R][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OnEventsNum[DVSSubFrameIndex::Gr][nIndex]) << ",";
-				outfile << std::to_string(m_Data.OffEventsNum[DVSSubFrameIndex::Gr][nIndex]) << ",";
-				outfile << std::to_string(m_Data.AllEventsNum[DVSSubFrameIndex::Gr][nIndex]);
+				outfile << std::to_string(m_Data.OnEventsNum[SubFrameIndex::All][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OffEventsNum[SubFrameIndex::All][nIndex]) << ",";
+				outfile << std::to_string(m_Data.AllEventsNum[SubFrameIndex::All][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OnEventsNum[SubFrameIndex::Gb][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OffEventsNum[SubFrameIndex::Gb][nIndex]) << ",";
+				outfile << std::to_string(m_Data.AllEventsNum[SubFrameIndex::Gb][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OnEventsNum[SubFrameIndex::B][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OffEventsNum[SubFrameIndex::B][nIndex]) << ",";
+				outfile << std::to_string(m_Data.AllEventsNum[SubFrameIndex::B][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OnEventsNum[SubFrameIndex::R][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OffEventsNum[SubFrameIndex::R][nIndex]) << ",";
+				outfile << std::to_string(m_Data.AllEventsNum[SubFrameIndex::R][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OnEventsNum[SubFrameIndex::Gr][nIndex]) << ",";
+				outfile << std::to_string(m_Data.OffEventsNum[SubFrameIndex::Gr][nIndex]) << ",";
+				outfile << std::to_string(m_Data.AllEventsNum[SubFrameIndex::Gr][nIndex]);
 				outfile << std::endl;
 			}
 			outfile.close();

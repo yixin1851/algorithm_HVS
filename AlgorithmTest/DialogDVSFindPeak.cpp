@@ -37,7 +37,7 @@ void CDialogDVSFindPeak::FindPeak()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->FindPeak(nIndexStart, nNumber, m_Data, LightTrigerType(nLightType+1));
+	bRet = m_pDVSAlgoInterface->FindPeak(nIndexStart, nNumber, m_Data, DVSLightTrigerType(nLightType+1));
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -46,7 +46,7 @@ void CDialogDVSFindPeak::FindPeak()
 		QString res = QString::number(time);
 		ui.label_Res->setText(res);
 
-		EventsNumberCountData CountData;
+		DVSEventsNumberCountType CountData;
 		m_pDVSAlgoInterface->EventsNumberCount(nIndexStart, nNumber, CountData);
 
 		QVector<double> XData(CountData.nDataNumber);
@@ -57,8 +57,8 @@ void CDialogDVSFindPeak::FindPeak()
 		for (uint32_t nIndex = 0; nIndex < CountData.nDataNumber; nIndex++)
 		{
 			XData[nIndex] = nIndex;
-			YDataOnAll[nIndex] = CountData.OnEventsNum[DVSSubFrameIndex::All][nIndex];
-			YDataOffAll[nIndex] = CountData.OffEventsNum[DVSSubFrameIndex::All][nIndex];
+			YDataOnAll[nIndex] = CountData.OnEventsNum[SubFrameIndex::All][nIndex];
+			YDataOffAll[nIndex] = CountData.OffEventsNum[SubFrameIndex::All][nIndex];
 		}
 
 		if ((nLightType + 1) & 1)
@@ -70,7 +70,7 @@ void CDialogDVSFindPeak::FindPeak()
 			for (uint32_t nIndex = 0; nIndex < m_Data.nOffEventsPeakNumber; nIndex++)
 			{
 				XOffPeakData[nIndex] = m_Data.OffEventsPeakPos[nIndex] - nIndexStart;
-				YOffPeakData[nIndex] = CountData.OffEventsNum[DVSSubFrameIndex::All][XOffPeakData[nIndex]];
+				YOffPeakData[nIndex] = CountData.OffEventsNum[SubFrameIndex::All][XOffPeakData[nIndex]];
 			}
 			ui.widgetChartView->SetScatter("OffEventsPeak", XOffPeakData, YOffPeakData);
 		}
@@ -84,7 +84,7 @@ void CDialogDVSFindPeak::FindPeak()
 			for (uint32_t nIndex = 0; nIndex < m_Data.nOnEventsPeakNumber; nIndex++)
 			{
 				XOnPeakData[nIndex] = m_Data.OnEventsPeakPos[nIndex] - nIndexStart;
-				YOnPeakData[nIndex] = CountData.OnEventsNum[DVSSubFrameIndex::All][XOnPeakData[nIndex]];
+				YOnPeakData[nIndex] = CountData.OnEventsNum[SubFrameIndex::All][XOnPeakData[nIndex]];
 			}
 			ui.widgetChartView->SetScatter("OnEventsPeak", XOnPeakData, YOnPeakData);
 		}

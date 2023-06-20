@@ -29,6 +29,8 @@ private slots:
     void OverallSystemGain();
     void DataMean();
     void Saturation();
+    void Pedestal();
+    void ReadNoise();
 private:
     Ui::DialogAPSFunction ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;

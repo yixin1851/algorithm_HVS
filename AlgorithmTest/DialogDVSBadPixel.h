@@ -16,5 +16,5 @@ private:
     Ui::DialogDVSBadPixel ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    DVSBadpixelData m_Data;
+    DVSBadpixelType m_Data;
 };

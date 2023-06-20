@@ -18,7 +18,7 @@ private:
     Ui::DialogAPSHotPixel ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<HotpixelData> m_HotPixel;
+    APSBadpixelType m_HotPixel;
     CWidgetTableView m_widgetTableView;
-    CWidgetImageView m_widgetImageView[APSSubFrameIndex::SubFrameNum];
+    CWidgetImageView m_widgetImageView[SubFrameIndex::All];
 };

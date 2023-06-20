@@ -71,10 +71,10 @@ void CDialogAPSDataMean::DataMean()
 
 		QStringList RowName, ColName;
 		RowName << "";
-		ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+		ColName << "Gb" << "B" << "R" << "Gr";
 
 		std::vector<std::vector<double>> Data;
-		Data.push_back(m_DataMean);
+		Data.push_back(m_DataMean.SubFrameDataMean);
 		ui.widgetTableView->SetData(RowName, ColName, Data);
 	}
 	else
@@ -96,10 +96,10 @@ void CDialogAPSDataMean::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_DataMean.size(); nIndex++)
+			outfile << "Gb,B,R,Gr" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < m_DataMean.SubFrameDataMean.size(); nIndex++)
 			{
-				outfile << std::to_string(m_DataMean[nIndex]) << ",";
+				outfile << std::to_string(m_DataMean.SubFrameDataMean[nIndex]) << ",";
 			}
 			outfile << std::endl;
 

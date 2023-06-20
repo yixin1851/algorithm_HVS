@@ -109,6 +109,8 @@
     <ClCompile Include="DialogAPSInit.cpp" />
     <ClCompile Include="DialogAPSLinearity.cpp" />
     <ClCompile Include="DialogAPSOverallSystemGain.cpp" />
+    <ClCompile Include="DialogAPSPedestal.cpp" />
+    <ClCompile Include="DialogAPSReadNoise.cpp" />
     <ClCompile Include="DialogAPSSaturation.cpp" />
     <ClCompile Include="DialogAPSShading.cpp" />
     <ClCompile Include="DialogAPSShow.cpp" />
@@ -149,6 +151,8 @@
     <QtUic Include="DialogAPSInit.ui" />
     <QtUic Include="DialogAPSLinearity.ui" />
     <QtUic Include="DialogAPSOverallSystemGain.ui" />
+    <QtUic Include="DialogAPSPedestal.ui" />
+    <QtUic Include="DialogAPSReadNoise.ui" />
     <QtUic Include="DialogAPSSaturation.ui" />
     <QtUic Include="DialogAPSShading.ui" />
     <QtUic Include="DialogAPSShow.ui" />
@@ -221,6 +225,8 @@
     <QtMoc Include="DialogAPSOverallSystemGain.h" />
     <QtMoc Include="DialogAPSDataMean.h" />
     <QtMoc Include="DialogAPSSaturation.h" />
+    <QtMoc Include="DialogAPSPedestal.h" />
+    <QtMoc Include="DialogAPSReadNoise.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

@@ -16,5 +16,5 @@ private:
     Ui::DialogAPSDSNU ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    DSNUData m_DSNUData;
+    APSDSNUType m_DSNUData;
 };

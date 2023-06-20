@@ -4,8 +4,8 @@
 #define DVS_FOOTER_003CA 0x0101FFFF
 #define DVS_FOOTER_DROP_003CA 0x0303FFFF
 
-CAlp003CADVSMPAlgorithm::CAlp003CADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum)
-	:CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum)
+CAlp003CADVSMPAlgorithm::CAlp003CADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
+	:CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat)
 {
 	m_nTotalRow = 1224;
 	m_nTotalCol = 1632;
@@ -27,7 +27,7 @@ bool CAlp003CADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 	{
 		uint8_t nNeedSubFrameIndex = 0;
-		m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true);
+		m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true, m_PixelFormat);
 		uint8_t nSubFrameIndex = 0;
 		uint64_t nTimeStamp = 0;
 		while (nNeedSubFrameIndex != 16)
@@ -48,7 +48,7 @@ bool CAlp003CADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	return true;
 }
 
-bool CAlp003CADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t& nTimeStamp)
+bool CAlp003CADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t& nTimeStamp)
 {
 	size_t nCurIndex = *pnPos;
 	Alp003CAFormatHeader* HeaderCode;
@@ -114,6 +114,7 @@ bool CAlp003CADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 
 		if (Footer->Footer_vec == DVS_FOOTER_003CA && Footer->Dropflag == 0)
 		{
+			nCurIndex += sizeof(Alp003CAFormatFooter);
 			*pnPos = nCurIndex;
 			return true;
 		}
@@ -121,7 +122,7 @@ bool CAlp003CADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 	return false;
 }
 
-bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRowStart, size_t nRowStop, size_t nColStart, size_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex)
+bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRowStart, uint32_t nRowStop, uint32_t nColStart, uint32_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex)
 {
 	bool bRet = false;
 
@@ -130,8 +131,8 @@ bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 	nRowStop *= 4;
 	nColStop *= 4;
 
-	size_t nRow = nRowStart;
-	size_t nCol = nColStart;
+	uint32_t nRow = nRowStart;
+	uint32_t nCol = nColStart;
 	size_t& nCurIndex = *pnPos;
 
 	Alp003CAFormatFooter* Footer;
@@ -184,7 +185,7 @@ bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 	return false;
 }
 
-bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRowStart, size_t nRowStop, size_t nColStart, size_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex)
+bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRowStart, uint32_t nRowStop, uint32_t nColStart, uint32_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex)
 {
 	bool bRet = false;
 
@@ -193,8 +194,8 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 	nRowStop *= 4;
 	nColStop *= 4;
 
-	size_t nRow = nRowStart;
-	size_t nCol = nColStart;
+	uint32_t nRow = nRowStart;
+	uint32_t nCol = nColStart;
 	size_t& nCurIndex = *pnPos;
 
 	Alp003CAFormatFooter* Footer;
@@ -216,13 +217,25 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 
 			if (EventGroup->Pix3 != 3)
 			{
-				SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix0);
+				if (EventGroup->Pix0)
+				{
+					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix0);
+				}
 				nCol += 4;
-				SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix1);
+				if (EventGroup->Pix1)
+				{
+					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix1);
+				}
 				nCol += 4;
-				SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix2);
+				if (EventGroup->Pix2)
+				{
+					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix2);
+				}
 				nCol += 4;
-				SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix3);
+				if (EventGroup->Pix3)
+				{
+					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix3);
+				}
 				nCol += 4;
 
 				if (nCol == nColStop)
@@ -265,9 +278,8 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 	return false;
 }
 
-void CAlp003CADVSMPAlgorithm::SetData(CDVSDataContainer* DVSData, size_t nRow, size_t nCol, uint8_t nSubFrameIndex, uint8_t nEventFlag)
+void CAlp003CADVSMPAlgorithm::SetData(CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, uint8_t nSubFrameIndex, uint8_t nEventFlag)
 {
-
 	switch (nSubFrameIndex)
 	{
 	case 0:

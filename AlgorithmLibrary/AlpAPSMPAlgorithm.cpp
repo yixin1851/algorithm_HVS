@@ -6,7 +6,23 @@
 #include <fstream>
 #include "Changelist.h"
 
-CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, RawType Rawtype, std::string strLogDir, uint32_t nSiteNum)
+bool operator< (const Local& lh, const Local& rh)
+{
+	if (lh.x < rh.x)
+	{
+		return true;
+	}
+	else if (lh.x == rh.x)
+	{
+		return lh.y < rh.y;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
 {
 	m_nSiteNum = nSiteNum;
 	m_bMultiThreadEnable = false;
@@ -14,39 +30,41 @@ CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, RawType Rawtype, s
 	m_SensorType = Sensortype;
 	m_RawType = Rawtype;
 	m_AlgorithmThre.dBadPixelThre = 0.19;
-	m_AlgorithmThre.dDeadLineThre = 0.5;
-	m_AlgorithmThre.dDeadPixelThre = 0.8;
-	m_AlgorithmThre.dHotLineThre = 0.5;
+	m_AlgorithmThre.dBadLineThre = 0.1;
 	m_AlgorithmThre.dHotPixelThre = 120;
-	m_AlgorithmThre.nBadPixelRadius = 2;
-	m_AlgorithmThre.nOpticalFindRadius = 100;
-	m_AlgorithmThre.nShadingTestRadius = 10;
-	m_AlgorithmThre.nDSNUBlockSize = 10;
-	m_RawDataContainer.resize(APSSubFrameIndex::SubFrameNum);
+	m_AlgorithmThre.dHotLineThre = 60;
+	m_AlgorithmThre.nBadPixelRadius = 1;
+	m_AlgorithmThre.nBadLineRadius = 2;
+	m_AlgorithmThre.nDSNURowBlockNum = 60;
+	m_AlgorithmThre.nDSNUColBlockNum = 78;
+	m_AlgorithmThre.nDSNURowBlockSize = 20;
+	m_AlgorithmThre.nDSNUColBlockSize = 20;
+	m_AlgorithmThre.nYShadingRowBlockNum = 5;
+	m_AlgorithmThre.nYShadingColBlockNum = 5;
+	m_AlgorithmThre.nColorShadingRowBlockNum = 13;
+	m_AlgorithmThre.nColorShadingColBlockNum = 17;
+	m_AlgorithmThre.nPedestalVariationRowBlockNum = 8;
+	m_AlgorithmThre.nPedestalVariationColBlockNum = 8;
+	m_AlgorithmThre.nPedestalVariationRowBlockSize = 150;
+	m_AlgorithmThre.nPedestalVariationColBlockSize = 200;
+	m_AlgorithmThre.nBadPixelMaxLen = 200;
+	m_AlgorithmThre.nBadPixelLocalRowOffset = 104; // for 003CA
+	m_AlgorithmThre.nBadPixelLocalColOffset = 52;  // for 003CA
 
-	if (Sensortype == SensorType::ALP_003AA)
+	m_RawDataContainer.resize(SubFrameIndex::All);
+	m_PixelFormat = Pixelformat;
+
+	if (m_RawType == RAW8)
 	{
-		m_ActiveArea = { 5, 620, 4, 799 };
-		m_nChannelRow = 622;
-		m_nChannelCol = 828;
-		m_nTotalRow = 2488;
-		m_nTotalCol = 1656;
+		m_dPedestal = 16;
 	}
-	else if (Sensortype == SensorType::ALP_003BA)
+	else if (m_RawType == RAW10 || m_RawType == UNPACK10)
 	{
-#if 0
-		m_ActiveArea = { 27, 611, 0, 815 };
-		m_nChannelRow = 612;
-		m_nChannelCol = 816;
-		m_nTotalRow = 2448;
-		m_nTotalCol = 1632;
-#else
-		m_ActiveArea = { 0, 584, 0, 815 };
-		m_nChannelRow = 585;
-		m_nChannelCol = 816;
-		m_nTotalRow = 2340;
-		m_nTotalCol = 1632;
-#endif
+		m_dPedestal = 64;
+	}
+	else
+	{
+		m_dPedestal = 256;
 	}
 
 	if (strLogDir != "")
@@ -68,309 +86,343 @@ CAlpAPSMPAlgorithm::~CAlpAPSMPAlgorithm()
 {
 }
 
-bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, bool bHeader_Footer)
+bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSTNoiseType& TNoiseRes)
 {
-	uint32_t nOneFrameSize = 0;
-	uint32_t nHeaderSize = 0;
-	uint32_t nFooterSize = 0;
-
-	uint8_t Header[8] = { 0 };
-	uint8_t Footer[8] = { 0 };
-
-	uint8_t Header_003AA_8Bit[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf4 };
-	uint8_t Footer_003AA_8Bit[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf4 };
-
-	uint8_t Header_003AA_10Bit[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf7 };
-	uint8_t Footer_003AA_10Bit[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf7 };
-
-	uint8_t Header_003BA[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xe5 };
-	uint8_t Footer_003BA[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xe5 };
-
-
-	if (m_SensorType == ALP_003BA)
+	bool bRet = true;
+	bool bSubRes[SubFrameIndex::All];
+	TNoiseRes.SubFrameTNoiseData.resize(SubFrameIndex::All);
+	if (m_bMultiThreadEnable)
 	{
-		memcpy_s(Header, sizeof(Header), Header_003BA, sizeof(Header_003BA));
-		memcpy_s(Footer, sizeof(Footer), Footer_003BA, sizeof(Footer_003BA));
-		nHeaderSize = 64;
-		nFooterSize = 8;
-	}
-	else if (m_SensorType == ALP_003AA)
-	{
-		if (m_RawType == RAW8)
+		std::thread* t[SubFrameIndex::All];
+
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			memcpy_s(Header, sizeof(Header), Header_003AA_8Bit, sizeof(Header_003AA_8Bit));
-			memcpy_s(Footer, sizeof(Footer), Footer_003AA_8Bit, sizeof(Footer_003AA_8Bit));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameTNoise, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(TNoiseRes.SubFrameTNoiseData[i]), std::ref(bSubRes[i]));
 		}
-		else if (m_RawType == RAW10)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			memcpy_s(Header, sizeof(Header), Header_003AA_10Bit, sizeof(Header_003AA_10Bit));
-			memcpy_s(Footer, sizeof(Footer), Footer_003AA_10Bit, sizeof(Footer_003AA_10Bit));
+			t[i]->join();
+			delete t[i];
 		}
-		nHeaderSize = 32;
-		nFooterSize = 8;
-	}
-
-	if (m_RawType == RAW8)
-	{
-		nOneFrameSize = m_nTotalRow * m_nTotalCol;
-	}
-	else if (m_RawType == RAW10)
-	{
-		nOneFrameSize = m_nTotalRow * m_nTotalCol / 4 * 5;
 	}
 	else
 	{
-		nOneFrameSize = m_nTotalRow * m_nTotalCol / 2 * 3;
-	}
-	if (bHeader_Footer)
-	{
-		nOneFrameSize += nHeaderSize + nFooterSize;
-	}
-
-	if ((nLens / nOneFrameSize) < nNumber)
-	{
-		std::string strErr = "ImportRawData: RawData buffer Lens less than frames number: Lens: " + std::to_string(nLens) + ", Number: " + std::to_string(nNumber);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
-		return false;
-	}
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
-	{
-		if (m_RawDataContainer[nChannelIndex].size() < nIndexStart + nNumber)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			m_RawDataContainer[nChannelIndex].resize(nIndexStart + nNumber);
+			SubFrameTNoise(nIndexStart, nNumber, ROI, SubFrameIndex(i), TNoiseRes.SubFrameTNoiseData[i], bSubRes[i]);
 		}
 	}
-
-	uint32_t nIndex = 0;
-
-	for (uint32_t i = 0; i < nNumber; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
-		for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+		bRet = bRet && bSubRes[i];
+	}
+	return bRet;
+}
+
+bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSNoiseType& SNoiseData)
+{
+	bool bRet = true;
+	bool bSubRes[SubFrameIndex::All];
+	SNoiseData.SNoiseFrame = 0;
+	SNoiseData.SubFrameSNoiseData.resize(SubFrameIndex::All);
+	if (m_bMultiThreadEnable)
+	{
+		std::thread* t[SubFrameIndex::All];
+
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			CAPSDataContainer& CurContainer = m_RawDataContainer[nChannelIndex][nIndexStart + i];
-			if (CurContainer.m_nRow != m_nChannelRow || CurContainer.m_nCol != m_nChannelCol)
-			{
-				CurContainer.Init(m_nChannelRow, m_nChannelCol);
-			}
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameSNoise, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(SNoiseData.SubFrameSNoiseData[i]), std::ref(bSubRes[i]));
 		}
-
-		if (bHeader_Footer)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			while (nIndex < nLens - sizeof(Header) && 0 != memcmp(pRawData + nIndex, Header, sizeof(Header)))
-			{
-				nIndex += 8;
-			}
-
-			if (nIndex >= nLens - sizeof(Header) || 0 != memcmp(pRawData + nIndex, Header, sizeof(Header)))
-			{
-				std::string strErr = "ImportRawData: Header Fail: Index " + std::to_string(i);
-				WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
-				return false;
-			}
-			else
-			{
-				nIndex += nHeaderSize;
-			}
+			t[i]->join();
+			delete t[i];
 		}
-
-		uint32_t nRows = 0, nCols = 0;
-		for (; nIndex < nLens;)
+	}
+	else
+	{
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			uint16_t tempData[4] = { 0 };
-			if (m_RawType == RAW8)
-			{
-				tempData[0] = pRawData[nIndex];
-				tempData[1] = pRawData[nIndex + 1];
-				tempData[2] = pRawData[nIndex + 2];
-				tempData[3] = pRawData[nIndex + 3];
+			SubFrameSNoise(nIndexStart, nNumber, ROI, SubFrameIndex(i), SNoiseData.SubFrameSNoiseData[i], bSubRes[i]);
+		}
+	}
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+	{
+		bRet = bRet && bSubRes[i];
+	}
+	if (bRet)
+	{
+		ROIArea RealRoi;
 
-				nIndex += 4;
-			}
-			else if (m_RawType == RAW10)
+		if (ROI == nullptr)
+		{
+			RealRoi = m_ActiveArea;
+		}
+		else
+		{
+			RealRoi = *ROI;
+		}
+		uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+		uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+		std::vector<double> AllPixel(nRow * nCol * SubFrameIndex::All);
+
+		uint32_t nCur = 0;
+		for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+		{
+			for (uint32_t nRows = 0; nRows < nRow; nRows++)
 			{
-				if (m_SensorType == ALP_003BA)
+				for (uint32_t nCols = 0; nCols < nCol; nCols++)
 				{
-					tempData[0] = ((uint16_t)(pRawData[nIndex])) << 2;
-					tempData[1] = ((uint16_t)(pRawData[nIndex + 1])) << 2;
-					tempData[2] = ((uint16_t)(pRawData[nIndex + 2])) << 2;
-					tempData[3] = ((uint16_t)(pRawData[nIndex + 3])) << 2;
-
-					tempData[0] += (((uint16_t)(pRawData[nIndex + 4])) & 3);
-					tempData[1] += ((((uint16_t)(pRawData[nIndex + 4])) >> 2) & 3);
-					tempData[2] += ((((uint16_t)(pRawData[nIndex + 4])) >> 4) & 3);
-					tempData[3] += ((((uint16_t)(pRawData[nIndex + 4])) >> 6) & 3);
-				}
-				else if(m_SensorType == ALP_003AA)
-				{
-					tempData[0] = ((uint16_t)(pRawData[nIndex])) + (((uint16_t)(pRawData[nIndex + 1]) & 0x3) << 8);
-					tempData[1] = (((uint16_t)(pRawData[nIndex + 1])) >> 2) + (((uint16_t)(pRawData[nIndex + 2]) & 0x0F) << 6);
-					tempData[2] = (((uint16_t)(pRawData[nIndex + 2])) >> 4) + (((uint16_t)(pRawData[nIndex + 3]) & 0x3F) << 4);
-					tempData[3] = (((uint16_t)(pRawData[nIndex + 3])) >> 6) + (((uint16_t)(pRawData[nIndex + 4])) << 2);
-				}
-
-				nIndex += 5;
-			}
-			else
-			{
-				tempData[0] = ((uint16_t)(pRawData[nIndex])) << 4;
-				tempData[1] = ((uint16_t)(pRawData[nIndex + 1])) << 4;
-				tempData[0] += (((uint16_t)(pRawData[nIndex + 2])) & 15);
-				tempData[1] += ((((uint16_t)(pRawData[nIndex + 2])) >> 4) & 15);
-
-				tempData[2] = ((uint16_t)(pRawData[nIndex + 3])) << 4;
-				tempData[3] = ((uint16_t)(pRawData[nIndex + 4])) << 4;
-				tempData[2] += (((uint16_t)(pRawData[nIndex + 5])) & 15);
-				tempData[3] += ((((uint16_t)(pRawData[nIndex + 5])) >> 4) & 15);
-
-				nIndex += 6;
-			}
-			switch (nRows % 4)
-			{
-			case 0:
-				m_RawDataContainer[Gb1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-				m_RawDataContainer[B1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
-				m_RawDataContainer[Gb1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-				m_RawDataContainer[B1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
-				break;
-			case 1:
-				if (m_SensorType == ALP_003BA)
-				{
-					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-					m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[1];
-					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-					if (nCols != m_nTotalCol - 4)
+					double value = 0;
+					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 					{
-						m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 2] = tempData[3];
+						value += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 					}
-					else
+					AllPixel[nCur++] = round(value / nNumber);
+				}
+			}
+		}
+		SNoiseData.SNoiseFrame = Std(AllPixel, nCur);
+	}
+	return bRet;
+}
+
+bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& BadpixelRes)
+{
+	bool bRet = true;
+	bool bSubRes[SubFrameIndex::All];
+	BadpixelRes.BadPixelNum = 0;
+	BadpixelRes.ClusterNum = 0;
+	BadpixelRes.CoupletNum = 0;
+	BadpixelRes.LadderNum = 0;
+	BadpixelRes.SingletNum = 0;
+	BadpixelRes.BadPixelMask.BadPixelNum = 0;
+	BadpixelRes.BadPixelMask.LocalData.clear();
+	BadpixelRes.BadPixelMask.Flag.clear();
+
+	BadpixelRes.SubFrameBadpixelData.resize(SubFrameIndex::All);
+	if (m_bMultiThreadEnable)
+	{
+		std::thread* t[SubFrameIndex::All];
+
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBadPixel, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(BadpixelRes.SubFrameBadpixelData[i]), std::ref(bSubRes[i]));
+		}
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			t[i]->join();
+			delete t[i];
+		}
+	}
+	else
+	{
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			SubFrameBadPixel(nIndexStart, nNumber, ROI, SubFrameIndex(i), BadpixelRes.SubFrameBadpixelData[i], bSubRes[i]);
+		}
+	}
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+	{
+		bRet = bRet && bSubRes[i];
+	}
+	if (bRet)
+	{
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			BadpixelRes.BadPixelNum += BadpixelRes.SubFrameBadpixelData[i].BadPixelNum;
+			BadpixelRes.ClusterNum += BadpixelRes.SubFrameBadpixelData[i].ClusterNum;
+			BadpixelRes.CoupletNum += BadpixelRes.SubFrameBadpixelData[i].CoupletNum;
+			BadpixelRes.SingletNum += BadpixelRes.SubFrameBadpixelData[i].SingletNum;
+			Local Total;
+			for (uint32_t n = 0; n < BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.BadPixelNum; n++)
+			{
+				BadpixelRes.BadPixelMask.BadPixelNum++;
+				SubFrameLocalToTotalLocal(BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.LocalData[n], SubFrameIndex(i), Total);
+				BadpixelRes.BadPixelMask.LocalData.push_back(Total);
+				BadpixelRes.BadPixelMask.Flag.push_back(BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.Flag[n]);
+			}
+		}
+
+		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
+		for (uint32_t i = 0; i < m_nTotalRow; i++)
+		{
+			BadPixelMask[i].resize(m_nTotalCol, 0);
+		}
+
+		for (uint32_t n = 0; n < BadpixelRes.BadPixelMask.BadPixelNum; n++)
+		{
+			Local temp = BadpixelRes.BadPixelMask.LocalData[n];
+
+			if (m_PixelFormat > 3)
+			{
+				if (temp.x % 4 == 1)
+				{
+					++temp.x;
+				}
+				else if (temp.x % 4 == 2)
+				{
+					--temp.x;
+				}
+				if (temp.y % 4 == 1)
+				{
+					++temp.y;
+				}
+				else if (temp.y % 4 == 2)
+				{
+					--temp.y;
+				}
+			}
+			BadPixelMask[temp.x][temp.y] = BadpixelRes.BadPixelMask.Flag[n];
+		}
+
+		for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
+		{
+			for (uint32_t nCols = 0; nCols < m_nTotalCol - 1;)
+			{
+				if (BadPixelMask[nRows][nCols])
+				{
+					if (BadPixelMask[nRows][nCols + 1])
 					{
-						//m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][0] = tempData[3];
-						m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][0] = m_RawDataContainer[Gb1][nIndexStart + i].m_RawData[nRows / 4][0];
+						++BadpixelRes.LadderNum;
 					}
+					nCols += 2;
 				}
 				else
 				{
-					m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
-					m_RawDataContainer[Gb2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-					m_RawDataContainer[B2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
+					++nCols;
 				}
-				break;
-			case 2:
-				m_RawDataContainer[R1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-				m_RawDataContainer[Gr1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
-				m_RawDataContainer[R1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-				m_RawDataContainer[Gr1][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
-				break;
-			case 3:
-				if (m_SensorType == ALP_003BA)
+			}
+		}
+	}
+	return bRet;
+}
+
+bool CAlpAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& HotpixelRes)
+{
+	bool bRet = true;
+	bool bSubRes[SubFrameIndex::All];
+	HotpixelRes.BadPixelNum = 0;
+	HotpixelRes.ClusterNum = 0;
+	HotpixelRes.CoupletNum = 0;
+	HotpixelRes.LadderNum = 0;
+	HotpixelRes.SingletNum = 0;
+	HotpixelRes.BadPixelMask.BadPixelNum = 0;
+	HotpixelRes.BadPixelMask.LocalData.clear();
+	HotpixelRes.BadPixelMask.Flag.clear();
+	HotpixelRes.SubFrameBadpixelData.resize(SubFrameIndex::All);
+	if (m_bMultiThreadEnable)
+	{
+		std::thread* t[SubFrameIndex::All];
+
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameHotPixel, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(HotpixelRes.SubFrameBadpixelData[i]), std::ref(bSubRes[i]));
+		}
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			t[i]->join();
+			delete t[i];
+		}
+	}
+	else
+	{
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			SubFrameHotPixel(nIndexStart, nNumber, ROI, SubFrameIndex(i), HotpixelRes.SubFrameBadpixelData[i], bSubRes[i]);
+		}
+	}
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+	{
+		bRet = bRet && bSubRes[i];
+	}
+	if (bRet)
+	{
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		{
+			HotpixelRes.BadPixelNum += HotpixelRes.SubFrameBadpixelData[i].BadPixelNum;
+			HotpixelRes.ClusterNum += HotpixelRes.SubFrameBadpixelData[i].ClusterNum;
+			HotpixelRes.CoupletNum += HotpixelRes.SubFrameBadpixelData[i].CoupletNum;
+			HotpixelRes.SingletNum += HotpixelRes.SubFrameBadpixelData[i].SingletNum;
+			Local Global;
+			for (uint32_t n = 0; n < HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.BadPixelNum; n++)
+			{
+				HotpixelRes.BadPixelMask.BadPixelNum++;
+				SubFrameLocalToTotalLocal(HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.LocalData[n], SubFrameIndex(i), Global);
+				HotpixelRes.BadPixelMask.LocalData.push_back(Global);
+				HotpixelRes.BadPixelMask.Flag.push_back(HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.Flag[n]);
+			}
+		}
+
+		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
+		for (uint32_t i = 0; i < m_nTotalRow; i++)
+		{
+			BadPixelMask[i].resize(m_nTotalCol, 0);
+		}
+
+		for (uint32_t n = 0; n < HotpixelRes.BadPixelMask.BadPixelNum; n++)
+		{
+			Local temp = HotpixelRes.BadPixelMask.LocalData[n];
+
+			if (m_PixelFormat > 3)
+			{
+				if ((temp.x & 3) == 1)
 				{
-					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-					m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[1];
-					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-					if (nCols != m_nTotalCol - 4)
+					++temp.x;
+				}
+				else if ((temp.x & 3) == 2)
+				{
+					--temp.x;
+				}
+				if ((temp.y & 3) == 1)
+				{
+					++temp.y;
+				}
+				else if ((temp.y & 3) == 2)
+				{
+					--temp.y;
+				}
+			}
+			BadPixelMask[temp.x][temp.y] = HotpixelRes.BadPixelMask.Flag[n];
+		}
+
+		for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
+		{
+			for (uint32_t nCols = 0; nCols < m_nTotalCol - 1;)
+			{
+				if (BadPixelMask[nRows][nCols])
+				{
+					if (BadPixelMask[nRows][nCols + 1])
 					{
-						m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 2] = tempData[3];
+						++HotpixelRes.LadderNum;
 					}
-					else
-					{
-						//m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][0] = tempData[3];
-						m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][0] = m_RawDataContainer[R1][nIndexStart + i].m_RawData[nRows / 4][0];
-					}
+					nCols += 2;
 				}
 				else
 				{
-					m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[0];
-					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2] = tempData[1];
-					m_RawDataContainer[R2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[2];
-					m_RawDataContainer[Gr2][nIndexStart + i].m_RawData[nRows / 4][nCols / 2 + 1] = tempData[3];
+					++nCols;
 				}
-				break;
-			}
-			nCols += 4;
-			if (nCols == m_nTotalCol)
-			{
-				nRows += 1;
-				nCols = 0;
-			}
-			if (nRows == m_nTotalRow)
-			{
-				break;
-			}
-		}
-
-
-		if (bHeader_Footer)
-		{
-			if (0 != memcmp(pRawData + nIndex, Footer, sizeof(Footer)))
-			{
-				std::string strErr = "ImportRawData: Footer Fail: Index " + std::to_string(i);
-				WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
-				return false;
-			}
-			else
-			{
-				nIndex += nFooterSize;
 			}
 		}
 	}
-	return true;
+	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, APSSubFrameIndex nChannelIndex, uint32_t nIndexStart, uint32_t nNumber)
-{
-	uint32_t nRawDataByte = 1;
-	if (m_RawType == RAW8)
-		nRawDataByte = 1;
-	else
-		nRawDataByte = 2;
-	if ((nLens / nRawDataByte / m_nChannelRow / m_nChannelCol) < nNumber)
-	{
-		std::string strErr = "ImportRawData: RawData buffer Lens less than frames number: Lens: " + std::to_string(nLens) + ", Number: " + std::to_string(nNumber);
-		WriteLog(strErr, nChannelIndex);
-		return false;
-	}
-	if (m_RawDataContainer[nChannelIndex].size() < nIndexStart + nNumber)
-	{
-		m_RawDataContainer[nChannelIndex].resize(nIndexStart + nNumber);
-	}
-	uint64_t nIndex = 0;
-	for (uint32_t i = 0; i < nNumber; i++)
-	{
-		CAPSDataContainer& CurContainer = m_RawDataContainer[nChannelIndex][nIndexStart + i];
-		if (CurContainer.m_nRow != m_nChannelRow || CurContainer.m_nCol != m_nChannelCol)
-		{
-			CurContainer.Init(m_nChannelRow, m_nChannelCol);
-		}
-		for (uint32_t rows = 0; rows < m_nChannelRow; rows++)
-		{
-			for (uint32_t cols = 0; cols < m_nChannelCol; cols++)
-			{
-				if (m_RawType == RAW8)
-					CurContainer.m_RawData[rows][cols] = pRawData[nIndex];
-				else
-					CurContainer.m_RawData[rows][cols] = (pRawData[nIndex + 1] << 8) + pRawData[nIndex];
-				nIndex += nRawDataByte;
-			}
-		}
-	}
-	return true;
-}
-
-bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& TNoiseData)
+bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber)
 {
 	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	TNoiseData.resize(APSSubFrameIndex::SubFrameNum);
+	bool bSubRes[SubFrameIndex::All];
+	std::vector<double> BaseMean(SubFrameIndex::All, m_dPedestal);
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameTNoise, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(TNoiseData[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBLC, this, nIndexStart, nNumber, nullptr, SubFrameIndex(i), std::ref(BaseMean[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -378,32 +430,32 @@ bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameTNoise(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), TNoiseData[i], bSubRes[i]);
+			SubFrameBLC(nIndexStart, nNumber, nullptr, SubFrameIndex(i), BaseMean[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
 	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& SNoiseData)
+bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, APSDataMeanType& BaseMean)
 {
 	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	SNoiseData.resize(APSSubFrameIndex::SubFrameNum);
+	bool bSubRes[SubFrameIndex::All];
+
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameSNoise, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(SNoiseData[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBLC, this, nIndexStart, nNumber, nullptr, SubFrameIndex(i), std::ref(BaseMean.SubFrameDataMean[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -411,243 +463,12 @@ bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameSNoise(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), SNoiseData[i], bSubRes[i]);
+			SubFrameBLC(nIndexStart, nNumber, nullptr, SubFrameIndex(i), BaseMean.SubFrameDataMean[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::RowTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& RowTNoiseData)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	RowTNoiseData.resize(APSSubFrameIndex::SubFrameNum);
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameRowTNoise, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(RowTNoiseData[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameRowTNoise(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), RowTNoiseData[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::ColTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& ColTNoiseData)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	ColTNoiseData.resize(APSSubFrameIndex::SubFrameNum);
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameColTNoise, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(ColTNoiseData[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameColTNoise(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), ColTNoiseData[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::RowSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& RowSNoiseData)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	RowSNoiseData.resize(APSSubFrameIndex::SubFrameNum);
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameRowSNoise, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(RowSNoiseData[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameRowSNoise(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), RowSNoiseData[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::ColSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& ColSNoiseData)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	ColSNoiseData.resize(APSSubFrameIndex::SubFrameNum);
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameColSNoise, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(ColSNoiseData[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameColSNoise(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), ColSNoiseData[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<BadpixelData>& BadpixelRes)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	BadpixelRes.resize(APSSubFrameIndex::SubFrameNum);
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBadPixel, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(BadpixelRes[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameBadPixel(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), BadpixelRes[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<HotpixelData>& HotpixelRes)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	HotpixelRes.resize(APSSubFrameIndex::SubFrameNum);
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameHotPixel, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(HotpixelRes[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameHotPixel(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), HotpixelRes[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-	{
-		bRet = bRet && bSubRes[i];
-	}
-	return bRet;
-}
-
-bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, std::vector<double>& BaseMean)
-{
-	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-
-	if (m_bMultiThreadEnable)
-	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBLC, this, nIndexStart, nNumber, nullptr, APSSubFrameIndex(i), std::ref(BaseMean[i]), std::ref(bSubRes[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-		}
-	}
-	else
-	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			SubFrameBLC(nIndexStart, nNumber, nullptr, APSSubFrameIndex(i), BaseMean[i], bSubRes[i]);
-		}
-	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
@@ -657,18 +478,18 @@ bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, std::vector
 bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nBaseIndexStart, uint32_t nBaseNumber)
 {
 	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	std::vector<double> ColMean[APSSubFrameIndex::SubFrameNum];
+	bool bSubRes[SubFrameIndex::All];
+	std::vector<double> ColMean[SubFrameIndex::All];
 
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameColMean, this, nBaseIndexStart, nBaseNumber, nullptr, APSSubFrameIndex(i), std::ref(ColMean[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameColMean, this, nBaseIndexStart, nBaseNumber, nullptr, SubFrameIndex(i), std::ref(ColMean[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -676,12 +497,12 @@ bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nB
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameColMean(nBaseIndexStart, nBaseNumber, nullptr, APSSubFrameIndex(i), ColMean[i], bSubRes[i]);
+			SubFrameColMean(nBaseIndexStart, nBaseNumber, nullptr, SubFrameIndex(i), ColMean[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
@@ -693,13 +514,13 @@ bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nB
 
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBLCByColBase, this, nIndexStart, nNumber, nullptr, APSSubFrameIndex(i), std::ref(ColMean[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBLCByColBase, this, nIndexStart, nNumber, nullptr, SubFrameIndex(i), std::ref(ColMean[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -707,32 +528,32 @@ bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nB
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameBLCByColBase(nIndexStart, nNumber, nullptr, APSSubFrameIndex(i), ColMean[i], bSubRes[i]);
+			SubFrameBLCByColBase(nIndexStart, nNumber, nullptr, SubFrameIndex(i), ColMean[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
 	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<BadPixelMaskData>& BadPixelMask)
+bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& BadPixelMask)
 {
 	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
+	bool bSubRes[SubFrameIndex::All];
 
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDPC, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(BadPixelMask[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDPC, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(BadPixelMask.SubFrameBadpixelData[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -740,19 +561,47 @@ bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* RO
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameDPC(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), BadPixelMask[i], bSubRes[i]);
+			SubFrameDPC(nIndexStart, nNumber, ROI, SubFrameIndex(i), BadPixelMask.SubFrameBadpixelData[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
 	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::Shading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, ShadingData& ShadingRes)
+bool CAlpAPSMPAlgorithm::BadPixelLocalToOtpType(std::vector<Local>& BadPixelLocal, std::vector<uint8_t>& OtpData)
+{
+	if (BadPixelLocal.size() > m_AlgorithmThre.nBadPixelMaxLen)
+	{
+		std::string strErr = "BadPixelLocalToOtpType: Size error: Bad pixel size: " + std::to_string(BadPixelLocal.size()) + ", Max lens: " + std::to_string(m_AlgorithmThre.nBadPixelMaxLen);
+		WriteLog(strErr, All);
+		return false;
+	}
+	std::sort(BadPixelLocal.begin(), BadPixelLocal.end());
+
+	OtpData.resize(BadPixelLocal.size() * 3);
+
+	uint32_t nCur = 0;
+	for (uint32_t nIndex = 0; nIndex < BadPixelLocal.size(); nIndex++)
+	{
+		uint16_t nRow = static_cast<uint16_t>(BadPixelLocal[nIndex].x + m_AlgorithmThre.nBadPixelLocalRowOffset);
+		uint16_t nCol = static_cast<uint16_t>(BadPixelLocal[nIndex].y + m_AlgorithmThre.nBadPixelLocalColOffset);
+		uint8_t uData1 = nCol & 0xFF;
+		uint8_t uData2 = ((nRow << 4) & 0xF0) +((nCol >> 8) & 0x0F);
+		uint8_t uData3 = (nRow >> 4) & 0xFF;
+		OtpData[nCur++] = uData1;
+		OtpData[nCur++] = uData2;
+		OtpData[nCur++] = uData3;
+	}
+
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::YShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSYShadingType& ShadingRes)
 {
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -763,11 +612,11 @@ bool CAlpAPSMPAlgorithm::Shading(uint32_t nIndexStart, uint32_t nNumber, ROIArea
 	{
 		RealRoi = *ROI;
 	}
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
 	{
 		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 		{
-			std::string strErr = "Shading: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			std::string strErr = "YShading: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 			WriteLog(strErr, nChannelIndex);
 			return false;
 		}
@@ -775,120 +624,319 @@ bool CAlpAPSMPAlgorithm::Shading(uint32_t nIndexStart, uint32_t nNumber, ROIArea
 
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
-		std::string strErr = "Shading: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		std::string strErr = "YShading: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
 
-	uint32_t AACenterRow = (RealRoi.Up + RealRoi.Down) / 2;
-	uint32_t AACenterCol = (RealRoi.Left + RealRoi.Right) / 2;
-	ROIArea OpticalFindArea = { AACenterRow - m_AlgorithmThre.nOpticalFindRadius + 1, AACenterRow + m_AlgorithmThre.nOpticalFindRadius, \
-								AACenterCol - m_AlgorithmThre.nOpticalFindRadius + 1, AACenterCol + m_AlgorithmThre.nOpticalFindRadius };
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
 
-	if (OpticalFindArea.Down >= m_nChannelRow || OpticalFindArea.Right >= m_nChannelCol || OpticalFindArea.Down < OpticalFindArea.Up || OpticalFindArea.Right < OpticalFindArea.Left)
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nYShadingRowBlockNum, m_AlgorithmThre.nYShadingColBlockNum, BlockData))
 	{
-		std::string strErr = "Shading: Optical Find ROI error: ROI: " + std::to_string(OpticalFindArea.Up) + ", " + std::to_string(OpticalFindArea.Down) + ", " + std::to_string(OpticalFindArea.Left) + ", " + std::to_string(OpticalFindArea.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		std::string strErr = "YShading: GetBlockMean error";
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
 
-	std::vector<double> RowMean(2 * m_AlgorithmThre.nOpticalFindRadius, 0);
-	std::vector<double> ColMean(2 * m_AlgorithmThre.nOpticalFindRadius, 0);
+	double YCenter = (BlockData[Gr].m_RawData[m_AlgorithmThre.nYShadingRowBlockNum / 2][m_AlgorithmThre.nYShadingColBlockNum / 2] +
+		BlockData[Gb].m_RawData[m_AlgorithmThre.nYShadingRowBlockNum / 2][m_AlgorithmThre.nYShadingColBlockNum / 2]) / 2;
 
-	for (uint32_t nRows = OpticalFindArea.Up; nRows <= OpticalFindArea.Down; nRows++)
+	if (YCenter <= 0)
 	{
-		for (uint32_t nCols = OpticalFindArea.Left; nCols <= OpticalFindArea.Right; nCols++)
+		std::string strErr = "YShading: Y Center error";
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	ShadingRes.YShadingData.resize(m_AlgorithmThre.nYShadingRowBlockNum);
+	for (uint32_t nRows = 0; nRows < m_AlgorithmThre.nYShadingRowBlockNum; nRows++)
+	{
+		ShadingRes.YShadingData[nRows].resize(m_AlgorithmThre.nYShadingColBlockNum);
+
+		for (uint32_t nCols = 0; nCols < m_AlgorithmThre.nYShadingColBlockNum; nCols++)
+		{
+			double Y = (BlockData[Gr].m_RawData[nRows][nCols] + BlockData[Gb].m_RawData[nRows][nCols]) / 2;
+
+			ShadingRes.YShadingData[nRows][nCols] = Y / YCenter;
+		}
+	}
+	ShadingRes.YShadingLT = ShadingRes.YShadingData[0][0];
+	ShadingRes.YShadingLB = ShadingRes.YShadingData[m_AlgorithmThre.nYShadingRowBlockNum - 1][0];
+	ShadingRes.YShadingRT = ShadingRes.YShadingData[0][m_AlgorithmThre.nYShadingColBlockNum - 1];
+	ShadingRes.YShadingLB = ShadingRes.YShadingData[m_AlgorithmThre.nYShadingRowBlockNum - 1][m_AlgorithmThre.nYShadingColBlockNum - 1];
+
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSColorShadingType& ShadingRes)
+{
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "ColorShading: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "ColorShading: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
+
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nColorShadingRowBlockNum, m_AlgorithmThre.nColorShadingColBlockNum, BlockData))
+	{
+		std::string strErr = "ColorShading: GetBlockMean error";
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	double RCenter = BlockData[R].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2];
+	double BCenter = BlockData[B].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2];
+	double GCenter = (BlockData[Gr].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2] +
+		BlockData[Gb].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2]) / 2;
+
+	if (GCenter <= 0)
+	{
+		std::string strErr = "ColorShading: G Center error";
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+	double RGCenter = RCenter / GCenter;
+	double BGCenter = BCenter / GCenter;
+
+	ShadingRes.ColorShadingRGData.resize(m_AlgorithmThre.nColorShadingRowBlockNum);
+	ShadingRes.ColorShadingBGData.resize(m_AlgorithmThre.nColorShadingRowBlockNum);
+	for (uint32_t nRows = 0; nRows < m_AlgorithmThre.nColorShadingRowBlockNum; nRows++)
+	{
+		ShadingRes.ColorShadingRGData[nRows].resize(m_AlgorithmThre.nColorShadingColBlockNum);
+		ShadingRes.ColorShadingBGData[nRows].resize(m_AlgorithmThre.nColorShadingColBlockNum);
+
+		for (uint32_t nCols = 0; nCols < m_AlgorithmThre.nColorShadingColBlockNum; nCols++)
+		{
+			double GMean = (BlockData[Gr].m_RawData[nRows][nCols] + BlockData[Gb].m_RawData[nRows][nCols]) / 2;
+			double RMean = BlockData[R].m_RawData[nRows][nCols];
+			double BMean = BlockData[B].m_RawData[nRows][nCols];
+
+			if (GMean <= 0)
+			{
+				std::string strErr = "ColorShading: G Block error";
+				WriteLog(strErr, SubFrameIndex::All);
+				return false;
+			}
+
+			double RG = RMean / GMean;
+			double BG = BMean / GMean;
+
+			ShadingRes.ColorShadingRGData[nRows][nCols] = RG / RGCenter;
+			ShadingRes.ColorShadingBGData[nRows][nCols] = BG / BGCenter;
+		}
+	}
+
+	ShadingRes.ColorShadingRGLT = ShadingRes.ColorShadingRGData[0][0];
+	ShadingRes.ColorShadingRGLB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][0];
+	ShadingRes.ColorShadingRGRT = ShadingRes.ColorShadingRGData[0][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+	ShadingRes.ColorShadingRGLB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+
+	ShadingRes.ColorShadingBGLT = ShadingRes.ColorShadingBGData[0][0];
+	ShadingRes.ColorShadingBGLB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][0];
+	ShadingRes.ColorShadingBGRT = ShadingRes.ColorShadingBGData[0][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+	ShadingRes.ColorShadingBGLB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSOpticalCenterType& OpticalCenterType)
+{
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "OpticalCenter: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "OpticalCenter: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+	std::vector<double> RowMean(nRow, 0);
+	std::vector<double> ColMean(nCol, 0);
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
 		{
 			double dMeanData = 0;
 			for (uint32_t nFrameIndex = 0; nFrameIndex < nNumber; nFrameIndex++)
 			{
-				for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+				for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
 				{
-					dMeanData += m_RawDataContainer[nChannelIndex][nIndexStart + nFrameIndex].m_RawData[nRows][nCols];
+					dMeanData += m_RawDataContainer[nChannelIndex][nIndexStart + nFrameIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 				}
 			}
-			dMeanData /= (nNumber * APSSubFrameIndex::SubFrameNum);
-			RowMean[nRows - OpticalFindArea.Up] += dMeanData;
-			ColMean[nCols - OpticalFindArea.Left] += dMeanData;
+			dMeanData /= (nNumber * SubFrameIndex::All);
+			RowMean[nRows] += dMeanData;
+			ColMean[nCols] += dMeanData;
 		}
 	}
 
 	double dMaxValue = 0;
-	Max(dMaxValue, ShadingRes.CenterRow, RowMean, RowMean.size());
-	ShadingRes.CenterRow += OpticalFindArea.Up;
-	Max(dMaxValue, ShadingRes.CenterCol, ColMean, ColMean.size());
-	ShadingRes.CenterCol += OpticalFindArea.Left;
-
-	ROIArea RoiOC = { ShadingRes.CenterRow - m_AlgorithmThre.nShadingTestRadius + 1, ShadingRes.CenterRow + m_AlgorithmThre.nShadingTestRadius, \
-					ShadingRes.CenterCol - m_AlgorithmThre.nShadingTestRadius + 1, ShadingRes.CenterCol + m_AlgorithmThre.nShadingTestRadius };
-
-	ROIArea RoiLT = { RealRoi.Up, RealRoi.Up + 2 * m_AlgorithmThre.nShadingTestRadius - 1, RealRoi.Left, RealRoi.Left + 2 * m_AlgorithmThre.nShadingTestRadius - 1 };
-	ROIArea RoiLB = { RealRoi.Down - 2 * m_AlgorithmThre.nShadingTestRadius + 1, RealRoi.Down, RealRoi.Left, RealRoi.Left + 2 * m_AlgorithmThre.nShadingTestRadius - 1 };
-	ROIArea RoiRT = { RealRoi.Up, RealRoi.Up + 2 * m_AlgorithmThre.nShadingTestRadius - 1, RealRoi.Right - 2 * m_AlgorithmThre.nShadingTestRadius + 1, RealRoi.Right };
-	ROIArea RoiRB = { RealRoi.Down - 2 * m_AlgorithmThre.nShadingTestRadius + 1, RealRoi.Down, RealRoi.Right - 2 * m_AlgorithmThre.nShadingTestRadius + 1, RealRoi.Right };
-
-	std::vector<double>CenterMean(APSSubFrameIndex::SubFrameNum);
-	std::vector<double>LTMean(APSSubFrameIndex::SubFrameNum);
-	std::vector<double>LBMean(APSSubFrameIndex::SubFrameNum);
-	std::vector<double>RTMean(APSSubFrameIndex::SubFrameNum);
-	std::vector<double>RBMean(APSSubFrameIndex::SubFrameNum);
-
-	ShadingRes.LumaShadingLT.resize(APSSubFrameIndex::SubFrameNum);
-	ShadingRes.LumaShadingLB.resize(APSSubFrameIndex::SubFrameNum);
-	ShadingRes.LumaShadingRT.resize(APSSubFrameIndex::SubFrameNum);
-	ShadingRes.LumaShadingRB.resize(APSSubFrameIndex::SubFrameNum);
-
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
-	{
-		bool bRes = false;
-		SubFrameDataMean(nIndexStart, nNumber, &RoiOC, (APSSubFrameIndex)nChannelIndex, CenterMean[nChannelIndex], bRes);
-		if (!bRes)
-		{
-			return false;
-		}
-		SubFrameDataMean(nIndexStart, nNumber, &RoiLT, (APSSubFrameIndex)nChannelIndex, LTMean[nChannelIndex], bRes);
-		if (!bRes)
-		{
-			return false;
-		}
-		SubFrameDataMean(nIndexStart, nNumber, &RoiLB, (APSSubFrameIndex)nChannelIndex, LBMean[nChannelIndex], bRes);
-		if (!bRes)
-		{
-			return false;
-		}
-		SubFrameDataMean(nIndexStart, nNumber, &RoiRT, (APSSubFrameIndex)nChannelIndex, RTMean[nChannelIndex], bRes);
-		if (!bRes)
-		{
-			return false;
-		}
-		SubFrameDataMean(nIndexStart, nNumber, &RoiRB, (APSSubFrameIndex)nChannelIndex, RBMean[nChannelIndex], bRes);
-		if (!bRes)
-		{
-			return false;
-		}
-		ShadingRes.LumaShadingLT[nChannelIndex] = LTMean[nChannelIndex] / CenterMean[nChannelIndex] * 100;
-		ShadingRes.LumaShadingRT[nChannelIndex] = RTMean[nChannelIndex] / CenterMean[nChannelIndex] * 100;
-		ShadingRes.LumaShadingLB[nChannelIndex] = LBMean[nChannelIndex] / CenterMean[nChannelIndex] * 100;
-		ShadingRes.LumaShadingRB[nChannelIndex] = RBMean[nChannelIndex] / CenterMean[nChannelIndex] * 100;
-	}
-	ShadingRes.R_Gb_Ratio = (CenterMean[APSSubFrameIndex::R1] + CenterMean[APSSubFrameIndex::R2]) / (CenterMean[APSSubFrameIndex::Gb1] + CenterMean[APSSubFrameIndex::Gb2]) * 100;
-	ShadingRes.B_Gb_Ratio = (CenterMean[APSSubFrameIndex::B1] + CenterMean[APSSubFrameIndex::B2]) / (CenterMean[APSSubFrameIndex::Gb1] + CenterMean[APSSubFrameIndex::Gb2]) * 100;
-	ShadingRes.Gr_Gb_Ratio = (CenterMean[APSSubFrameIndex::Gr1] + CenterMean[APSSubFrameIndex::Gr2]) / (CenterMean[APSSubFrameIndex::Gb1] + CenterMean[APSSubFrameIndex::Gb2]) * 100;
+	Max(dMaxValue, OpticalCenterType.CenterRow, RowMean, RowMean.size());
+	OpticalCenterType.CenterRow += RealRoi.Up;
+	Max(dMaxValue, OpticalCenterType.CenterCol, ColMean, ColMean.size());
+	OpticalCenterType.CenterCol += RealRoi.Left;
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<std::vector<double>>& Data, std::vector<double>& ExpTime, bool bUseMeanFunc, std::vector<double>& DarkCurrentRes)
+bool CAlpAPSMPAlgorithm::PedestalVariation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSPedestalVariationType& PedestalVariationRes)
 {
-	if (Data.size() != ExpTime.size())
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
 	{
-		std::string strErr = "DarkCurrent: Size Error: Data Size: " + std::to_string(Data.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "PedestalVariation: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "PedestalVariation: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
-	DarkCurrentRes.resize(APSSubFrameIndex::SubFrameNum);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
+
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nPedestalVariationRowBlockNum, m_AlgorithmThre.nPedestalVariationColBlockNum, BlockData, m_AlgorithmThre.nPedestalVariationRowBlockSize, m_AlgorithmThre.nPedestalVariationColBlockSize))
 	{
-		uint32_t nDataNum = Data.size();
+		std::string strErr = "PedestalVariation: GetBlockMean error";
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	Local temp;
+	for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+	{
+		Max(PedestalVariationRes.PedestalMax[nIndex], temp, BlockData[nIndex]);
+		Min(PedestalVariationRes.PedestalMin[nIndex], temp, BlockData[nIndex]);
+	}
+
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::ReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, APSReadNoiseType& ReadNoiseRes)
+{
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		if (nIndex1 >= m_RawDataContainer[nChannelIndex].size() || nIndex2 >= m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "ReadNoise: Index error: nIndex1: " + std::to_string(nIndex1) + ", nIndex2: " + std::to_string(nIndex2);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "ReadNoise: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+	std::vector<double> AllPixel(nRow * nCol * SubFrameIndex::All);
+
+	uint32_t nCur = 0;
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		for (uint32_t nRows = 0; nRows < nRow; nRows++)
+		{
+			for (uint32_t nCols = 0; nCols < nCol; nCols++)
+			{
+				double value1 = m_RawDataContainer[nChannelIndex][nIndex1].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				double value2 = m_RawDataContainer[nChannelIndex][nIndex2].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				AllPixel[nCur++] = value1 - value2;
+			}
+		}
+	}
+	ReadNoiseRes = Std(AllPixel, nCur) / sqrt(2);
+
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSDataMeanType>& DataMean, std::vector<double>& ExpTime, APSDarkCurrentType& DarkCurrentRes)
+{
+	if (DataMean.size() != ExpTime.size())
+	{
+		std::string strErr = "DarkCurrent: Size Error: Data Size: " + std::to_string(DataMean.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+	DarkCurrentRes.SubFrameKValue.resize(SubFrameIndex::All);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		uint32_t nDataNum = DataMean.size();
 		std::vector<double> XData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
@@ -897,19 +945,12 @@ bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<std::vector<double>>& Data, std
 		std::vector<double> YData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
-			if (bUseMeanFunc)
-			{
-				YData[nIndex] = Data[nIndex][nChannelIndex];
-			}
-			else
-			{
-				YData[nIndex] = Data[nIndex][nChannelIndex] * Data[nIndex][nChannelIndex];
-			}
+			YData[nIndex] = DataMean[nIndex].SubFrameDataMean[nChannelIndex];
 		}
 		double k = 0.0, b = 0.0;
 		if (LinearityFit(XData, YData, k, b))
 		{
-			DarkCurrentRes[nChannelIndex] = k * 1000;
+			DarkCurrentRes.SubFrameKValue[nChannelIndex] = k * 1000;
 		}
 		else
 		{
@@ -922,7 +963,46 @@ bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<std::vector<double>>& Data, std
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, DSNUData& DSNURes)
+bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSTNoiseType>& TNoise, std::vector<double>& ExpTime, APSDarkCurrentType& DarkCurrentRes)
+{
+	if (TNoise.size() != ExpTime.size())
+	{
+		std::string strErr = "DarkCurrent: Size Error: Data Size: " + std::to_string(TNoise.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+	DarkCurrentRes.SubFrameKValue.resize(SubFrameIndex::All);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		uint32_t nDataNum = TNoise.size();
+		std::vector<double> XData(nDataNum);
+		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
+		{
+			XData[nIndex] = ExpTime[nIndex];
+		}
+		std::vector<double> YData(nDataNum);
+		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
+		{
+
+			YData[nIndex] = TNoise[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise * TNoise[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise;
+		}
+		double k = 0.0, b = 0.0;
+		if (LinearityFit(XData, YData, k, b))
+		{
+			DarkCurrentRes.SubFrameKValue[nChannelIndex] = k * 1000;
+		}
+		else
+		{
+			std::string strErr = "DarkCurrent: LinearityFit Error";
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSDSNUType& DSNURes)
 {
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -933,7 +1013,7 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	{
 		RealRoi = *ROI;
 	}
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
 	{
 		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 		{
@@ -946,20 +1026,21 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "DSNU: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
 
 	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-	uint32_t nRowBlockNum = nRow / m_AlgorithmThre.nDSNUBlockSize;
-	uint32_t nColBlockNum = nCol / m_AlgorithmThre.nDSNUBlockSize;
-	std::vector<CAPSDataContainer>BlockData(APSSubFrameIndex::SubFrameNum);
+	uint32_t nRowBlockNum = m_AlgorithmThre.nDSNURowBlockNum;
+	uint32_t nColBlockNum = m_AlgorithmThre.nDSNUColBlockNum;
 
-	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nDSNUBlockSize, BlockData))
+	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
+
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, nRowBlockNum, nColBlockNum, BlockData, m_AlgorithmThre.nDSNURowBlockSize, m_AlgorithmThre.nDSNUColBlockSize))
 	{
 		std::string strErr = "DSNU: GetBlockMean error";
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
 
@@ -976,23 +1057,28 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	{
 		for (uint32_t nColBlocks = 0; nColBlocks < nColBlockNum; nColBlocks++)
 		{
-			R.m_RawData[nRowBlocks][nColBlocks] = (BlockData[R1].m_RawData[nRowBlocks][nColBlocks] + BlockData[R2].m_RawData[nRowBlocks][nColBlocks]) / 2;
-			G.m_RawData[nRowBlocks][nColBlocks] = (BlockData[Gr1].m_RawData[nRowBlocks][nColBlocks] + BlockData[Gr2].m_RawData[nRowBlocks][nColBlocks] + BlockData[Gb1].m_RawData[nRowBlocks][nColBlocks] + BlockData[Gb2].m_RawData[nRowBlocks][nColBlocks]) / 4;
-			B.m_RawData[nRowBlocks][nColBlocks] = (BlockData[B1].m_RawData[nRowBlocks][nColBlocks] + BlockData[B2].m_RawData[nRowBlocks][nColBlocks]) / 2;
-			dPedestal += (R.m_RawData[nRowBlocks][nColBlocks] + G.m_RawData[nRowBlocks][nColBlocks] + B.m_RawData[nRowBlocks][nColBlocks]) / 3;
+			R.m_RawData[nRowBlocks][nColBlocks] = BlockData[SubFrameIndex::R].m_RawData[nRowBlocks][nColBlocks];
+			//G.m_RawData[nRowBlocks][nColBlocks] = sqrt((BlockData[SubFrameIndex::Gr].m_RawData[nRowBlocks][nColBlocks] * BlockData[SubFrameIndex::Gr].m_RawData[nRowBlocks][nColBlocks] + BlockData[SubFrameIndex::Gb].m_RawData[nRowBlocks][nColBlocks] * BlockData[SubFrameIndex::Gb].m_RawData[nRowBlocks][nColBlocks]) / 2);
+			G.m_RawData[nRowBlocks][nColBlocks] = (BlockData[SubFrameIndex::Gr].m_RawData[nRowBlocks][nColBlocks] + BlockData[SubFrameIndex::Gb].m_RawData[nRowBlocks][nColBlocks]) / 2;
+			B.m_RawData[nRowBlocks][nColBlocks] = BlockData[SubFrameIndex::B].m_RawData[nRowBlocks][nColBlocks];
+			dPedestal += R.m_RawData[nRowBlocks][nColBlocks];
+			dPedestal += G.m_RawData[nRowBlocks][nColBlocks];
+			dPedestal += B.m_RawData[nRowBlocks][nColBlocks];
 		}
 	}
-	dPedestal /= nRowBlockNum * nColBlockNum;
 
-	double MaxR = R.m_RawData[0][0], MinR = R.m_RawData[0][0], MaxG = G.m_RawData[0][0], MinG = G.m_RawData[0][0], MaxB = B.m_RawData[0][0], MinB = B.m_RawData[0][0], MaxSignal = 0;
+	dPedestal = round(dPedestal / (3 * nRowBlockNum * nColBlockNum));
+
+	double MaxR = R.m_RawData[0][0], MinR = R.m_RawData[0][0], MaxG = G.m_RawData[0][0], MinG = G.m_RawData[0][0], MaxB = B.m_RawData[0][0], MinB = B.m_RawData[0][0];
+	double MaxSignal = 0, MinSignal = 10000, MinSignalCorner = 10000, MinSignalCentre = 10000, MinSignalEdge = 10000;
+	uint32_t nMinSignalCornerRow = 0, nMinSignalCornerCol = 0;
+	uint32_t nMinSignalCentreRow = 0, nMinSignalCentreCol = 0;
+	uint32_t nMinSignalEdgeRow = 0, nMinSignalEdgeCol = 0;
+	uint32_t nMinSignalRow = 0, nMinSignalCol = 0;
 
 	ROIArea ROICorner[4] = { { 0, 1, 0, 1 }, { 0, 1, nColBlockNum - 2, nColBlockNum - 1 }, { nRowBlockNum - 2, nRowBlockNum - 1, 0, 1 }, { nRowBlockNum - 2, nRowBlockNum - 1, nColBlockNum - 2, nColBlockNum - 1 } };
 	ROIArea ROIEdge[4] = { { 0, 1, 2, nColBlockNum - 3 }, { nRowBlockNum - 2, nRowBlockNum - 1, 2, nColBlockNum - 3 }, {2, nRowBlockNum - 3, 0, 1 }, {2, nRowBlockNum - 3, nColBlockNum - 2, nColBlockNum - 1 }, };
 	ROIArea ROICenter = { 2, nRowBlockNum - 3, 2, nColBlockNum - 3 };
-
-	double dMinCornerR = R.m_RawData[0][0], dMinCornerG = G.m_RawData[0][0], dMinCornerB = B.m_RawData[0][0];
-	double dMinEdgeR = R.m_RawData[0][2], dMinEdgeG = G.m_RawData[0][2], dMinEdgeB = B.m_RawData[0][2];
-	double dMinCenterR = R.m_RawData[2][2], dMinCenterG = G.m_RawData[2][2], dMinCenterB = B.m_RawData[2][2];
 
 	for (uint32_t nRowBlockIndex = 0; nRowBlockIndex < nRowBlockNum; nRowBlockIndex++)
 	{
@@ -1013,33 +1099,38 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 			double dSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - dPedestal, 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - dPedestal, 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - dPedestal, 2));
 			if (dSignal > MaxSignal)
 				MaxSignal = dSignal;
-
+			if (dSignal < MinSignal)
+			{
+				MinSignal = dSignal;
+				nMinSignalRow = nRowBlockIndex;
+				nMinSignalCol = nColBlockIndex;
+			}
 			if (PosInRoi(nRowBlockIndex, nColBlockIndex, ROICenter))
 			{
-				if (R.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinCenterR)
-					dMinCenterR = R.m_RawData[nRowBlockIndex][nColBlockIndex];
-				if (G.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinCenterG)
-					dMinCenterG = G.m_RawData[nRowBlockIndex][nColBlockIndex];
-				if (B.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinCenterB)
-					dMinCenterB = B.m_RawData[nRowBlockIndex][nColBlockIndex];
+				if (dSignal < MinSignalCentre)
+				{
+					MinSignalCentre = dSignal;
+					nMinSignalCentreRow = nRowBlockIndex;
+					nMinSignalCentreCol = nColBlockIndex;
+				}
 			}
 			else if (PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[0]) || PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[1]) || PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[2]) || PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[3]))
 			{
-				if (R.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinCornerR)
-					dMinCornerR = R.m_RawData[nRowBlockIndex][nColBlockIndex];
-				if (G.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinCornerG)
-					dMinCornerG = G.m_RawData[nRowBlockIndex][nColBlockIndex];
-				if (B.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinCornerB)
-					dMinCornerB = B.m_RawData[nRowBlockIndex][nColBlockIndex];
+				if (dSignal < MinSignalCorner)
+				{
+					MinSignalCorner = dSignal;
+					nMinSignalCornerRow = nRowBlockIndex;
+					nMinSignalCornerCol = nColBlockIndex;
+				}
 			}
 			else
 			{
-				if (R.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinEdgeR)
-					dMinEdgeR = R.m_RawData[nRowBlockIndex][nColBlockIndex];
-				if (G.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinEdgeG)
-					dMinEdgeG = G.m_RawData[nRowBlockIndex][nColBlockIndex];
-				if (B.m_RawData[nRowBlockIndex][nColBlockIndex] < dMinEdgeB)
-					dMinEdgeB = B.m_RawData[nRowBlockIndex][nColBlockIndex];
+				if (dSignal < MinSignalEdge)
+				{
+					MinSignalEdge = dSignal;
+					nMinSignalEdgeRow = nRowBlockIndex;
+					nMinSignalEdgeCol = nColBlockIndex;
+				}
 			}
 		}
 	}
@@ -1048,20 +1139,33 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	DSNURes.RangeG = MaxG - MinG;
 	DSNURes.RangeB = MaxB - MinB;
 	DSNURes.SignalMax = MaxSignal;
+	DSNURes.RMax = MaxR;
+	DSNURes.RMin = MinR;
+	DSNURes.GMax = MaxG;
+	DSNURes.GMin = MinG;
+	DSNURes.BMax = MaxB;
+	DSNURes.BMin = MinB;
 
 	double dDeltaSignal = 0;
 	DSNURes.DeltaSignalCentreMax = 0;
 	DSNURes.DeltaSignalCornerMax = 0;
 	DSNURes.DeltaSignalEdgeMax = 0;
 	DSNURes.DeltaSignalMax = 0;
+	double dGlobalDeltaSignal = 0;
 
 	for (uint32_t nRowBlockIndex = 0; nRowBlockIndex < nRowBlockNum; nRowBlockIndex++)
 	{
 		for (uint32_t nColBlockIndex = 0; nColBlockIndex < nColBlockNum; nColBlockIndex++)
 		{
+			dGlobalDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - R.m_RawData[nMinSignalRow][nMinSignalCol], 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - G.m_RawData[nMinSignalRow][nMinSignalCol], 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - B.m_RawData[nMinSignalRow][nMinSignalCol], 2));
+			if (dGlobalDeltaSignal > DSNURes.DeltaSignalMax)
+			{
+				DSNURes.DeltaSignalMax = dGlobalDeltaSignal;
+			}
+
 			if (PosInRoi(nRowBlockIndex, nColBlockIndex, ROICenter))
 			{
-				dDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinCenterR, 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinCenterG, 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinCenterB, 2));
+				dDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - R.m_RawData[nMinSignalCentreRow][nMinSignalCentreCol], 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - G.m_RawData[nMinSignalCentreRow][nMinSignalCentreCol], 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - B.m_RawData[nMinSignalCentreRow][nMinSignalCentreCol], 2));
 				if (dDeltaSignal > DSNURes.DeltaSignalCentreMax)
 				{
 					DSNURes.DeltaSignalCentreMax = dDeltaSignal;
@@ -1069,7 +1173,7 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 			}
 			else if (PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[0]) || PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[1]) || PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[2]) || PosInRoi(nRowBlockIndex, nColBlockIndex, ROICorner[3]))
 			{
-				dDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinCornerR, 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinCornerG, 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinCornerB, 2));
+				dDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - R.m_RawData[nMinSignalCornerRow][nMinSignalCornerCol], 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - G.m_RawData[nMinSignalCornerRow][nMinSignalCornerCol], 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - B.m_RawData[nMinSignalCornerRow][nMinSignalCornerCol], 2));
 				if (dDeltaSignal > DSNURes.DeltaSignalCornerMax)
 				{
 					DSNURes.DeltaSignalCornerMax = dDeltaSignal;
@@ -1077,35 +1181,31 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 			}
 			else
 			{
-				dDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinEdgeR, 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinEdgeG, 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - dMinEdgeB, 2));
+				dDeltaSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - R.m_RawData[nMinSignalEdgeRow][nMinSignalEdgeCol], 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - G.m_RawData[nMinSignalEdgeRow][nMinSignalEdgeCol], 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - B.m_RawData[nMinSignalEdgeRow][nMinSignalEdgeCol], 2));
 				if (dDeltaSignal > DSNURes.DeltaSignalEdgeMax)
 				{
 					DSNURes.DeltaSignalEdgeMax = dDeltaSignal;
 				}
-			}
-			if (dDeltaSignal > DSNURes.DeltaSignalMax)
-			{
-				DSNURes.DeltaSignalMax = dDeltaSignal;
 			}
 		}
 	}
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::DataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<double>& DataMean)
+bool CAlpAPSMPAlgorithm::DataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSDataMeanType& DataMean)
 {
 	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
-	DataMean.resize(APSSubFrameIndex::SubFrameNum);
+	bool bSubRes[SubFrameIndex::All];
+	DataMean.SubFrameDataMean.resize(SubFrameIndex::All);
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDataMean, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), std::ref(DataMean[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDataMean, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(DataMean.SubFrameDataMean[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -1113,28 +1213,38 @@ bool CAlpAPSMPAlgorithm::DataMean(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameDataMean(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), DataMean[i], bSubRes[i]);
+			SubFrameDataMean(nIndexStart, nNumber, ROI, SubFrameIndex(i), DataMean.SubFrameDataMean[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
 	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::Linearity(std::vector<std::vector<double>>& LightMean, std::vector<double>& ExpTime, std::vector<LinearityData>& LinearityRes)
+bool CAlpAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean, std::vector<double>& ExpTime, APSLinearityType& LinearityRes)
 {
-	if (LightMean.size() != ExpTime.size())
+	if (LightMean.size() != ExpTime.size() && LightMean.size() != 0)
 	{
 		std::string strErr = "Linearity: Size Error: LightMean Size: " + std::to_string(LightMean.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
-	LinearityRes.resize(APSSubFrameIndex::SubFrameNum);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+	for (uint32_t nIndex = 0; nIndex < LightMean.size(); nIndex++)
+	{
+		if (LightMean[nIndex].SubFrameDataMean.size() != SubFrameIndex::All)
+		{
+			std::string strErr = "LightMean: Size Error: Index: " + std::to_string(nIndex) + ", Sub Frame Size: " + std::to_string(LightMean[nIndex].SubFrameDataMean.size());
+			WriteLog(strErr, SubFrameIndex::All);
+			return false;
+		}
+	}
+
+	LinearityRes.SubFrameLinearityData.resize(SubFrameIndex::All);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
 	{
 		uint32_t nDataNum = LightMean.size();
 		std::vector<double> XData(nDataNum);
@@ -1145,19 +1255,19 @@ bool CAlpAPSMPAlgorithm::Linearity(std::vector<std::vector<double>>& LightMean, 
 		std::vector<double> YData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
-			YData[nIndex] = LightMean[nIndex][nChannelIndex];
+			YData[nIndex] = LightMean[nIndex].SubFrameDataMean[nChannelIndex];
 		}
-		if (LinearityFit(XData, YData, LinearityRes[nChannelIndex].k, LinearityRes[nChannelIndex].b))
+		if (LinearityFit(XData, YData, LinearityRes.SubFrameLinearityData[nChannelIndex].k, LinearityRes.SubFrameLinearityData[nChannelIndex].b))
 		{
-			LinearityRes[nChannelIndex].LeMax = -100000, LinearityRes[nChannelIndex].LeMin = 10000;
+			LinearityRes.SubFrameLinearityData[nChannelIndex].LeMax = -100000, LinearityRes.SubFrameLinearityData[nChannelIndex].LeMin = 10000;
 			for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 			{
-				double FitY = ExpTime[nIndex] * LinearityRes[nChannelIndex].k + LinearityRes[nChannelIndex].b;
+				double FitY = ExpTime[nIndex] * LinearityRes.SubFrameLinearityData[nChannelIndex].k + LinearityRes.SubFrameLinearityData[nChannelIndex].b;
 				double LE = 100 * (YData[nIndex] - FitY) / FitY;
-				if (LE > LinearityRes[nChannelIndex].LeMax)
-					LinearityRes[nChannelIndex].LeMax = LE;
-				if (LE < LinearityRes[nChannelIndex].LeMin)
-					LinearityRes[nChannelIndex].LeMin = LE;
+				if (LE > LinearityRes.SubFrameLinearityData[nChannelIndex].LeMax)
+					LinearityRes.SubFrameLinearityData[nChannelIndex].LeMax = LE;
+				if (LE < LinearityRes.SubFrameLinearityData[nChannelIndex].LeMin)
+					LinearityRes.SubFrameLinearityData[nChannelIndex].LeMin = LE;
 			}
 		}
 		else
@@ -1171,32 +1281,32 @@ bool CAlpAPSMPAlgorithm::Linearity(std::vector<std::vector<double>>& LightMean, 
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<std::vector<double>>& LightTNoiseData, std::vector<std::vector<double>>& LightMean, std::vector<double> DarkTNoiseBase, std::vector<double>& GainK)
+bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<APSTNoiseType>& LightTNoiseData, std::vector<APSDataMeanType>& LightMean, APSTNoiseType DarkTNoiseBase, APSOverallSystemGainType& GainRes)
 {
 	if (LightTNoiseData.size() != LightMean.size())
 	{
 		std::string strErr = "OverallSystemGain: Size Error: LightTNoiseData Size: " + std::to_string(LightTNoiseData.size()) + ", LightMean Size: " + std::to_string(LightMean.size());
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
-	GainK.resize(APSSubFrameIndex::SubFrameNum);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < APSSubFrameIndex::SubFrameNum; nChannelIndex++)
+	GainRes.SubFrameGainK.resize(SubFrameIndex::All);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
 	{
 		uint32_t nDataNum = LightMean.size();
 		std::vector<double> XData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
-			XData[nIndex] = LightMean[nIndex][nChannelIndex];
+			XData[nIndex] = LightMean[nIndex].SubFrameDataMean[nChannelIndex];
 		}
 		std::vector<double> YData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
-			YData[nIndex] = LightTNoiseData[nIndex][nChannelIndex] * LightTNoiseData[nIndex][nChannelIndex] - DarkTNoiseBase[nChannelIndex] * DarkTNoiseBase[nChannelIndex];
+			YData[nIndex] = LightTNoiseData[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise * LightTNoiseData[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise - DarkTNoiseBase.SubFrameTNoiseData[nChannelIndex].TempNoise * DarkTNoiseBase.SubFrameTNoiseData[nChannelIndex].TempNoise;
 		}
 		double k = 0.0, b = 0.0;
 		if (LinearityFit(XData, YData, k, b))
 		{
-			GainK[nChannelIndex] = k;
+			GainRes.SubFrameGainK[nChannelIndex] = k;
 		}
 		else
 		{
@@ -1209,7 +1319,7 @@ bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<std::vector<double>>& Lig
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, SaturationData& SaturationRes)
+bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSaturationType& SaturationRes)
 {
 	bool bRes = false;
 	SubFrameDataMean(nIndexStart, nNumber, ROI, nChannelIndex, SaturationRes.SaturationMean, bRes);
@@ -1217,11 +1327,13 @@ bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIA
 	{
 		return false;
 	}
-	SubFrameTNoise(nIndexStart, nNumber, ROI, nChannelIndex, SaturationRes.SaturationTNoise, bRes);
+	APSSubFrameTNoiseType TNoise;
+	SubFrameTNoise(nIndexStart, nNumber, ROI, nChannelIndex, TNoise, bRes);
 	if (!bRes)
 	{
 		return false;
 	}
+	SaturationRes.SaturationTNoise = TNoise.TempNoise;
 	if (0 == SaturationRes.SaturationTNoise)
 	{
 		std::string strErr = "Saturation: TNoise abnormal";
@@ -1235,7 +1347,7 @@ bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIA
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData)
+bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData)
 {
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -1255,7 +1367,7 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "Show: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
 	ImgData.resize(m_nChannelRow);
@@ -1283,11 +1395,11 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 					}
 					else
 					{
-						if (m_RawType == RawType::RAW8)
+						if (m_RawType == APSRawType::RAW8)
 						{
 							ImgData[nRows][nCols] = floor(temp);
 						}
-						else if (m_RawType == RawType::RAW10)
+						else if (m_RawType == APSRawType::RAW10 || m_RawType == APSRawType::UNPACK10)
 						{
 							ImgData[nRows][nCols] = floor(temp / 4);
 						}
@@ -1337,7 +1449,7 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	return true;
 }
 
-bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, APSType& ImgData)
+bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData)
 {
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -1357,7 +1469,7 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "Show: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
 	ImgData.resize(m_nChannelRow);
@@ -1415,8 +1527,8 @@ ROIArea CAlpAPSMPAlgorithm::GetActiveArea()
 
 void CAlpAPSMPAlgorithm::GetRawDataSize(uint32_t& nRow, uint32_t& nCol)
 {
-	nRow = m_nChannelRow;
-	nCol = m_nChannelCol;
+	nRow = m_nTotalRow;
+	nCol = m_nTotalCol;
 }
 
 void CAlpAPSMPAlgorithm::SetActiveArea(ROIArea ActiveArea)
@@ -1428,7 +1540,7 @@ void CAlpAPSMPAlgorithm::SetRawDataSize(uint32_t nRow, uint32_t nCol)
 {
 	m_nTotalRow = nRow;
 	m_nTotalCol = nCol;
-	m_nChannelRow = m_nTotalRow / 4;
+	m_nChannelRow = m_nTotalRow / 2;
 	m_nChannelCol = m_nTotalCol / 2;
 }
 
@@ -1505,7 +1617,7 @@ double CAlpAPSMPAlgorithm::Mean(std::vector<double>& RawData, uint32_t nLens)
 	if (nLens < 1 || nLens > RawData.size())
 	{
 		std::string strErr = "Mean: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return 0.0;
 	}
 	double dMean = 0;
@@ -1531,7 +1643,7 @@ double CAlpAPSMPAlgorithm::Mean(CAPSDataContainer& RawData, ROIArea* ROI)
 	if (nSize < 1 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "Mean: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return 0.0;
 	}
 	double dMean = 0;
@@ -1551,7 +1663,7 @@ double CAlpAPSMPAlgorithm::Std(std::vector<double>& RawData, uint32_t nLens)
 	if (nLens < 2 || nLens > RawData.size())
 	{
 		std::string strErr = "Std: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return 0.0;
 	}
 	double dMean = Mean(RawData, nLens);
@@ -1579,7 +1691,7 @@ double CAlpAPSMPAlgorithm::Std(CAPSDataContainer& RawData, ROIArea* ROI)
 	if (nSize < 2 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "Std: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return 0.0;
 	}
 	double dMean = Mean(RawData, &RealRoi);
@@ -1600,7 +1712,7 @@ double CAlpAPSMPAlgorithm::RMS(std::vector<double>& RawData, uint32_t nLens)
 	if (nLens < 1 || nLens > RawData.size())
 	{
 		std::string strErr = "RMS: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return 0.0;
 	}
 	double dRMS = 0;
@@ -1627,7 +1739,7 @@ double CAlpAPSMPAlgorithm::RMS(CAPSDataContainer& RawData, ROIArea* ROI)
 	if (nSize < 1 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "RMS: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return 0.0;
 	}
 	double dRMS = 0;
@@ -1647,7 +1759,7 @@ void CAlpAPSMPAlgorithm::Max(double& dMaxValue, uint32_t& nMaxLocal, std::vector
 	if (nLens < 1 || nLens > RawData.size())
 	{
 		std::string strErr = "Max: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return;
 	}
 	dMaxValue = RawData[0];
@@ -1677,7 +1789,7 @@ void CAlpAPSMPAlgorithm::Max(double& dMaxValue, Local& MaxLocal, CAPSDataContain
 	if (nSize < 1 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "Max: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return;
 	}
 	dMaxValue = RawData.m_RawData[RealRoi.Up][RealRoi.Left];
@@ -1702,7 +1814,7 @@ void CAlpAPSMPAlgorithm::Min(double& dMinValue, uint32_t& nMinLocal, std::vector
 	if (nLens < 1 || nLens > RawData.size())
 	{
 		std::string strErr = "Min: Lens error: RawData Lens: " + std::to_string(RawData.size()) + ", Need Lens: " + std::to_string(nLens);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return;
 	}
 	dMinValue = RawData[0];
@@ -1732,7 +1844,7 @@ void CAlpAPSMPAlgorithm::Min(double& dMinValue, Local& MinLocal, CAPSDataContain
 	if (nSize < 1 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "Max: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
-		WriteLog(strErr, APSSubFrameIndex::SubFrameNum);
+		WriteLog(strErr, SubFrameIndex::All);
 		return;
 	}
 	dMinValue = RawData.m_RawData[RealRoi.Up][RealRoi.Left];
@@ -1787,7 +1899,7 @@ bool CAlpAPSMPAlgorithm::LinearityFit(std::vector<double>& XData, std::vector<do
 	return true;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& TNoiseData, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameTNoiseType& TNoise, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -1818,6 +1930,16 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 
 	CAPSDataContainer PixelTNoiseArray;
 	PixelTNoiseArray.Init(nRow, nCol);
+
+	CAPSDataContainer RowDataArray;
+	RowDataArray.Init(nRow, nNumber, true);
+
+	std::vector<double> RowNoise(nRow, 0);
+	std::vector<double> ColNoise(nCol, 0);
+
+	CAPSDataContainer ColDataArray;
+	ColDataArray.Init(nCol, nNumber, true);
+
 	std::vector<double> onePixelInMultiFrames(nNumber);
 
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
@@ -1826,16 +1948,50 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 		{
 			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 			{
-				onePixelInMultiFrames[nIndex] = m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				double dValue = m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				onePixelInMultiFrames[nIndex] = dValue;
+				RowDataArray.m_RawData[nRows][nIndex] += dValue;
+				ColDataArray.m_RawData[nCols][nIndex] += dValue;
 			}
 			PixelTNoiseArray.m_RawData[nRows][nCols] = Std(onePixelInMultiFrames, nNumber);
 		}
 	}
-	TNoiseData = RMS(PixelTNoiseArray);
+	RowDataArray /= nCol;
+	ColDataArray /= nRow;
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		RowNoise[nRows] = Std(RowDataArray.m_RawData[nRows], nNumber);
+	}
+	for (uint32_t nCols = 0; nCols < nCol; nCols++)
+	{
+		ColNoise[nCols] = Std(ColDataArray.m_RawData[nCols], nNumber);
+	}
+
+	TNoise.RowTemp = RMS(RowNoise, nRow);
+	TNoise.ColTemp = RMS(ColNoise, nCol);
+	TNoise.TempNoise = RMS(PixelTNoiseArray);
+	TNoise.PixelTemp = sqrt(TNoise.TempNoise * TNoise.TempNoise - TNoise.RowTemp * TNoise.RowTemp - TNoise.ColTemp * TNoise.ColTemp);
+	if (TNoise.RowTemp > 0)
+	{
+		TNoise.TempRNRatio = TNoise.PixelTemp / TNoise.RowTemp;
+	}
+	else
+	{
+		TNoise.TempRNRatio = -1;
+	}
+	if (TNoise.ColTemp > 0)
+	{
+		TNoise.TempCNRatio = TNoise.PixelTemp / TNoise.ColTemp;
+	}
+	else
+	{
+		TNoise.TempCNRatio = -1;
+	}
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& SNoiseData, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameSNoiseType& SNoiseData, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -1866,212 +2022,40 @@ void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	CAPSDataContainer PixelSNoiseArray;
 	PixelSNoiseArray.Init(nRow, nCol, true);
 
-	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-	{
-		for (uint32_t nRows = 0; nRows < nRow; nRows++)
-		{
-			for (uint32_t nCols = 0; nCols < nCol; nCols++)
-			{
-				PixelSNoiseArray.m_RawData[nRows][nCols] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
-			}
-		}
-	}
-	PixelSNoiseArray /= nNumber;
-	SNoiseData = Std(PixelSNoiseArray);
-	return;
-}
-
-void CAlpAPSMPAlgorithm::SubFrameRowTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& RowTNoiseData, bool& bRes)
-{
-	bRes = true;
-	ROIArea RealRoi = { 0 };
-	if (ROI == nullptr)
-	{
-		RealRoi = m_ActiveArea;
-	}
-	else
-	{
-		RealRoi = *ROI;
-	}
-	if (nNumber < 2 || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
-	{
-		std::string strErr = "SubFrameRowTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
-	{
-		std::string strErr = "SubFrameRowTNoise: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
-	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-
-	std::vector<double> RowNoise(nRow);
+	std::vector<double> RowMean(nRow, 0);
+	std::vector<double> ColMean(nCol, 0);
 
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
-		std::vector<double> RowMean(nNumber, 0);
-
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
 		{
-			for (uint32_t nCols = 0; nCols < nCol; nCols++)
+			double dValue = 0;
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 			{
-				RowMean[nIndex] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 			}
-			RowMean[nIndex] /= nCol;
+			dValue = round(dValue / nNumber);
+			PixelSNoiseArray.m_RawData[nRows][nCols] = dValue;
+			RowMean[nRows] += dValue;
+			ColMean[nCols] += dValue;
 		}
-		RowNoise[nRows] = Std(RowMean, nNumber);
 	}
-	RowTNoiseData = RMS(RowNoise, nRow);
-	return;
-}
-
-void CAlpAPSMPAlgorithm::SubFrameColTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& ColTNoiseData, bool& bRes)
-{
-	bRes = true;
-	ROIArea RealRoi = { 0 };
-	if (ROI == nullptr)
-	{
-		RealRoi = m_ActiveArea;
-	}
-	else
-	{
-		RealRoi = *ROI;
-	}
-	if (nNumber < 2 || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
-	{
-		std::string strErr = "SubFrameColTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
-	{
-		std::string strErr = "SubFrameColTNoise: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
-	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-
-	std::vector<double> ColNoise(nCol);
-
-	for (uint32_t nCols = 0; nCols < nCol; nCols++)
-	{
-		std::vector<double> ColMean(nNumber, 0);
-
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			for (uint32_t nRows = 0; nRows < nRow; nRows++)
-			{
-				ColMean[nIndex] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
-			}
-			ColMean[nIndex] /= nRow;
-		}
-		ColNoise[nCols] = Std(ColMean, nNumber);
-	}
-	ColTNoiseData = RMS(ColNoise, nCol);
-	return;
-}
-
-void CAlpAPSMPAlgorithm::SubFrameRowSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& RowSNoiseData, bool& bRes)
-{
-	bRes = true;
-	ROIArea RealRoi = { 0 };
-	if (ROI == nullptr)
-	{
-		RealRoi = m_ActiveArea;
-	}
-	else
-	{
-		RealRoi = *ROI;
-	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
-	{
-		std::string strErr = "SubFrameRowSNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
-	{
-		std::string strErr = "SubFrameRowSNoise: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
-	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-
-	std::vector<double> RowMean(nRow);
-
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			for (uint32_t nCols = 0; nCols < nCol; nCols++)
-			{
-				RowMean[nRows] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
-			}
-		}
-		RowMean[nRows] /= (nCol * nNumber);
+		RowMean[nRows] /= nCol;
 	}
-	RowSNoiseData = Std(RowMean, nRow);
-	return;
-}
-
-void CAlpAPSMPAlgorithm::SubFrameColSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& ColSNoiseData, bool& bRes)
-{
-	bRes = true;
-	ROIArea RealRoi = { 0 };
-	if (ROI == nullptr)
-	{
-		RealRoi = m_ActiveArea;
-	}
-	else
-	{
-		RealRoi = *ROI;
-	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
-	{
-		std::string strErr = "SubFrameColSNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
-	{
-		std::string strErr = "SubFrameColSNoise: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
-		WriteLog(strErr, nChannelIndex);
-		bRes = false;
-		return;
-	}
-	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
-	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-
-	std::vector<double> ColMean(nCol);
-
 	for (uint32_t nCols = 0; nCols < nCol; nCols++)
 	{
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			for (uint32_t nRows = 0; nRows < nRow; nRows++)
-			{
-				ColMean[nCols] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
-			}
-		}
-		ColMean[nCols] /= (nRow * nNumber);
+		ColMean[nCols] /= nRow;
 	}
-	ColSNoiseData = Std(ColMean, nCol);
+
+	SNoiseData.SNoise = Std(PixelSNoiseArray);
+	SNoiseData.RowSNoise = Std(RowMean, nRow);
+	SNoiseData.ColSNoise = Std(ColMean, nCol);
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, BadpixelData& BadpixelRes, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2105,17 +2089,17 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 	std::vector<std::vector<uint32_t>> BadPixelMask(nRow);
 	for (uint32_t i = 0; i < nRow; i++)
 	{
-		BadPixelMask[i].resize(nCol);
+		BadPixelMask[i].resize(nCol, 0);
 	}
-	std::vector<double> SortData((2 * m_AlgorithmThre.nBadPixelRadius + 1) * (2 * m_AlgorithmThre.nBadPixelRadius + 1));
-
 	BadpixelRes.BadPixelNum = 0;
-	BadpixelRes.DeadPixelNum = 0;
+	BadpixelRes.DefectColNum = 0;
+	BadpixelRes.DefectRowNum = 0;
+	BadpixelRes.SingletNum = 0;
+	BadpixelRes.CoupletNum = 0;
+	BadpixelRes.ClusterNum = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
 	BadpixelRes.BadPixelMask.BadPixelNum = 0;
-	std::vector<uint32_t> RowDeadLine(nRow, 0);
-	std::vector<uint32_t> ColDeadLine(nCol, 0);
 
 	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
 	{
@@ -2123,16 +2107,19 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 		{
 			if (nRows < nRow && nCols < nCol)
 			{
+				double dValue = 0;
 				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 				{
-					PixelMeanArray.m_RawData[nRows][nCols] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+					dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 				}
-				PixelMeanArray.m_RawData[nRows][nCols] /= nNumber;
+				PixelMeanArray.m_RawData[nRows][nCols] = round(dValue / nNumber);
 			}
 			if ((nRows - m_AlgorithmThre.nBadPixelRadius < nRow) && (nCols - m_AlgorithmThre.nBadPixelRadius < nCol))
 			{
 				uint32_t uSize = 0;
 				double dSurroundPixle = 0;
+				double dMax = -1;
+				double dMin = 10000;
 				for (uint32_t i = 0; i < 2 * m_AlgorithmThre.nBadPixelRadius + 1; i++)
 				{
 					for (uint32_t j = 0; j < 2 * m_AlgorithmThre.nBadPixelRadius + 1; j++)
@@ -2141,13 +2128,21 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 						{
 							dSurroundPixle += PixelMeanArray.m_RawData[nRows - i][nCols - j];
 							//SortData[uSize] = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							if (dMax < PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMax = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
+							if (dMin > PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMin = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
 							uSize++;
 						}
 					}
 				}
-				if (uSize)
+				if (uSize > 2)
 				{
-					dSurroundPixle /= uSize;
+					dSurroundPixle = (dSurroundPixle - dMax - dMin) / (uSize - 2);
 				}
 				else
 				{
@@ -2159,50 +2154,17 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 
 				if (abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle > m_AlgorithmThre.dBadPixelThre)
 				{
-					BadpixelRes.BadPixelMask.BadPixelNum++;
-					BadpixelRes.BadPixelMask.LocalData.push_back({ nRows - m_AlgorithmThre.nBadPixelRadius + RealRoi.Up, nCols - m_AlgorithmThre.nBadPixelRadius + RealRoi.Left });
+					//BadpixelRes.BadPixelMask.BadPixelNum++;
+					//BadpixelRes.BadPixelMask.LocalData.push_back({ nRows - m_AlgorithmThre.nBadPixelRadius + RealRoi.Up, nCols - m_AlgorithmThre.nBadPixelRadius + RealRoi.Left });
+					//BadpixelRes.BadPixelMask.Flag.push_back(APS_BAD_PIXEL_FLAG);
 
 					BadpixelRes.BadPixelNum++;
-					if (abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle > m_AlgorithmThre.dDeadPixelThre)
-					{
-						BadpixelRes.DeadPixelNum++;
-						++RowDeadLine[nRows - m_AlgorithmThre.nBadPixelRadius];
-						++ColDeadLine[nCols - m_AlgorithmThre.nBadPixelRadius];
-						BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = APS_DEAD_PIXEL_FLAG;
-						BadpixelRes.BadPixelMask.Flag.push_back(APS_DEAD_PIXEL_FLAG);
-					}
-					else
-					{
-						BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = APS_BAD_PIXEL_FLAG;
-						BadpixelRes.BadPixelMask.Flag.push_back(APS_BAD_PIXEL_FLAG);
-					}
-				}
-				else
-				{
-					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 0;
+					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 1;
 				}
 			}
 		}
 	}
-	BadpixelRes.DeadLineNum = 0;
-	for (uint32_t nRows = 0; nRows < nRow; nRows++)
-	{
-		if (RowDeadLine[nRows] > nCol * m_AlgorithmThre.dDeadLineThre)
-		{
-			++BadpixelRes.DeadLineNum;
-		}
-	}
-	for (uint32_t nCols = 0; nCols < nCol; nCols++)
-	{
-		if (ColDeadLine[nCols] > nRow * m_AlgorithmThre.dDeadLineThre)
-		{
-			++BadpixelRes.DeadLineNum;
-		}
-	}
 	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
-	BadpixelRes.SingletNum = 0;
-	BadpixelRes.CoupletNum = 0;
-	BadpixelRes.ClusterNum = 0;
 
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
@@ -2211,12 +2173,13 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 			if (BadPixelMask[nRows][nCols] != 0 && BadPixelMask[nRows][nCols] < ConnectedAreaFlag)
 			{
 				uint32_t AreaSize = 0;
-				std::stack<Local> Search;
-				Search.push({ nRows, nCols });
-				while (!Search.empty())
+				uint32_t nCur = 0;
+				std::vector<Local> Search;
+				Search.push_back({ nRows, nCols });
+				while (nCur != Search.size())
 				{
-					Local temp = Search.top();
-					Search.pop();
+					Local temp = Search[nCur];
+					nCur++;
 					BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
 					AreaSize++;
 					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
@@ -2227,32 +2190,99 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 							{
 								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
-									Search.push({ nTempRows , nTempCols });
+									Search.push_back({ nTempRows , nTempCols });
 								}
 							}
 						}
 					}
 				}
+				uint8_t uFlag = 0;
 				if (AreaSize == 1)
 				{
 					BadpixelRes.SingletNum++;
+					uFlag = APS_BAD_PIXEL_SINGLET_FLAG;
 				}
 				else if (AreaSize == 2)
 				{
 					BadpixelRes.CoupletNum++;
+					uFlag = APS_BAD_PIXEL_COUPLET_FLAG;
 				}
 				else
 				{
 					BadpixelRes.ClusterNum++;
+					uFlag = APS_BAD_PIXEL_CLUSTER_FLAG;
+				}
+				for (uint32_t n = 0; n < Search.size(); n++)
+				{
+					BadpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
+					BadpixelRes.BadPixelMask.Flag.push_back(uFlag);
+					BadpixelRes.BadPixelMask.BadPixelNum++;
 				}
 				ConnectedAreaFlag--;
 			}
 		}
 	}
+
+	std::vector<double> RowMean(nRow, 0);
+	std::vector<double> ColMean(nCol, 0);
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		{
+			double value = 0;
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+			{
+				value += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+			}
+			RowMean[nRows] += round(value / nNumber);
+			ColMean[nCols] += round(value / nNumber);
+		}
+	}
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		RowMean[nRows] /= nCol;
+	}
+	for (uint32_t nCols = 0; nCols < nCol; nCols++)
+	{
+		ColMean[nCols] /= nRow;
+	}
+	for (uint32_t nRows = m_AlgorithmThre.nBadLineRadius; nRows < nRow - m_AlgorithmThre.nBadLineRadius; nRows++)
+	{
+		double dBaseMean = 0;
+		for (uint32_t n = nRows - m_AlgorithmThre.nBadLineRadius; n <= nRows + m_AlgorithmThre.nBadLineRadius; n++)
+		{
+			if (n != nRows)
+			{
+				dBaseMean += RowMean[n];
+			}
+		}
+		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		if (abs(RowMean[nRows] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
+		{
+			BadpixelRes.DefectRowNum++;
+		}
+	}
+	for (uint32_t nCols = m_AlgorithmThre.nBadLineRadius; nCols < nCol - m_AlgorithmThre.nBadLineRadius; nCols++)
+	{
+		double dBaseMean = 0;
+		for (uint32_t n = nCols - m_AlgorithmThre.nBadLineRadius; n <= nCols + m_AlgorithmThre.nBadLineRadius; n++)
+		{
+			if (n != nCols)
+			{
+				dBaseMean += ColMean[n];
+			}
+		}
+		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		if (abs(ColMean[nCols] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
+		{
+			BadpixelRes.DefectColNum++;
+		}
+	}
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, HotpixelData& HotpixelRes, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& HotpixelRes, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2283,15 +2313,21 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 
 	CAPSDataContainer PixelMeanArray;
 	PixelMeanArray.Init(nRow, nCol, true);
-	std::vector<double> SortData((2 * m_AlgorithmThre.nBadPixelRadius + 1) * (2 * m_AlgorithmThre.nBadPixelRadius + 1));
+	std::vector<std::vector<uint32_t>> BadPixelMask(nRow);
+	for (uint32_t i = 0; i < nRow; i++)
+	{
+		BadPixelMask[i].resize(nCol, 0);
+	}
 
-	HotpixelRes.HotPixelNum = 0;
-	HotpixelRes.HotPixelMask.LocalData.clear();
-	HotpixelRes.HotPixelMask.Flag.clear();
-	HotpixelRes.HotPixelMask.BadPixelNum = 0;
-
-	std::vector<uint32_t> RowHotLine(nRow, 0);
-	std::vector<uint32_t> ColHotLine(nCol, 0);
+	HotpixelRes.BadPixelNum = 0;
+	HotpixelRes.DefectColNum = 0;
+	HotpixelRes.DefectRowNum = 0;
+	HotpixelRes.SingletNum = 0;
+	HotpixelRes.CoupletNum = 0;
+	HotpixelRes.ClusterNum = 0;
+	HotpixelRes.BadPixelMask.LocalData.clear();
+	HotpixelRes.BadPixelMask.Flag.clear();
+	HotpixelRes.BadPixelMask.BadPixelNum = 0;
 
 	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
 	{
@@ -2299,16 +2335,19 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 		{
 			if (nRows < nRow && nCols < nCol)
 			{
+				double dValue = 0;
 				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 				{
-					PixelMeanArray.m_RawData[nRows][nCols] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+					dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 				}
-				PixelMeanArray.m_RawData[nRows][nCols] /= nNumber;
+				PixelMeanArray.m_RawData[nRows][nCols] = round(dValue / nNumber);
 			}
 			if ((nRows - m_AlgorithmThre.nBadPixelRadius < nRow) && (nCols - m_AlgorithmThre.nBadPixelRadius < nCol))
 			{
 				uint32_t uSize = 0;
 				double dSurroundPixle = 0;
+				double dMax = -1;
+				double dMin = 10000;
 				for (uint32_t i = 0; i < 2 * m_AlgorithmThre.nBadPixelRadius + 1; i++)
 				{
 					for (uint32_t j = 0; j < 2 * m_AlgorithmThre.nBadPixelRadius + 1; j++)
@@ -2317,13 +2356,21 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 						{
 							dSurroundPixle += PixelMeanArray.m_RawData[nRows - i][nCols - j];
 							//SortData[uSize] = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							if (dMax < PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMax = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
+							if (dMin > PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMin = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
 							uSize++;
 						}
 					}
 				}
-				if (uSize)
+				if (uSize > 2)
 				{
-					dSurroundPixle /= uSize;
+					dSurroundPixle = (dSurroundPixle - dMax - dMin) / (uSize - 2);
 				}
 				else
 				{
@@ -2335,36 +2382,134 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 
 				if (abs(dCurrentPixel - dSurroundPixle) > m_AlgorithmThre.dHotPixelThre)
 				{
-					HotpixelRes.HotPixelMask.BadPixelNum++;
-					HotpixelRes.HotPixelMask.LocalData.push_back({ nRows - m_AlgorithmThre.nBadPixelRadius + RealRoi.Up, nCols - m_AlgorithmThre.nBadPixelRadius + RealRoi.Left });
-					HotpixelRes.HotPixelMask.Flag.push_back(APS_HOT_PIXEL_FLAG);
-					HotpixelRes.HotPixelNum++;
-
-					++RowHotLine[nRows - m_AlgorithmThre.nBadPixelRadius];
-					++ColHotLine[nCols - m_AlgorithmThre.nBadPixelRadius];
+					HotpixelRes.BadPixelNum++;
+					//HotpixelRes.BadPixelMask.LocalData.push_back({ nRows - m_AlgorithmThre.nBadPixelRadius + RealRoi.Up, nCols - m_AlgorithmThre.nBadPixelRadius + RealRoi.Left });
+					//HotpixelRes.BadPixelMask.Flag.push_back(APS_HOT_PIXEL_FLAG);
+					//HotpixelRes.BadPixelMask.BadPixelNum++;
+					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 1;
 				}
 			}
 		}
 	}
-	HotpixelRes.HotLineNum = 0;
+
+	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
+
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
-		if (RowHotLine[nRows] > nCol * m_AlgorithmThre.dHotLineThre)
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
 		{
-			++HotpixelRes.HotLineNum;
+			if (BadPixelMask[nRows][nCols] != 0 && BadPixelMask[nRows][nCols] < ConnectedAreaFlag)
+			{
+				uint32_t AreaSize = 0;
+				std::vector<Local> Search;
+				uint32_t nCur = 0;
+				Search.push_back({ nRows, nCols });
+				while (nCur != Search.size())
+				{
+					Local temp = Search[nCur];
+					nCur++;
+					BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
+					AreaSize++;
+					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					{
+						if (nTempRows < nRow)
+						{
+							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							{
+								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								{
+									Search.push_back({ nTempRows , nTempCols });
+								}
+							}
+						}
+					}
+				}
+				uint8_t uFlag = 0;
+				if (AreaSize == 1)
+				{
+					HotpixelRes.SingletNum++;
+					uFlag = APS_HOT_PIXEL_SINGLET_FLAG;
+				}
+				else if (AreaSize == 2)
+				{
+					HotpixelRes.CoupletNum++;
+					uFlag = APS_HOT_PIXEL_COUPLET_FLAG;
+				}
+				else
+				{
+					HotpixelRes.ClusterNum++;
+					uFlag = APS_HOT_PIXEL_CLUSTER_FLAG;
+				}
+				for (uint32_t n = 0; n < Search.size(); n++)
+				{
+					HotpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
+					HotpixelRes.BadPixelMask.Flag.push_back(uFlag);
+					HotpixelRes.BadPixelMask.BadPixelNum++;
+				}
+				ConnectedAreaFlag--;
+			}
 		}
+	}
+	std::vector<double> RowMean(nRow, 0);
+	std::vector<double> ColMean(nCol, 0);
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		{
+			double value = 0;
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+			{
+				value += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+			}
+			RowMean[nRows] += round(value / nNumber);
+			ColMean[nCols] += round(value / nNumber);
+		}
+	}
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		RowMean[nRows] /= nCol;
 	}
 	for (uint32_t nCols = 0; nCols < nCol; nCols++)
 	{
-		if (ColHotLine[nCols] > nRow * m_AlgorithmThre.dHotLineThre)
+		ColMean[nCols] /= nRow;
+	}
+	for (uint32_t nRows = m_AlgorithmThre.nBadLineRadius; nRows < nRow - m_AlgorithmThre.nBadLineRadius; nRows++)
+	{
+		double dBaseMean = 0;
+		for (uint32_t n = nRows - m_AlgorithmThre.nBadLineRadius; n <= nRows + m_AlgorithmThre.nBadLineRadius; n++)
 		{
-			++HotpixelRes.HotLineNum;
+			if (n != nRows)
+			{
+				dBaseMean += RowMean[n];
+			}
+		}
+		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		if (abs(RowMean[nRows] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
+		{
+			HotpixelRes.DefectRowNum++;
+		}
+	}
+	for (uint32_t nCols = m_AlgorithmThre.nBadLineRadius; nCols < nCol - m_AlgorithmThre.nBadLineRadius; nCols++)
+	{
+		double dBaseMean = 0;
+		for (uint32_t n = nCols - m_AlgorithmThre.nBadLineRadius; n <= nCols + m_AlgorithmThre.nBadLineRadius; n++)
+		{
+			if (n != nCols)
+			{
+				dBaseMean += ColMean[n];
+			}
+		}
+		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		if (abs(ColMean[nCols] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
+		{
+			HotpixelRes.DefectColNum++;
 		}
 	}
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& BaseMean, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& BaseMean, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2404,7 +2549,7 @@ void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROI
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, BadPixelMaskData& BadPixelMask, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& SubFrameBadPixel, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2431,12 +2576,12 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 		return;
 	}
 
-	for (uint32_t nBadPixelIndex = 0; nBadPixelIndex < BadPixelMask.BadPixelNum; nBadPixelIndex++)
+	for (uint32_t nBadPixelIndex = 0; nBadPixelIndex < SubFrameBadPixel.BadPixelMask.BadPixelNum; nBadPixelIndex++)
 	{
-		uint32_t nBadpixelRows = BadPixelMask.LocalData[nBadPixelIndex].x;
-		uint32_t nBadpixelCols = BadPixelMask.LocalData[nBadPixelIndex].y;
+		uint32_t nBadpixelRows = SubFrameBadPixel.BadPixelMask.LocalData[nBadPixelIndex].x;
+		uint32_t nBadpixelCols = SubFrameBadPixel.BadPixelMask.LocalData[nBadPixelIndex].y;
 
-		for (uint32_t nBadPixelIndex = 0; nBadPixelIndex < BadPixelMask.BadPixelNum; nBadPixelIndex++)
+		for (uint32_t nBadPixelIndex = 0; nBadPixelIndex < SubFrameBadPixel.BadPixelMask.BadPixelNum; nBadPixelIndex++)
 		{
 			for (uint32_t nFrameIndex = 0; nFrameIndex < nNumber; nFrameIndex++)
 			{
@@ -2449,7 +2594,7 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 					{
 						for (uint32_t nCurCols = nBadpixelCols - 1; nCurCols <= nBadpixelCols + 1; nCurCols++)
 						{
-							if (nCurCols >= RealRoi.Left && nCurCols <= RealRoi.Right && BadPixelMask.LocalData.end() == std::find(BadPixelMask.LocalData.begin(), BadPixelMask.LocalData.end(), Local{ nCurRows, nCurCols }))
+							if (nCurCols >= RealRoi.Left && nCurCols <= RealRoi.Right && SubFrameBadPixel.BadPixelMask.LocalData.end() == std::find(SubFrameBadPixel.BadPixelMask.LocalData.begin(), SubFrameBadPixel.BadPixelMask.LocalData.end(), Local{ nCurRows, nCurCols }))
 							{
 								dMeanData += CurRawData.m_RawData[nCurRows][nCurCols];
 								nSize++;
@@ -2459,7 +2604,7 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 				}
 				if (nSize > 0)
 				{
-					CurRawData.m_RawData[nBadpixelRows][nBadpixelCols] = dMeanData / nSize;
+					CurRawData.m_RawData[nBadpixelRows][nBadpixelCols] = round(dMeanData / nSize);
 				}
 			}
 		}
@@ -2467,7 +2612,7 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, double& DataMean, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& DataMean, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2499,18 +2644,21 @@ void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber
 	{
 		for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
 		{
+			double dValue = 0;
 			for (uint32_t nFrameIndex = 0; nFrameIndex < nNumber; nFrameIndex++)
 			{
-				DataMean += m_RawDataContainer[nChannelIndex][nIndexStart + nFrameIndex].m_RawData[nRows][nCols];
+				dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nFrameIndex].m_RawData[nRows][nCols];
 			}
+			dValue = round(dValue / nNumber);
+			DataMean += dValue;
 		}
 	}
-	DataMean /= ((RealRoi.Down - RealRoi.Up + 1) * (RealRoi.Right - RealRoi.Left + 1) * nNumber);
+	DataMean /= ((RealRoi.Down - RealRoi.Up + 1) * (RealRoi.Right - RealRoi.Left + 1));
 
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, std::vector<double>& BaseMean, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<double>& BaseMean, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2558,7 +2706,7 @@ void CAlpAPSMPAlgorithm::SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNu
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameColMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, std::vector<double>& DataMean, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameColMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<double>& DataMean, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2587,35 +2735,37 @@ void CAlpAPSMPAlgorithm::SubFrameColMean(uint32_t nIndexStart, uint32_t nNumber,
 	uint32_t nAACol = RealRoi.Right - RealRoi.Left + 1;
 	uint32_t nAARow = RealRoi.Down - RealRoi.Up + 1;
 	DataMean.resize(nAACol);
-	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-	{
 		for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
 		{
 			DataMean[nCols - RealRoi.Left] = 0;
 			for (uint32_t nRows = RealRoi.Up; nRows <= RealRoi.Down; nRows++)
 			{
-				DataMean[nCols - RealRoi.Left] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
+				double dValue = 0;
+				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+				{
+					dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
+				}
+				DataMean[nCols - RealRoi.Left] += round(dValue / nNumber);
 			}
 			DataMean[nCols - RealRoi.Left] /= nAARow;
-		}
 	}
 	return;
 }
 
-bool CAlpAPSMPAlgorithm::GetBlockMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t nBlockSize, std::vector<CAPSDataContainer>& BlockData)
+bool CAlpAPSMPAlgorithm::GetBlockMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t nRowBlockNum, uint32_t nColBlockNum, std::vector<CAPSDataContainer>& BlockData, uint32_t nSubRowBlockSize, uint32_t nSubColBlockSize)
 {
 	bool bRet = true;
-	bool bSubRes[APSSubFrameIndex::SubFrameNum];
+	bool bSubRes[SubFrameIndex::All];
 
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
+		std::thread* t[SubFrameIndex::All];
 
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBlockMean, this, nIndexStart, nNumber, ROI, APSSubFrameIndex(i), nBlockSize, std::ref(BlockData[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameBlockMean, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), nRowBlockNum, nColBlockNum, nSubRowBlockSize, nSubColBlockSize, std::ref(BlockData[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -2623,19 +2773,19 @@ bool CAlpAPSMPAlgorithm::GetBlockMean(uint32_t nIndexStart, uint32_t nNumber, RO
 	}
 	else
 	{
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameBlockMean(nIndexStart, nNumber, ROI, APSSubFrameIndex(i), nBlockSize, BlockData[i], bSubRes[i]);
+			SubFrameBlockMean(nIndexStart, nNumber, ROI, SubFrameIndex(i), nRowBlockNum, nColBlockNum, nSubRowBlockSize, nSubColBlockSize, BlockData[i], bSubRes[i]);
 		}
 	}
-	for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
+	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
 	return bRet;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSubFrameIndex nChannelIndex, uint32_t nBlockSize, CAPSDataContainer& BlockData, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, uint32_t nRowBlockNum, uint32_t nColBlockNum, uint32_t nSubRowBlockSize, uint32_t nSubColBlockSize, CAPSDataContainer& BlockData, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2663,38 +2813,46 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 		return;
 	}
 
-	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
-	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-	uint32_t nRowBlockNum = nRow / nBlockSize;
-	uint32_t nColBlockNum = nCol / nBlockSize;
-	uint32_t nRowMod = nRow % nRowBlockNum;
-	uint32_t nColMod = nCol % nColBlockNum;
+	int32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	int32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+	int32_t nRowBlockSizeBase = nSubRowBlockSize != 0 ? nSubRowBlockSize : nRow / nRowBlockNum;
+	int32_t nColBlockSizeBase = nSubColBlockSize != 0 ? nSubColBlockSize : nCol / nColBlockNum;
+	int32_t nRowMod = nRow - nRowBlockNum * nRowBlockSizeBase;
+	int32_t nColMod = nCol - nColBlockNum * nColBlockSizeBase;
 
 	BlockData.Init(nRowBlockNum, nColBlockNum);
 
-	uint32_t nRowBlockSize = 0, nColBlockSize = 0, nRowIndex = RealRoi.Up, nColIndex = RealRoi.Left;
-	double dPedestal = 0;
+	int32_t nRowBlockSize = 0, nColBlockSize = 0, nRowIndex = RealRoi.Up, nColIndex = RealRoi.Left;
 	for (uint32_t nRowBlockIndex = 0; nRowBlockIndex < nRowBlockNum; nRowBlockIndex++)
 	{
 		if (0 == nRowBlockIndex || nRowBlockNum - 1 == nRowBlockIndex)
 		{
-			nRowBlockSize = m_AlgorithmThre.nDSNUBlockSize + nRowMod / 2;
+			nRowBlockSize = nRowBlockSizeBase + nRowMod / 2;
 		}
 		else
 		{
-			nRowBlockSize = m_AlgorithmThre.nDSNUBlockSize;
+			nRowBlockSize = nRowBlockSizeBase;
 		}
 		nColIndex = RealRoi.Left;
 		for (uint32_t nColBlockIndex = 0; nColBlockIndex < nColBlockNum; nColBlockIndex++)
 		{
 			if (0 == nColBlockIndex || nColBlockNum - 1 == nColBlockIndex)
 			{
-				nColBlockSize = m_AlgorithmThre.nDSNUBlockSize + nColMod / 2;
+				nColBlockSize = nColBlockSizeBase + nColMod / 2;
 			}
 			else
 			{
-				nColBlockSize = m_AlgorithmThre.nDSNUBlockSize;
+				nColBlockSize = nColBlockSizeBase;
 			}
+
+			if (nRowBlockSize <= 0 || nColBlockSize <= 0)
+			{
+				std::string strErr = "SubFrameBlockMean: BlockSize error: RowBlockSize: " + std::to_string(nRowBlockSize) + ", ColBlockSize: " + std::to_string(nColBlockSize);
+				WriteLog(strErr, nChannelIndex);
+				bRes = false;
+				return;
+			}
+
 			ROIArea temp = { nRowIndex, nRowIndex + nRowBlockSize - 1, nColIndex, nColIndex + nColBlockSize - 1 };
 
 			double dValue = 0;
@@ -2703,15 +2861,804 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 			{
 				for (uint32_t nCols = temp.Left; nCols <= temp.Right; nCols++)
 				{
+					double dValue = 0;
 					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 					{
-						BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
+						dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
 					}
+					BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] += round(dValue / nNumber);
 				}
 			}
-			BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] /= (nNumber * nRowBlockSize * nColBlockSize);
+			BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] /= (nRowBlockSize * nColBlockSize);
 			nColIndex += nColBlockSize;
 		}
 		nRowIndex += nRowBlockSize;
 	}
+}
+
+void CAlpAPSMPAlgorithm::SetDataToSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double dValue)
+{
+	switch (m_PixelFormat)
+	{
+	case BayerGBRG:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		break;
+	case BayerBGGR:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		break;
+	case BayerRGGB:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		break;
+	case BayerGRBG:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1] = dValue;
+		}
+		break;
+	case QuadBayerGBRG:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		break;
+	case QuadBayerBGGR:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		break;
+	case QuadBayerRGGB:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		break;
+	case QuadBayerGRBG:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)] = dValue;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1] = dValue;
+		}
+		break;
+	}
+}
+
+void CAlpAPSMPAlgorithm::SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex nChannelIndex, Local& TotalLocal)
+{
+	uint32_t nSubRows = SubLocal.x, nSubCols = SubLocal.y;
+	uint32_t nTotalRows = 0, nTotalCols = 0;
+
+	switch (m_PixelFormat)
+	{
+	case BayerGBRG:
+		if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		else if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		break;
+	case BayerBGGR:
+		if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		else if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		break;
+	case BayerRGGB:
+		if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		else if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		break;
+	case BayerGRBG:
+		if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows << 1);
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		else if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1);
+		}
+		else if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows << 1) + 1;
+			nTotalCols = (nSubCols  << 1) + 1;
+		}
+		break;
+	case QuadBayerGBRG:
+		if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		else if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		break;
+	case QuadBayerBGGR:
+		if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		else if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		break;
+	case QuadBayerRGGB:
+		if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		else if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		break;
+	case QuadBayerGRBG:
+		if (nChannelIndex == Gr)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == R)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 0;
+			}
+			else
+			{
+				nTotalRows += 1;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		else if (nChannelIndex == B)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 0;
+			}
+			else
+			{
+				nTotalCols += 1;
+			}
+		}
+		else if (nChannelIndex == Gb)
+		{
+			nTotalRows = (nSubRows & 0xFFFE) << 1;
+			nTotalCols = (nSubCols & 0xFFFE) << 1;
+			if ((nSubRows & 1) == 0)
+			{
+				nTotalRows += 2;
+			}
+			else
+			{
+				nTotalRows += 3;
+			}
+			if ((nSubCols & 1) == 0)
+			{
+				nTotalCols += 2;
+			}
+			else
+			{
+				nTotalCols += 3;
+			}
+		}
+		break;
+	}
+	TotalLocal.x = nTotalRows;
+	TotalLocal.y = nTotalCols;
 }

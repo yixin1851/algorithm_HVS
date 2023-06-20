@@ -18,7 +18,7 @@ private:
     Ui::DialogAPSOverallSystemGain ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<double> m_GainK;
+    APSOverallSystemGainType m_GainK;
     CWidgetTableView m_widgetTableView;
     CWidgetChartView m_widgetChartView;
 };

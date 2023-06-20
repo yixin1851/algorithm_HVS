@@ -18,6 +18,8 @@ CDialogAPSShow::CDialogAPSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	uint32_t nRow = 0, nCol = 0;
 	QStringList RowList, ColList;
 	m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
+	nRow /= 2;
+	nCol /= 2;
 	for (uint32_t nRows = 1; nRows <= nRow; nRows++)
 	{
 		RowList << QString("%1").arg(nRows, 4, 10, QLatin1Char(' '));
@@ -59,7 +61,7 @@ void CDialogAPSShow::UpDateTable(int nIndex)
 	uint32_t nCurChannel = ui.comboBoxChannel->currentIndex();
 	clock_t time = 0;
 	auto start = clock();
-	bool bRet = m_pAPSAlgoInterface->Show(nCurIndex, 1, nullptr, APSSubFrameIndex(nCurChannel), RawData);
+	bool bRet = m_pAPSAlgoInterface->Show(nCurIndex, 1, nullptr, SubFrameIndex(nCurChannel), RawData);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -70,7 +72,8 @@ void CDialogAPSShow::UpDateTable(int nIndex)
 
 		uint32_t nRow = 0, nCol = 0;
 		m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
-
+		nRow /= 2;
+		nCol /= 2;
 		m_RawDataModel->removeRows(0, nRow);
 		for (uint32_t nRows = 0; nRows < nRow; nRows++)
 		{
@@ -101,7 +104,7 @@ void CDialogAPSShow::Show(int nIndex)
 	bool bNormal = ui.checkBoxNormalize->isChecked();
 	clock_t time = 0;
 	auto start = clock();
-	bool bRet = m_pAPSAlgoInterface->Show(nCurIndex, 1, nullptr, APSSubFrameIndex(nCurChannel), bNormal, Img);
+	bool bRet = m_pAPSAlgoInterface->Show(nCurIndex, 1, nullptr, SubFrameIndex(nCurChannel), bNormal, Img);
 	auto end = clock();
 	time = end - start;
 

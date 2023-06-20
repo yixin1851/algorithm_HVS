@@ -44,7 +44,7 @@ void CDialogDVSBadPixel::BadPixel()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->BadPixel(nIndexStart, nNumber, nullptr, nPeakNum, LightTrigerType(nLightType + 1), m_Data);
+	bRet = m_pDVSAlgoInterface->BadPixel(nIndexStart, nNumber, nullptr, nPeakNum, DVSLightTrigerType(nLightType + 1), m_Data);
 	auto end = clock();
 	time = end - start;
 	if (bRet)

@@ -22,7 +22,7 @@ CDialogDVSImportData::CDialogDVSImportData(QDialog* parent, CAlpAPSMPAlgoInterfa
 
 void CDialogDVSImportData::Browser()
 {
-	QString strFileName = QFileDialog::getOpenFileName(nullptr, tr("Open DVS File"), ui.lineEditDataFile->text(), tr("Bin File (*.bin) \n All Files (*.*)"));
+	QString strFileName = QFileDialog::getOpenFileName(nullptr, tr("Open DVS File"), ui.lineEditDataFile->text(), tr("All Files (*.*) \n Bin File (*.bin)"));
 	ui.lineEditDataFile->setText(strFileName);
 }
 

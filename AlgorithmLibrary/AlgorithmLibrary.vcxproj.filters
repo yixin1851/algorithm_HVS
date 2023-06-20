@@ -51,6 +51,18 @@
     <ClInclude Include="Alp003CADVSMPAlgorithm.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Alp003AAAPSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alp003BAAPSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alp003BBAPSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Alp003CAAPSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlpAPSMPAlgorithm.cpp">
@@ -81,6 +93,18 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Alp003CADVSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003AAAPSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003BAAPSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003BBAPSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp003CAAPSMPAlgorithm.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

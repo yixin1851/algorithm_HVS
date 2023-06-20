@@ -69,9 +69,11 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 	}
 	else
 	{
-		std::vector<std::vector<double>> DarkData;
+		std::vector<APSDataMeanType> DarkData;
+		std::vector<APSTNoiseType> DarkTNoiseData;
 		std::vector<double> ExpTime;
-		std::vector<double>OneRes;
+		APSDataMeanType OneDataMeanRes;
+		APSTNoiseType OneTNoiseRes;
 
 		for (uint32_t i = 0; i < ExpList.size(); i++)
 		{
@@ -82,9 +84,9 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 
 			if (bUseMeanFunc)
 			{
-				if (m_pAPSAlgoInterface->DataMean(nIndexStart, nNumber, roi, OneRes))
+				if (m_pAPSAlgoInterface->DataMean(nIndexStart, nNumber, roi, OneDataMeanRes))
 				{
-					DarkData.push_back(OneRes);
+					DarkData.push_back(OneDataMeanRes);
 				}
 				else
 				{
@@ -93,9 +95,9 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 			}
 			else
 			{
-				if (m_pAPSAlgoInterface->TNoise(nIndexStart, nNumber, roi, OneRes))
+				if (m_pAPSAlgoInterface->TNoise(nIndexStart, nNumber, roi, OneTNoiseRes))
 				{
-					DarkData.push_back(OneRes);
+					DarkTNoiseData.push_back(OneTNoiseRes);
 				}
 				else
 				{
@@ -106,7 +108,14 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 		if (bRet)
 		{
 			auto start = clock();
-			bRet = m_pAPSAlgoInterface->DarkCurrent(DarkData, ExpTime, bUseMeanFunc, m_DarkCurrent);
+			if (bUseMeanFunc)
+			{
+				bRet = m_pAPSAlgoInterface->DarkCurrent(DarkData, ExpTime, m_DarkCurrent);
+			}
+			else
+			{
+				bRet = m_pAPSAlgoInterface->DarkCurrent(DarkTNoiseData, ExpTime, m_DarkCurrent);
+			}
 			auto end = clock();
 			time = end - start;
 		}
@@ -119,44 +128,40 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 
 			QStringList RowName, ColName;
 			RowName << " ";
-			ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
+			ColName << "Gb" << "B" << "R" << "Gr";
 
 			std::vector<std::vector<double>> Data(1);
 
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
 			{
-				Data[0].push_back(m_DarkCurrent[nIndex]);
+				Data[0].push_back(m_DarkCurrent.SubFrameKValue[nIndex]);
 			}
 
 			m_widgetTableView.SetData(RowName, ColName, Data);
 
 			QVector<double> XData;
-			QVector<double> YData[APSSubFrameIndex::SubFrameNum];
+			QVector<double> YData[SubFrameIndex::All];
 
 			for (uint32_t nIndex = 0; nIndex < ExpTime.size(); nIndex++)
 			{
 				XData.push_back(ExpTime[nIndex]);
-				for (uint32_t nChannel = 0; nChannel < APSSubFrameIndex::SubFrameNum; nChannel++)
+				for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
 				{
 					if (bUseMeanFunc)
 					{
-						YData[nChannel].push_back(DarkData[nIndex][nChannel]);
+						YData[nChannel].push_back(DarkData[nIndex].SubFrameDataMean[nChannel]);
 					}
 					else
 					{
-						YData[nChannel].push_back(DarkData[nIndex][nChannel] * DarkData[nIndex][nChannel]);
+						YData[nChannel].push_back(DarkTNoiseData[nIndex].SubFrameTNoiseData[nChannel].TempNoise * DarkTNoiseData[nIndex].SubFrameTNoiseData[nChannel].TempNoise);
 					}
 				}
 			}
 
-			m_widgetChartView.SetLine("Gb1", XData, YData[Gb1]);
-			m_widgetChartView.SetLine("Gb2", XData, YData[Gb2]);
-			m_widgetChartView.SetLine("B1", XData, YData[B1]);
-			m_widgetChartView.SetLine("B2", XData, YData[B2]);
-			m_widgetChartView.SetLine("R1", XData, YData[R1]);
-			m_widgetChartView.SetLine("R2", XData, YData[R2]);
-			m_widgetChartView.SetLine("Gr1", XData, YData[Gr1]);
-			m_widgetChartView.SetLine("Gr2", XData, YData[Gr2]);
+			m_widgetChartView.SetLine("Gb", XData, YData[Gb]);
+			m_widgetChartView.SetLine("B", XData, YData[B]);
+			m_widgetChartView.SetLine("R", XData, YData[R]);
+			m_widgetChartView.SetLine("Gr", XData, YData[Gr]);
 		}
 		else
 		{
@@ -178,10 +183,10 @@ void CDialogAPSDarkCurrent::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < m_DarkCurrent.size(); nIndex++)
+			outfile << "Gb,B,R,Gr" << std::endl;
+			for (uint32_t nIndex = 0; nIndex < m_DarkCurrent.SubFrameKValue.size(); nIndex++)
 			{
-				outfile << std::to_string(m_DarkCurrent[nIndex]) << ",";
+				outfile << std::to_string(m_DarkCurrent.SubFrameKValue[nIndex]) << ",";
 			}
 			outfile << std::endl;
 

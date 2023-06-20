@@ -43,40 +43,40 @@
        <string>003CA</string>
       </property>
      </item>
+    </widget>
+   </item>
+   <item row="0" column="2" colspan="2">
+    <widget class="QLabel" name="label_10">
+     <property name="text">
+      <string>PixelFormat</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="4" colspan="3">
+    <widget class="QComboBox" name="comboBoxPixelFormat">
      <item>
       <property name="text">
-       <string>004AA</string>
+       <string>BayerGBRG</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>BayerBGGR</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>BayerRGGB</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>BayerGRBG</string>
       </property>
      </item>
     </widget>
    </item>
-   <item row="0" column="2">
-    <spacer name="horizontalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>80</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="0" column="3">
-    <spacer name="horizontalSpacer_3">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>80</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="0" column="4">
+   <item row="0" column="7">
     <spacer name="horizontalSpacer_4">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -115,14 +115,14 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="3">
+   <item row="1" column="3" colspan="2">
     <widget class="QPushButton" name="pushButtonBrowser">
      <property name="text">
       <string>browse</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="4">
+   <item row="1" column="5" colspan="3">
     <spacer name="horizontalSpacer">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -135,7 +135,7 @@
      </property>
     </spacer>
    </item>
-   <item row="2" column="0" colspan="4">
+   <item row="2" column="0" colspan="6">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -279,7 +279,7 @@
      </property>
     </spacer>
    </item>
-   <item row="6" column="4">
+   <item row="6" column="6" colspan="2">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

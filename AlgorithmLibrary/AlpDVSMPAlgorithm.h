@@ -10,18 +10,18 @@ class CAlpDVSMPAlgorithm : public CAlpDVSMPAlgoInterface
 {
 public:
 	CAlpDVSMPAlgorithm() = delete;
-	CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum);
+	CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat);
 	virtual ~CAlpDVSMPAlgorithm();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
-	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, EventsNumberCountData& EventsNumberCountRes);
-	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, StationaryNoiseData& StationaryNoiseRes);
-	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, StationaryUniformityData& UniformityRes);
-	virtual bool HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelData& HotpixelRes);
-	virtual bool FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo& Peak, LightTrigerType Light);
-	virtual bool ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, ImageContrastSensitivityData& ImageContrastSensitivityRes);
-	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, AccompaniedPeakAndDelayedPeakData& AccompaniedPeakAndDelayedPeakRes);
-	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, SpatialResponseUniformityData& SpatialResponseUniformityRes);
-	virtual bool BadPixel(uint32_t nIndexStart, uint32_t nNumber, PeakInfo* Peak, uint32_t nPeakNum, LightTrigerType Light, DVSBadpixelData& BadpixelRes);
+	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes);
+	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes);
+	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes);
+	virtual bool HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelType& HotpixelRes);
+	virtual bool FindPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo& Peak, DVSLightTrigerType Light);
+	virtual bool ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSImageContrastSensitivityType& ImageContrastSensitivityRes);
+	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSAccompaniedPeakAndDelayedPeakType& AccompaniedPeakAndDelayedPeakRes);
+	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes);
+	virtual bool BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSBadpixelType& BadpixelRes);
 	virtual bool Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag, uint8_t OffEventFlag, ImgType& ImgData);
 	virtual void SetMultiThreadEnable(bool bEnable = true);
 	virtual void SetLogEnable(bool bEnable = true);
@@ -36,7 +36,7 @@ public:
 	virtual std::string GetVersion();
 	virtual uint32_t GetErrCode();
 protected:
-	virtual void ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, EventsNumberCountData& EventsNumberCountRes);
+	virtual void ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, DVSEventsNumberCountType& EventsNumberCountRes);
 	virtual double Mean(std::vector<double>& RawData, uint32_t nLens);
 	virtual double Mean(std::vector<uint32_t>& RawData, uint32_t nLens);
 	virtual double Mean(CAPSDataContainer& RawData, ROIArea* ROI = nullptr);
@@ -49,6 +49,7 @@ protected:
 	virtual void Min(double& dMinValue, uint32_t& nMinLocal, std::vector<double>& RawData, uint32_t nLens);
 	virtual void Min(double& dMinValue, Local& MinLocal, CAPSDataContainer& RawData, ROIArea* ROI = nullptr);
 	virtual bool WriteLog(std::string strMessage);
+	virtual void GetChannel(uint32_t nRow, uint32_t nCol, SubFrameIndex& nChannel);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;
@@ -62,4 +63,5 @@ protected:
 	DVSAlgorithmThre m_AlgorithmThre;
 	uint32_t m_nSiteNum;
 	uint32_t m_nErrCode;
+	PixelFormatType m_PixelFormat;
 };

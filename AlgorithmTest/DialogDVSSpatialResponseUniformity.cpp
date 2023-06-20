@@ -53,7 +53,7 @@ void CDialogDVSSpatialResponseUniformity::SpatialResponseUniformity()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->SpatialResponseUniformity(nIndexStart, nNumber, nullptr, nPeakNum, LightTrigerType(nLigtType + 1), m_Data);
+	bRet = m_pDVSAlgoInterface->SpatialResponseUniformity(nIndexStart, nNumber, nullptr, nPeakNum, DVSLightTrigerType(nLigtType + 1), m_Data);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -78,35 +78,35 @@ void CDialogDVSSpatialResponseUniformity::SpatialResponseUniformity()
 		if ((nLigtType + 1) & 1)
 		{
 			ResRowName << "OffUniformityRatio";
-			std::vector<double> OffUniformityRes(DVSSubFrameIndex::All + 1, 0);
-			for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+			std::vector<double> OffUniformityRes(SubFrameIndex::All + 1, 0);
+			for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 			{
 				OffUniformityRes[nChannel] = m_Data.dOffEventsUniformityRatio[nChannel];
 			}
 			UniformityRes.push_back(OffUniformityRes);
 
-			ui.tabOffEventsTableWidegetAll->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[DVSSubFrameIndex::All]);
-			ui.tabOffEventsTableWidegetGb->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[DVSSubFrameIndex::Gb]);
-			ui.tabOffEventsTableWidegetB->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[DVSSubFrameIndex::B]);
-			ui.tabOffEventsTableWidegetR->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[DVSSubFrameIndex::R]);
-			ui.tabOffEventsTableWidegetGr->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[DVSSubFrameIndex::Gr]);
+			ui.tabOffEventsTableWidegetAll->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[SubFrameIndex::All]);
+			ui.tabOffEventsTableWidegetGb->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[SubFrameIndex::Gb]);
+			ui.tabOffEventsTableWidegetB->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[SubFrameIndex::B]);
+			ui.tabOffEventsTableWidegetR->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[SubFrameIndex::R]);
+			ui.tabOffEventsTableWidegetGr->SetData(UniformRowName, UniformColName, m_Data.OffEventsUniformityBlockData[SubFrameIndex::Gr]);
 		}
 
 		if ((nLigtType + 1) & 2)
 		{
 			ResRowName << "OnUniformityRatio";
-			std::vector<double> OnUniformityRes(DVSSubFrameIndex::All + 1, 0);
-			for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+			std::vector<double> OnUniformityRes(SubFrameIndex::All + 1, 0);
+			for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 			{
 				OnUniformityRes[nChannel] = m_Data.dOnEventsUniformityRatio[nChannel];
 			}
 			UniformityRes.push_back(OnUniformityRes);
 
-			ui.tabOnEventsTableWidegetAll->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[DVSSubFrameIndex::All]);
-			ui.tabOnEventsTableWidegetGb->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[DVSSubFrameIndex::Gb]);
-			ui.tabOnEventsTableWidegetB->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[DVSSubFrameIndex::B]);
-			ui.tabOnEventsTableWidegetR->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[DVSSubFrameIndex::R]);
-			ui.tabOnEventsTableWidegetGr->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[DVSSubFrameIndex::Gr]);
+			ui.tabOnEventsTableWidegetAll->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[SubFrameIndex::All]);
+			ui.tabOnEventsTableWidegetGb->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[SubFrameIndex::Gb]);
+			ui.tabOnEventsTableWidegetB->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[SubFrameIndex::B]);
+			ui.tabOnEventsTableWidegetR->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[SubFrameIndex::R]);
+			ui.tabOnEventsTableWidegetGr->SetData(UniformRowName, UniformColName, m_Data.OnEventsUniformityBlockData[SubFrameIndex::Gr]);
 		}
 
 		ui.tabUniformityRes->SetData(ResRowName, ResColName, UniformityRes);
@@ -131,7 +131,7 @@ void CDialogDVSSpatialResponseUniformity::Export()
 		if (!outfile.fail())
 		{
 			outfile << "OffEvents" << std::endl;
-			for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+			for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 			{
 				for (uint32_t nRows = 0; nRows < m_Data.OffEventsUniformityBlockData[nChannel].size(); nRows++)
 				{
@@ -146,7 +146,7 @@ void CDialogDVSSpatialResponseUniformity::Export()
 			}
 
 			outfile << "OnEvents" << std::endl;
-			for (uint32_t nChannel = 0; nChannel <= DVSSubFrameIndex::All; nChannel++)
+			for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 			{
 				for (uint32_t nRows = 0; nRows < m_Data.OnEventsUniformityBlockData[nChannel].size(); nRows++)
 				{

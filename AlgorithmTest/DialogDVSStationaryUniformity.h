@@ -16,5 +16,5 @@ private:
     Ui::DialogStationaryUniformity ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    StationaryUniformityData m_Data;
+    DVSStationaryUniformityType m_Data;
 };

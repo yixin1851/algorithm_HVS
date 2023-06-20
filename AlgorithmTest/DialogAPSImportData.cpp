@@ -22,7 +22,7 @@ CDialogAPSImportData::CDialogAPSImportData(QDialog* parent, CAlpAPSMPAlgoInterfa
 
 }
 
-void CDialogAPSImportData::FindFiles(std::string strPath, std::vector<std::string> &FileQuene)
+void CDialogAPSImportData::FindFiles(std::string strPath, std::vector<std::string>& FileQuene)
 {
 	_finddata_t file_info;
 	std::string current_path = strPath + "/*.raw";
@@ -46,51 +46,10 @@ void CDialogAPSImportData::FindFiles(std::string strPath, std::vector<std::strin
 	return;
 }
 
-void CDialogAPSImportData::ImportSingleChannelData(uint32_t nIndexStart, uint32_t nNumber, uint32_t nChannelIndex, std::vector<std::string>& FileQuene, bool & bRet)
-{
-	clock_t time;
-	std::ifstream infile;
-	bRet = false;
-	for (uint32_t i = 0; i < nNumber; i++)
-	{
-		infile.open(FileQuene[i], std::ios::binary | std::ios::in);
-		if (!infile.fail())
-		{
-			infile.seekg(0, std::ios::end);
-			uint64_t length = infile.tellg();
-			infile.seekg(0, std::ios::beg);
-			uint8_t* pRawData = new uint8_t[length];
-			infile.read((char*)pRawData, length);
-			infile.close();
-
-			auto start = clock();
-			bRet = m_pAPSAlgoInterface->ImportRawData(pRawData, length, APSSubFrameIndex(nChannelIndex), nIndexStart + i, 1);
-			auto end = clock();
-			time = end - start;
-			delete[] pRawData;
-		}
-		else
-		{
-			bRet = false;
-		}
-		if (!bRet)
-			break;
-	}
-
-}
-
 void CDialogAPSImportData::Browser()
 {
-	if (ui.comboBoxImportFormat->currentIndex() == 1)
-	{
-		QString strFileName = QFileDialog::getOpenFileName(nullptr, tr("Open APS File"), ui.lineEditDataFile->text(), tr("Bin File (*.bin) \n Raw File (*.raw) \n All Files (*.*)"));
-		ui.lineEditDataFile->setText(strFileName);
-	}
-	else
-	{
-		QString strFileName = QFileDialog::getExistingDirectory(nullptr, tr("Open APS File"), ui.lineEditDataFile->text(), QFileDialog::ShowDirsOnly);
-		ui.lineEditDataFile->setText(strFileName);
-	}
+	QString strFileName = QFileDialog::getOpenFileName(nullptr, tr("Open APS File"), ui.lineEditDataFile->text(), tr("All Files (*.*) \n Bin File (*.bin) \n Raw File (*.raw)"));
+	ui.lineEditDataFile->setText(strFileName);
 }
 
 void CDialogAPSImportData::ImportData()
@@ -103,87 +62,36 @@ void CDialogAPSImportData::ImportData()
 	ui.label_Res->setText(tr(" "));
 	clock_t time = 0;
 	std::ifstream infile;
-	if (ui.comboBoxImportFormat->currentIndex() == 1)
-	{
-		infile.open(strFileName, std::ios::binary | std::ios::in);
-		if (!infile.fail())
-		{
-			infile.seekg(0, std::ios::end);
-			uint64_t length = infile.tellg();
-			infile.seekg(0, std::ios::beg);
-			uint8_t* pRawData = new uint8_t[length];
-			infile.read((char*)pRawData, length);
-			infile.close();
 
-			auto start = clock();
-			bRet = m_pAPSAlgoInterface->ImportRawData(pRawData, length, nIndexStart, nNumber, bHeaderFooter);
-			auto end = clock();
-			time = end - start;
-			delete[] pRawData;
-		}
-		else
-		{
-			bRet = false;
-		}
-		if (bRet)
-		{
-			ui.label_Res->setStyleSheet("color:green;");
-			QString res = QString::number(time);
-			ui.label_Res->setText(res);
-		}
-		else
-		{
-			ui.label_Res->setStyleSheet("color:red;");
-			ui.label_Res->setText(tr("Fail!"));
-		}
+	infile.open(strFileName, std::ios::binary | std::ios::in);
+	if (!infile.fail())
+	{
+		infile.seekg(0, std::ios::end);
+		uint64_t length = infile.tellg();
+		infile.seekg(0, std::ios::beg);
+		uint8_t* pRawData = new uint8_t[length];
+		infile.read((char*)pRawData, length);
+		infile.close();
+
+		auto start = clock();
+		bRet = m_pAPSAlgoInterface->ImportRawData(pRawData, length, nIndexStart, nNumber, bHeaderFooter);
+		auto end = clock();
+		time = end - start;
+		delete[] pRawData;
 	}
 	else
 	{
-		std::string strChannelName[] = {"/Gb1", "/Gb2", "/B1", "/B2", "/R1", "/R2", "/Gr1", "/Gr2"};
-		std::vector<std::string> FileQuene[APSSubFrameIndex::SubFrameNum];
-		std::thread* t[APSSubFrameIndex::SubFrameNum];
-		bool bSubRet[APSSubFrameIndex::SubFrameNum];
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			FindFiles(strFileName + strChannelName[i], FileQuene[i]);
-
-			if (FileQuene[i].size() < nNumber)
-			{
-				ui.label_Res->setStyleSheet("color:red;");
-				ui.label_Res->setText(tr("Fail!"));
-				return;
-			}
-		}
-		bRet = true;
-		auto start = clock();
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i] = new std::thread(&CDialogAPSImportData::ImportSingleChannelData, this, nIndexStart, nNumber, i, std::ref(FileQuene[i]), std::ref(bSubRet[i]));
-		}
-		for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		{
-			t[i]->join();
-			delete t[i];
-			bRet = bRet && bSubRet[i];
-		}
-
-		//for (uint32_t i = 0; i < APSSubFrameIndex::SubFrameNum; i++)
-		//{
-		//	ImportSingleChannelData(nIndexStart, nNumber, i, FileQuene[i], bSubRet[i]);
-		//}
-		auto end = clock();
-		time = end - start;
-		if (bRet)
-		{
-			ui.label_Res->setStyleSheet("color:green;");
-			QString res = QString::number(time);
-			ui.label_Res->setText(res);
-		}
-		else
-		{
-			ui.label_Res->setStyleSheet("color:red;");
-			ui.label_Res->setText(tr("Fail!"));
-		}
-
+		bRet = false;
+	}
+	if (bRet)
+	{
+		ui.label_Res->setStyleSheet("color:green;");
+		QString res = QString::number(time);
+		ui.label_Res->setText(res);
+	}
+	else
+	{
+		ui.label_Res->setStyleSheet("color:red;");
+		ui.label_Res->setText(tr("Fail!"));
 	}
 }

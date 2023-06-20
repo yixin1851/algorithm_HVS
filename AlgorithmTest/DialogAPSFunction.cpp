@@ -14,6 +14,8 @@
 #include "DialogAPSOverallSystemGain.h"
 #include "DialogAPSDataMean.h"
 #include "DialogAPSSaturation.h"
+#include "DialogAPSPedestal.h"
+#include "DialogAPSReadNoise.h"
 
 CDialogAPSFunction::CDialogAPSFunction(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgoInterface, CAlpDVSMPAlgoInterface* pDVSAlgoInterface)
 	: QDialog(parent), m_pAPSAlgoInterface(pAPSAlgoInterface), m_pDVSAlgoInterface(pDVSAlgoInterface)
@@ -35,6 +37,8 @@ CDialogAPSFunction::CDialogAPSFunction(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	connect(ui.pushButtonDataMean, SIGNAL(clicked()), this, SLOT(DataMean()));
 	connect(ui.pushButtonSaturation, SIGNAL(clicked()), this, SLOT(Saturation()));
 	connect(ui.pushButtonShow, SIGNAL(clicked()), this, SLOT(Show()));
+	connect(ui.pushButtonPedestal, SIGNAL(clicked()), this, SLOT(Pedestal()));
+	connect(ui.pushButtonReadNoise, SIGNAL(clicked()), this, SLOT(ReadNoise()));
 
 	if (m_pAPSAlgoInterface)
 	{
@@ -148,3 +152,16 @@ void CDialogAPSFunction::Saturation()
 	CDialogAPSSaturation Saturation(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
 	Saturation.exec();
 }
+
+void CDialogAPSFunction::Pedestal()
+{
+	CDialogAPSPedestal Pedestal(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
+	Pedestal.exec();
+}
+
+void CDialogAPSFunction::ReadNoise()
+{
+	CDialogAPSReadNoise ReadNoise(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
+	ReadNoise.exec();
+}
+

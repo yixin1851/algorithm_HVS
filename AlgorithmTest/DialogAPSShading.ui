@@ -16,8 +16,8 @@
   <property name="windowTitle">
    <string>Shading</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout" columnstretch="1,1">
-   <item row="0" column="0" rowspan="2">
+  <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
+   <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="maximumSize">
       <size>
@@ -71,7 +71,7 @@
       <property name="geometry">
        <rect>
         <x>130</x>
-        <y>70</y>
+        <y>60</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -97,7 +97,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>70</y>
+        <y>60</y>
         <width>54</width>
         <height>16</height>
        </rect>
@@ -236,11 +236,11 @@
        <string>0</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEditOCFindRadius">
+     <widget class="QLineEdit" name="lineEditYShadingRowNum">
       <property name="geometry">
        <rect>
         <x>130</x>
-        <y>110</y>
+        <y>90</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -253,20 +253,20 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>110</y>
-        <width>81</width>
+        <y>90</y>
+        <width>111</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>OCFindRadius</string>
+       <string>YRowNum</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEditShadingTestRadius">
+     <widget class="QLineEdit" name="lineEditYShadingColNum">
       <property name="geometry">
        <rect>
         <x>130</x>
-        <y>150</y>
+        <y>120</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -279,33 +279,74 @@
       <property name="geometry">
        <rect>
         <x>10</x>
+        <y>120</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>YColNum</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_10">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
         <y>150</y>
         <width>111</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>ShadingTestRadius</string>
+       <string>ColorRowNum</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditColorShadingRowNum">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>150</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditColorShadingColNum">
+      <property name="geometry">
+       <rect>
+        <x>130</x>
+        <y>180</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_11">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>180</y>
+        <width>111</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>ColorColNum</string>
       </property>
      </widget>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="CWidgetTableView" name="widgetTableView" native="true"/>
-   </item>
-   <item row="1" column="1">
-    <widget class="CWidgetTableView" name="widgetTableView_2" native="true"/>
+   <item>
+    <widget class="QTabWidget" name="tabWidgetView"/>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>CWidgetTableView</class>
-   <extends>QWidget</extends>
-   <header>WidgetTableView.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

@@ -1,4 +1,5 @@
 #include "DialogDVSShow.h"
+#include "WidgetChartView.h"
 
 CDialogDVSShow::CDialogDVSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgoInterface, CAlpDVSMPAlgoInterface* pDVSAlgoInterface)
 	: QDialog(parent), m_pAPSAlgoInterface(pAPSAlgoInterface), m_pDVSAlgoInterface(pDVSAlgoInterface)
@@ -10,13 +11,49 @@ CDialogDVSShow::CDialogDVSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	{
 		ui.comboBoxIndex->addItem(QString::number(nIndex));
 	}
+
+	m_RawDataModel = new QStandardItemModel(this);
+	ui.tableView->setModel(m_RawDataModel);
+	uint32_t nRow = 0, nCol = 0;
+	QStringList RowList, ColList;
+	m_pDVSAlgoInterface->GetRawDataSize(nRow, nCol);
+	for (uint32_t nRows = 1; nRows <= nRow; nRows++)
+	{
+		RowList << QString("%1").arg(nRows, 4, 10, QLatin1Char(' '));
+	}
+	for (uint32_t nCols = 1; nCols <= nCol; nCols++)
+	{
+		ColList << QString("%1").arg(nCols, 4, 10, QLatin1Char(' '));
+	}
+	m_RawDataModel->setHorizontalHeaderLabels(ColList);
+	m_RawDataModel->setVerticalHeaderLabels(RowList);
+
+
+	ui.tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	ui.tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
+	ui.tableView->setContextMenuPolicy(Qt::CustomContextMenu);
+
+	m_CustomMenu = new QMenu(ui.tableView);
+	m_DispRowData = new QAction(this);
+	m_DispRowData->setText("Display Row Data");
+	m_CustomMenu->addAction(m_DispRowData);
+	m_DispColData = new QAction(this);
+	m_DispColData->setText("Display Col Data");
+	m_CustomMenu->addAction(m_DispColData);
+
 	connect(ui.comboBoxIndex, SIGNAL(currentIndexChanged(int)), this, SLOT(Show(int)), Qt::QueuedConnection);
+	connect(ui.comboBoxIndex, SIGNAL(currentIndexChanged(int)), this, SLOT(UpDateTable(int)), Qt::QueuedConnection);
+	connect(m_CustomMenu, SIGNAL(triggered(QAction*)), this, SLOT(MenuClicked(QAction*)), Qt::QueuedConnection);
 
 	emit(ui.comboBoxIndex->currentIndexChanged(0));
 }
 
 void CDialogDVSShow::Show(int nIndex)
 {
+	if (ui.tabWidget->currentIndex() != 0)
+	{
+		return;
+	}
 	ImgType OnEvents;
 	ImgType OffEvents;
 
@@ -59,5 +96,111 @@ void CDialogDVSShow::Show(int nIndex)
 		ui.label_Res->setText(tr("Fail!"));
 
 		ui.widgetImageView->Clear();
+	}
+}
+
+void CDialogDVSShow::UpDateTable(int nIndex)
+{
+	if (ui.tabWidget->currentIndex() != 1)
+	{
+		return;
+	}
+	ImgType RawData;
+	uint32_t nCurIndex = ui.comboBoxIndex->currentIndex();
+	clock_t time = 0;
+	auto start = clock();
+	bool bRet = m_pDVSAlgoInterface->Show(nCurIndex, 0, 2, 1, RawData);
+	auto end = clock();
+	time = end - start;
+	if (bRet)
+	{
+		ui.label_Res->setStyleSheet("color:green;");
+		QString res = QString::number(time);
+		ui.label_Res->setText(res);
+
+		uint32_t nRow = 0, nCol = 0;
+		m_pDVSAlgoInterface->GetRawDataSize(nRow, nCol);
+		m_RawDataModel->removeRows(0, nRow);
+		for (uint32_t nRows = 0; nRows < nRow; nRows++)
+		{
+			QList<QStandardItem*> add_items;
+
+			for (uint32_t nCols = 0; nCols < nCol; nCols++)
+			{
+				add_items << new QStandardItem(QString::number(RawData[nRows][nCols]));
+			}
+
+			m_RawDataModel->appendRow(add_items);
+		}
+	}
+	else
+	{
+		ui.label_Res->setStyleSheet("color:red;");
+		ui.label_Res->setText(tr("Fail!"));
+		ui.tableView->setModel(nullptr);
+	}
+
+}
+
+void CDialogDVSShow::on_tableView_customContextMenuRequested(const QPoint& pos)
+{
+	QModelIndex index = ui.tableView->indexAt(pos);
+	if (index.isValid())
+	{
+		if (ui.tableView->selectionModel()->selectedRows().size() == 0)
+		{
+			m_DispRowData->setEnabled(false);
+		}
+		else
+		{
+			m_DispRowData->setEnabled(true);
+		}
+		if (ui.tableView->selectionModel()->selectedColumns().size() == 0)
+		{
+			m_DispColData->setEnabled(false);
+		}
+		else
+		{
+			m_DispColData->setEnabled(true);
+		}
+		m_CustomMenu->exec(QCursor::pos());
+	}
+}
+
+void CDialogDVSShow::MenuClicked(QAction* act)
+{
+	CWidgetChartView* DataView = new CWidgetChartView(this);
+	DataView->setWindowFlags(Qt::WindowCloseButtonHint | Qt::Dialog | Qt::WindowMinMaxButtonsHint);
+	DataView->setWindowTitle("Line Data");
+	if (act == m_DispRowData)
+	{
+		auto selectedRows = ui.tableView->selectionModel()->selectedRows();
+		for (uint32_t nIndex = 0; nIndex < selectedRows.size(); nIndex++)
+		{
+			QVector<double> XData, YData;
+			for (uint32_t nCols = 0; nCols < m_RawDataModel->columnCount(); nCols++)
+			{
+				XData.push_back(nCols + 1);
+				YData.push_back(m_RawDataModel->item(selectedRows[nIndex].row(), nCols)->data(0).toDouble());
+			}
+			DataView->SetLine(std::to_string(selectedRows[nIndex].row() + 1), XData, YData);
+		}
+		DataView->show();
+	}
+
+	if (act == m_DispColData)
+	{
+		auto selectedCols = ui.tableView->selectionModel()->selectedColumns();
+		for (uint32_t nIndex = 0; nIndex < selectedCols.size(); nIndex++)
+		{
+			QVector<double> XData, YData;
+			for (uint32_t nRows = 0; nRows < m_RawDataModel->rowCount(); nRows++)
+			{
+				XData.push_back(nRows + 1);
+				YData.push_back(m_RawDataModel->item(nRows, selectedCols[nIndex].column())->data(0).toDouble());
+			}
+			DataView->SetLine(std::to_string(selectedCols[nIndex].column() + 1), XData, YData);
+		}
+		DataView->show();
 	}
 }

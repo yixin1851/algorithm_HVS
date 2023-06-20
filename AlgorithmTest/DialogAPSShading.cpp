@@ -15,8 +15,10 @@ CDialogAPSShading::CDialogAPSShading(QDialog* parent, CAlpAPSMPAlgoInterface* pA
 	ui.lineEditROIRight->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditROILeft->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditROIDown->setValidator(new QIntValidator(0, 100000, this));
-	ui.lineEditOCFindRadius->setValidator(new QIntValidator(1, 100000, this));
-	ui.lineEditShadingTestRadius->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditYShadingRowNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditYShadingColNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditColorShadingRowNum->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditColorShadingColNum->setValidator(new QIntValidator(1, 100000, this));
 
 	ui.lineEditROIUp->setEnabled(false);
 	ui.lineEditROIRight->setEnabled(false);
@@ -29,8 +31,10 @@ CDialogAPSShading::CDialogAPSShading(QDialog* parent, CAlpAPSMPAlgoInterface* pA
 	ui.lineEditROIDown->setText(QString::number(temp.Down));
 	ui.lineEditROIRight->setText(QString::number(temp.Right));
 
-	ui.lineEditOCFindRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nOpticalFindRadius));
-	ui.lineEditShadingTestRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nShadingTestRadius));
+	ui.lineEditYShadingRowNum->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nYShadingRowBlockNum));
+	ui.lineEditYShadingColNum->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nYShadingColBlockNum));
+	ui.lineEditColorShadingRowNum->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nColorShadingRowBlockNum));
+	ui.lineEditColorShadingColNum->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nColorShadingColBlockNum));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(Shading()), Qt::QueuedConnection);
@@ -39,6 +43,10 @@ CDialogAPSShading::CDialogAPSShading(QDialog* parent, CAlpAPSMPAlgoInterface* pA
 	connect(ui.checkBoxROI, SIGNAL(clicked(bool)), ui.lineEditROILeft, SLOT(setEnabled(bool)));
 	connect(ui.checkBoxROI, SIGNAL(clicked(bool)), ui.lineEditROIRight, SLOT(setEnabled(bool)));
 
+	ui.tabWidgetView->insertTab(0, &m_widgetTableView[0], "YShading");
+	ui.tabWidgetView->insertTab(1, &m_widgetTableView[1], "ColorShading(RG)");
+	ui.tabWidgetView->insertTab(2, &m_widgetTableView[2], "ColorShading(BG)");
+	ui.tabWidgetView->insertTab(3, &m_widgetTableView[3], "OpticalCenter");
 }
 
 
@@ -49,15 +57,21 @@ void CDialogAPSShading::Shading()
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 	ui.label_Res->setText(tr(" "));
 	ui.pushButtonStart->setEnabled(false);
-	ui.widgetTableView->Clear();
-	ui.widgetTableView_2->Clear();
+
+	for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+	{
+		m_widgetTableView[nIndex].Clear();
+	}
+
 
 	ROIArea* roi = nullptr;
 	ROIArea tempROI;
 
 	auto tempThre = m_pAPSAlgoInterface->GetAlgorithmThre();
-	tempThre.nOpticalFindRadius = ui.lineEditOCFindRadius->text().toUInt();
-	tempThre.nShadingTestRadius = ui.lineEditShadingTestRadius->text().toUInt();
+	tempThre.nYShadingRowBlockNum = ui.lineEditYShadingRowNum->text().toUInt();
+	tempThre.nYShadingColBlockNum = ui.lineEditYShadingColNum->text().toUInt();
+	tempThre.nColorShadingRowBlockNum = ui.lineEditColorShadingRowNum->text().toUInt();
+	tempThre.nColorShadingColBlockNum = ui.lineEditColorShadingColNum->text().toUInt();
 	m_pAPSAlgoInterface->SetAlgorithmThre(tempThre);
 
 	if (ui.checkBoxROI->isChecked())
@@ -71,7 +85,9 @@ void CDialogAPSShading::Shading()
 
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->Shading(nIndexStart, nNumber, roi, m_Data);
+	bRet = m_pAPSAlgoInterface->YShading(nIndexStart, nNumber, roi, m_YShadingData)
+		&& m_pAPSAlgoInterface->ColorShading(nIndexStart, nNumber, roi, m_ColorShadingData)
+		&& m_pAPSAlgoInterface->OpticalCenter(nIndexStart, nNumber, roi, m_OpticalCenterData);
 	auto end = clock();
 	time = end - start;
 	if (bRet)
@@ -81,30 +97,42 @@ void CDialogAPSShading::Shading()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		RowName << "LumaShading(Left-Top)" << "LumaShading(Left-Bottom)" << "LumaShading(Right-Top)" << "LumaShading(Right-Bottom)";
-		ColName << "Gb1" << "Gb2" << "B1" << "B2" << "R1" << "R2" << "Gr1" << "Gr2";
 
-		std::vector<std::vector<double>> Data(4);
-
-		for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+		for (uint32_t nRows = 0; nRows < m_YShadingData.YShadingData.size(); nRows++)
 		{
-			Data[0].push_back(m_Data.LumaShadingLT[nIndex]);
-			Data[1].push_back(m_Data.LumaShadingLB[nIndex]);
-			Data[2].push_back(m_Data.LumaShadingRT[nIndex]);
-			Data[3].push_back(m_Data.LumaShadingRB[nIndex]);
+			RowName << QString::number(nRows + 1);
 		}
-		ui.widgetTableView->SetData(RowName, ColName, Data);
+		for (uint32_t nCols = 0; nCols < m_YShadingData.YShadingData[0].size(); nCols++)
+		{
+			ColName << QString::number(nCols + 1);
+		}
+		m_widgetTableView[0].SetData(RowName, ColName, m_YShadingData.YShadingData);
 
-		QStringList RowName2, ColName2;
-		ColName2 << "OpticalCenterRow" << "OpticalCenterCol" << "R/Gb" << "B/Gb" << "Gr/Gb";
-		RowName2 << "";
-		std::vector<std::vector<double>> Data2(1);
-		Data2[0].push_back(m_Data.CenterRow);
-		Data2[0].push_back(m_Data.CenterCol);
-		Data2[0].push_back(m_Data.R_Gb_Ratio);
-		Data2[0].push_back(m_Data.B_Gb_Ratio);
-		Data2[0].push_back(m_Data.Gr_Gb_Ratio);
-		ui.widgetTableView_2->SetData(RowName2, ColName2, Data2);
+		RowName.clear();
+		ColName.clear();
+
+		for (uint32_t nRows = 0; nRows < m_ColorShadingData.ColorShadingRGData.size(); nRows++)
+		{
+			RowName << QString::number(nRows + 1);
+		}
+		for (uint32_t nCols = 0; nCols < m_ColorShadingData.ColorShadingRGData[0].size(); nCols++)
+		{
+			ColName << QString::number(nCols + 1);
+		}
+
+		m_widgetTableView[1].SetData(RowName, ColName, m_ColorShadingData.ColorShadingRGData);
+		m_widgetTableView[2].SetData(RowName, ColName, m_ColorShadingData.ColorShadingBGData);
+
+		RowName.clear();
+		ColName.clear();
+		RowName << "";
+		ColName << "CenterRow" << "CenterCol";
+
+		std::vector<std::vector<double>> Data(1);
+		Data[0].push_back(m_OpticalCenterData.CenterRow);
+		Data[0].push_back(m_OpticalCenterData.CenterCol);
+
+		m_widgetTableView[3].SetData(RowName, ColName, Data);
 	}
 	else
 	{
@@ -125,34 +153,37 @@ void CDialogAPSShading::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb1,Gb2,B1,B2,R1,R2,Gr1,Gr2" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+			outfile << "YShading" << std::endl;
+			for (uint32_t nRows = 0; nRows < m_YShadingData.YShadingData.size(); nRows++)
 			{
-				outfile << std::to_string(m_Data.LumaShadingLT[nIndex]) << ",";
+				for (uint32_t nCols = 0; nCols < m_YShadingData.YShadingData[0].size(); nCols++)
+				{
+					outfile << m_YShadingData.YShadingData[nRows][nCols] << ",";
+				}
+				outfile << std::endl;
 			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+			outfile << "ColorShading(RG)" << std::endl;
+			for (uint32_t nRows = 0; nRows < m_ColorShadingData.ColorShadingRGData.size(); nRows++)
 			{
-				outfile << std::to_string(m_Data.LumaShadingLB[nIndex]) << ",";
+				for (uint32_t nCols = 0; nCols < m_ColorShadingData.ColorShadingRGData[0].size(); nCols++)
+				{
+					outfile << m_ColorShadingData.ColorShadingRGData[nRows][nCols] << ",";
+				}
+				outfile << std::endl;
 			}
-			outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
+			outfile << "ColorShading(BG)" << std::endl;
+			for (uint32_t nRows = 0; nRows < m_ColorShadingData.ColorShadingBGData.size(); nRows++)
 			{
-				outfile << std::to_string(m_Data.LumaShadingRT[nIndex]) << ",";
+				for (uint32_t nCols = 0; nCols < m_ColorShadingData.ColorShadingBGData[0].size(); nCols++)
+				{
+					outfile << m_ColorShadingData.ColorShadingBGData[nRows][nCols] << ",";
+				}
+				outfile << std::endl;
 			}
+			outfile << "CenterRow, CenterCol" << std::endl;
+			outfile << std::to_string(m_OpticalCenterData.CenterRow) << "," << std::to_string(m_OpticalCenterData.CenterCol) << ",";
 			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < APSSubFrameIndex::SubFrameNum; nIndex++)
-			{
-				outfile << std::to_string(m_Data.LumaShadingRB[nIndex]) << ",";
-			}
-			outfile << std::endl;
-
-			outfile << "OpticalCenterRow," << "OpticalCenterCol," << "R/Gb," << "B/Gb," << "Gr/Gb" <<std::endl;
-			outfile << std::to_string(m_Data.CenterRow) << "," << std::to_string(m_Data.CenterCol) << ",";
-			outfile << std::to_string(m_Data.R_Gb_Ratio) << "," << std::to_string(m_Data.B_Gb_Ratio) << "," << std::to_string(m_Data.Gr_Gb_Ratio) << std::endl;
 
 			outfile.close();
 		}

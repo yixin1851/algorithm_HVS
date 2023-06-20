@@ -16,5 +16,5 @@ private:
     Ui::DialogDVSSpatialResponseUniformity ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    SpatialResponseUniformityData m_Data;
+    DVSSpatialResponseUniformityType m_Data;
 };

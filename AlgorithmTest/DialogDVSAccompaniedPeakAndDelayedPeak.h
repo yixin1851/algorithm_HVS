@@ -16,5 +16,5 @@ private:
     Ui::DialogDVSAccompaniedPeakAndDelayedPeak ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    AccompaniedPeakAndDelayedPeakData m_Data;
+    DVSAccompaniedPeakAndDelayedPeakType m_Data;
 };

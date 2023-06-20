@@ -245,7 +245,7 @@ class CDVS03BADecoder
 public:
 	CDVS03BADecoder();
 	void Init();
-	bool DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens, uint8_t &nSubFrameIndex, uint64_t &nTimeStamp);
+	bool DVS_Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, size_t* pnPos, size_t nBinLens, uint8_t &nSubFrameIndex, uint64_t &nTimeStamp);
 	void SetCheckSimpleFooter(bool bCheckSimpleFooter) { m_bCheckSimpleFooter = bCheckSimpleFooter; }
 	void SetHalfMode(bool bEnable) { m_bHalfMode = bEnable; }
 protected:

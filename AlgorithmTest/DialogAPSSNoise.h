@@ -16,7 +16,5 @@ private:
     Ui::DialogAPSSNoise ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;
     CAlpDVSMPAlgoInterface* m_pDVSAlgoInterface;
-    std::vector<double> m_SNoiseData;
-    std::vector<double> m_RowSNoiseData;
-    std::vector<double> m_ColSNoiseData;
+    APSSNoiseType m_SNoiseData;
 };
