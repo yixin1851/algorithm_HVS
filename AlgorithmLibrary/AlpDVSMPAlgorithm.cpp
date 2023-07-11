@@ -306,12 +306,12 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 			{
 				uint32_t AreaSize = 0;
 				std::stack<Local> Search;
+				BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
 				Search.push({ nRows, nCols });
 				while (!Search.empty())
 				{
 					Local temp = Search.top();
 					Search.pop();
-					BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
 					AreaSize++;
 					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
 					{
@@ -321,6 +321,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 							{
 								if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
+									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
 									Search.push({ nTempRows , nTempCols });
 								}
 							}
@@ -1024,12 +1025,12 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 				{
 					uint32_t AreaSize = 0;
 					std::stack<Local> Search;
+					BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
 					Search.push({ nRows, nCols });
 					while (!Search.empty())
 					{
 						Local temp = Search.top();
 						Search.pop();
-						BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
 						AreaSize++;
 						for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
 						{
@@ -1039,6 +1040,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 								{
 									if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 									{
+										BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
 										Search.push({ nTempRows , nTempCols });
 									}
 								}

@@ -2175,12 +2175,12 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 				uint32_t AreaSize = 0;
 				uint32_t nCur = 0;
 				std::vector<Local> Search;
+				BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
 				Search.push_back({ nRows, nCols });
 				while (nCur != Search.size())
 				{
 					Local temp = Search[nCur];
 					nCur++;
-					BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
 					AreaSize++;
 					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
 					{
@@ -2190,6 +2190,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 							{
 								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
+									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
 									Search.push_back({ nTempRows , nTempCols });
 								}
 							}
@@ -2403,12 +2404,12 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 				uint32_t AreaSize = 0;
 				std::vector<Local> Search;
 				uint32_t nCur = 0;
+				BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
 				Search.push_back({ nRows, nCols });
 				while (nCur != Search.size())
 				{
 					Local temp = Search[nCur];
 					nCur++;
-					BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
 					AreaSize++;
 					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
 					{
@@ -2418,6 +2419,7 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 							{
 								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
+									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
 									Search.push_back({ nTempRows , nTempCols });
 								}
 							}
