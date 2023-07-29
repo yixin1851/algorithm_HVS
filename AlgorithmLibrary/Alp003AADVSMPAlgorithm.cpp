@@ -25,7 +25,7 @@ bool CAlp003AADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	{
 		if (Decoder(pBinData, pRawData, m_nTotalRow, m_nTotalCol, &pos, nLens))
 		{
-			m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, m_PixelFormat);
+			m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true, m_PixelFormat);
 			for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
 			{
 				for (uint32_t nCols = 0; nCols < m_nTotalCol; nCols++)
