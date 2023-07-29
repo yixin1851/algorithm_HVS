@@ -15,23 +15,23 @@
 uint32_t CAlpAPSMPAlgoInterface::m_nSiteNumber = 0;
 uint32_t CAlpDVSMPAlgoInterface::m_nSiteNumber = 0;
 
-CAlpAPSMPAlgoInterface* CAlpAPSMPAlgoInterface::CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat)
+CAlpAPSMPAlgoInterface* CAlpAPSMPAlgoInterface::CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat, int code)
 {
 	if (Sensortype == ALP_003AA)
 	{
-		return new CAlp003AAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003AAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else if (Sensortype == ALP_003BA)
 	{
-		return new CAlp003BAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003BAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else if (Sensortype == ALP_003BB)
 	{
-		return new CAlp003BBAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003BBAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else if (Sensortype == ALP_003CA)
 	{
-		return new CAlp003CAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003CAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else
 	{
@@ -48,23 +48,23 @@ CAlpDVSMPAlgoInterface::~CAlpDVSMPAlgoInterface()
 
 }
 
-CAlpDVSMPAlgoInterface* CAlpDVSMPAlgoInterface::CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat)
+CAlpDVSMPAlgoInterface* CAlpDVSMPAlgoInterface::CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat, int code)
 {
 	if (Sensortype == ALP_003AA)
 	{
-		return new CAlp003AADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003AADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else if (Sensortype == ALP_003BA)
 	{
-		return new CAlp003BADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003BADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else if (Sensortype == ALP_003BB)
 	{
-		return new CAlp003BBDVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003BBDVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else if (Sensortype == ALP_003CA)
 	{
-		return new CAlp003CADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat);
+		return new CAlp003CADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else
 	{
@@ -84,12 +84,12 @@ bool operator==(const Local& lh, const Local& rh)
 	}
 }
 
-ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat)
+ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat, int code)
 {
-	return CAlpAPSMPAlgoInterface::CreateAPSAlgoInterface(Sensortype, Rawtype, strLogDir, Pixelformat);
+	return CAlpAPSMPAlgoInterface::CreateAPSAlgoInterface(Sensortype, Rawtype, strLogDir, Pixelformat, code);
 }
 
-ALP_ALGO_DLL_API CAlpDVSMPAlgoInterface* CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat)
+ALP_ALGO_DLL_API CAlpDVSMPAlgoInterface* CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat, int code)
 {
-	return CAlpDVSMPAlgoInterface::CreateDVSAlgoInterface(Sensortype, strLogDir, Pixelformat);
+	return CAlpDVSMPAlgoInterface::CreateDVSAlgoInterface(Sensortype, strLogDir, Pixelformat, code);
 }

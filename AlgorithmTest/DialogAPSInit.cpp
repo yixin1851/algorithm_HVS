@@ -13,6 +13,7 @@ CDialogAPSInit::CDialogAPSInit(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	ui.lineEditDown->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditLeft->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditRight->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditApsCode->setValidator(new QIntValidator(0, 100000, this));
 
 	connect(this, SIGNAL(accepted()), this, SLOT(Init()));
 	connect(ui.pushButtonBrowser, SIGNAL(clicked()), this, SLOT(Browser()));
@@ -90,13 +91,14 @@ void CDialogAPSInit::Init()
 	bool bMultiThreadEnable = ui.checkBoxMultiThreadEnable->isChecked();
 	bool bLogEnable = ui.checkBoxLogEnable->isChecked();
 	int32_t nPixelFormat = ui.comboBoxPixelFormat->currentIndex();
+	int32_t nCode = ui.lineEditApsCode->text().toInt();
 
 	if (m_pAPSAlgoInterface != nullptr)
 	{
 		delete m_pAPSAlgoInterface;
 	}
 
-	m_pAPSAlgoInterface = CreateAPSAlgoInterface(SensorType(nSensorType), APSRawType(nRawType), strLogDir, PixelFormatType(nPixelFormat));
+	m_pAPSAlgoInterface = CreateAPSAlgoInterface(SensorType(nSensorType), APSRawType(nRawType), strLogDir, PixelFormatType(nPixelFormat), nCode);
 	m_pAPSAlgoInterface->SetLogEnable(bLogEnable);
 	m_pAPSAlgoInterface->SetMultiThreadEnable(bMultiThreadEnable);
 

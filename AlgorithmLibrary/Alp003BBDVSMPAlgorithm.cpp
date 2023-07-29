@@ -1,7 +1,7 @@
 #include "Alp003BBDVSMPAlgorithm.h"
 
-CAlp003BBDVSMPAlgorithm::CAlp003BBDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
-	:CAlp003BADVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat)
+CAlp003BBDVSMPAlgorithm::CAlp003BBDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
+	:CAlp003BADVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat, code)
 {
 	m_nTotalRow = 1224;
 	m_nTotalCol = 1632;

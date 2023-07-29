@@ -119,23 +119,29 @@ void CDialogAPSOverallSystemGain::OverallSystemGain()
 
 			QStringList RowName, ColName;
 			RowName << " ";
-			ColName << "Gb" << "B" << "R" << "Gr";
-
+			if (m_GainK.SubFrameGainK.size() == 4)
+			{
+				ColName << "Gb" << "B" << "R" << "Gr";
+			}
+			else
+			{
+				ColName << "Gb1" << "Gb2" << "Gb3" << "Gb4" << "B1" << "B2" << "B3" << "B4" << "R1" << "R2" << "R3" << "R4" << "Gr1" << "Gr2" << "Gr3" << "Gr4";
+			}
 			std::vector<std::vector<double>> Data(1);
 
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_GainK.SubFrameGainK.size(); nIndex++)
 			{
 				Data[0].push_back(m_GainK.SubFrameGainK[nIndex]);
 			}
 
 			m_widgetTableView.SetData(RowName, ColName, Data);
 
-			QVector<double> XData[SubFrameIndex::All];
-			QVector<double> YData[SubFrameIndex::All];
+			std::vector<QVector<double>> XData(m_GainK.SubFrameGainK.size());
+			std::vector <QVector<double>> YData(m_GainK.SubFrameGainK.size());
 
 			for (uint32_t nIndex = 0; nIndex < LightTNoise.size(); nIndex++)
 			{
-				for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
+				for (uint32_t nChannel = 0; nChannel < m_GainK.SubFrameGainK.size(); nChannel++)
 				{
 					XData[nChannel].push_back(LightMean[nIndex].SubFrameDataMean[nChannel]);
 
@@ -143,10 +149,32 @@ void CDialogAPSOverallSystemGain::OverallSystemGain()
 				}
 			}
 
-			m_widgetChartView.SetLine("Gb", XData[Gb], YData[Gb]);
-			m_widgetChartView.SetLine("B",  XData[B], YData[B]);
-			m_widgetChartView.SetLine("R",  XData[R], YData[R]);
-			m_widgetChartView.SetLine("Gr", XData[Gr], YData[Gr]);
+			if (m_GainK.SubFrameGainK.size() == 4)
+			{
+				m_widgetChartView.SetLine("Gb", XData[Gb], YData[Gb]);
+				m_widgetChartView.SetLine("B",  XData[B],  YData[B]);
+				m_widgetChartView.SetLine("R",  XData[R],  YData[R]);
+				m_widgetChartView.SetLine("Gr", XData[Gr], YData[Gr]);
+			}
+			else
+			{
+				m_widgetChartView.SetLine("Gb1", XData[0], YData[0]);
+				m_widgetChartView.SetLine("Gb2", XData[1], YData[1]);
+				m_widgetChartView.SetLine("Gb3", XData[2], YData[2]);
+				m_widgetChartView.SetLine("Gb4", XData[3], YData[3]);
+				m_widgetChartView.SetLine("B1", XData[4], YData[4]);
+				m_widgetChartView.SetLine("B2", XData[5], YData[5]);
+				m_widgetChartView.SetLine("B3", XData[6], YData[6]);
+				m_widgetChartView.SetLine("B4", XData[7], YData[7]);
+				m_widgetChartView.SetLine("R1", XData[8], YData[8]);
+				m_widgetChartView.SetLine("R2", XData[9], YData[9]);
+				m_widgetChartView.SetLine("R3", XData[10], YData[10]);
+				m_widgetChartView.SetLine("R4", XData[11], YData[11]);
+				m_widgetChartView.SetLine("Gr1", XData[12], YData[12]);
+				m_widgetChartView.SetLine("Gr2", XData[13], YData[13]);
+				m_widgetChartView.SetLine("Gr3", XData[14], YData[14]);
+				m_widgetChartView.SetLine("Gr4", XData[15], YData[15]);
+			}
 		}
 		else
 		{
@@ -168,7 +196,14 @@ void CDialogAPSOverallSystemGain::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb,B,R,Gr" << std::endl;
+			if (m_GainK.SubFrameGainK.size() == 4)
+			{
+				outfile << "Gb,B,R,Gr" << std::endl;
+			}
+			else
+			{
+				outfile << "Gb1,Gb2,Gb3,Gb4,B1,B2,B3,B4,R1,R2,R3,R4,Gr1,Gr2,Gr3,Gr4" << std::endl;
+			}
 			for (uint32_t nIndex = 0; nIndex < m_GainK.SubFrameGainK.size(); nIndex++)
 			{
 				outfile << std::to_string(m_GainK.SubFrameGainK[nIndex]) << ",";

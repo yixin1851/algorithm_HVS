@@ -71,11 +71,18 @@ void CDialogAPSTNoise::TNoise()
 
 		QStringList RowName, ColName;
 		RowName << "TempNoise" << "RowTemp" << "ColTemp" << "PixelTemp" << "TempRNRatio" << "TempCNRatio";
-		ColName << "Gb" << "B" << "R" << "Gr";
+		if (m_TNoiseData.SubFrameTNoiseData.size() == 4)
+		{
+			ColName << "Gb" << "B" << "R" << "Gr";
+		}
+		else
+		{
+			ColName << "Gb1" << "Gb2" << "Gb3" << "Gb4" << "B1" << "B2" << "B3" << "B4" << "R1" << "R2" << "R3" << "R4" << "Gr1" << "Gr2" << "Gr3" << "Gr4";
+		}
 
 		std::vector<std::vector<double>> Data(6);
 
-		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+		for (uint32_t nIndex = 0; nIndex < m_TNoiseData.SubFrameTNoiseData.size(); nIndex++)
 		{
 			Data[0].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].TempNoise);
 			Data[1].push_back(m_TNoiseData.SubFrameTNoiseData[nIndex].RowTemp);
@@ -107,7 +114,7 @@ void CDialogAPSTNoise::Export()
 		if (!outfile.fail())
 		{
 			outfile << "TempNoise,RowTemp,ColTemp,PixelTemp,TempRNRatio,TempCNRatio" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_TNoiseData.SubFrameTNoiseData.size(); nIndex++)
 			{
 				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].TempNoise) << ",";
 				outfile <<std::to_string(m_TNoiseData.SubFrameTNoiseData[nIndex].RowTemp) << ",";

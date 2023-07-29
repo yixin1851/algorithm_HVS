@@ -70,10 +70,8 @@ void CDialogAPSShow::UpDateTable(int nIndex)
 		QString res = QString::number(time);
 		ui.label_Res->setText(res);
 
-		uint32_t nRow = 0, nCol = 0;
-		m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
-		nRow /= 2;
-		nCol /= 2;
+		uint32_t nRow = RawData.size();
+		uint32_t nCol = RawData[0].size();
 		m_RawDataModel->removeRows(0, nRow);
 		for (uint32_t nRows = 0; nRows < nRow; nRows++)
 		{

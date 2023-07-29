@@ -22,7 +22,7 @@ bool operator< (const Local& lh, const Local& rh)
 	}
 }
 
-CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
+CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 {
 	m_nSiteNum = nSiteNum;
 	m_bMultiThreadEnable = false;
@@ -52,6 +52,17 @@ CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype
 	m_AlgorithmThre.nBadPixelLocalColOffset = 52;  // for 003CA
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
+
+	if ((code & APSCodeType::APS_Code_16_Subframe) == APSCodeType::APS_Code_16_Subframe)
+	{
+		m_bUse16SubFrame = true;
+		m_16SubRawDataContainer.resize(16);
+	}
+	else
+	{
+		m_bUse16SubFrame = false;
+	}
+
 	m_PixelFormat = Pixelformat;
 
 	if (m_RawType == RAW8)
@@ -89,17 +100,38 @@ CAlpAPSMPAlgorithm::~CAlpAPSMPAlgorithm()
 bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSTNoiseType& TNoiseRes)
 {
 	bool bRet = true;
-	bool bSubRes[SubFrameIndex::All];
-	TNoiseRes.SubFrameTNoiseData.resize(SubFrameIndex::All);
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
+	bool* bSubRes = new bool[nChannelNum];
+	TNoiseRes.SubFrameTNoiseData.resize(nChannelNum);
+	TNoiseRes.TNoiseFrame = 0;
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+
+	if (m_bUse16SubFrame)
+	{
+		RealRoi.Up /= 2;
+		RealRoi.Left /= 2;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
+	}
+
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[SubFrameIndex::All];
+		std::vector<std::thread*> t(nChannelNum);
 
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameTNoise, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(TNoiseRes.SubFrameTNoiseData[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameTNoise, this, nIndexStart, nNumber, &RealRoi, SubFrameIndex(i), std::ref(TNoiseRes.SubFrameTNoiseData[i]), std::ref(bSubRes[i]), std::ref(DataContainer));
 		}
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -107,14 +139,51 @@ bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 	}
 	else
 	{
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
-			SubFrameTNoise(nIndexStart, nNumber, ROI, SubFrameIndex(i), TNoiseRes.SubFrameTNoiseData[i], bSubRes[i]);
+			SubFrameTNoise(nIndexStart, nNumber, &RealRoi, SubFrameIndex(i), TNoiseRes.SubFrameTNoiseData[i], bSubRes[i], DataContainer);
 		}
 	}
-	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+	for (uint32_t i = 0; i < nChannelNum; i++)
 	{
 		bRet = bRet && bSubRes[i];
+	}
+	delete[] bSubRes;
+
+	if (bRet)
+	{
+		ROIArea RealRoi;
+
+		if (ROI == nullptr)
+		{
+			RealRoi = m_ActiveArea;
+		}
+		else
+		{
+			RealRoi = *ROI;
+		}
+		uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+		uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+		std::vector<double> AllPixel(nRow * nCol * SubFrameIndex::All);
+		std::vector<double> onePixelInMultiFrames(nNumber);
+
+		uint32_t nCur = 0;
+		for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+		{
+			for (uint32_t nRows = 0; nRows < nRow; nRows++)
+			{
+				for (uint32_t nCols = 0; nCols < nCol; nCols++)
+				{
+					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+					{
+						onePixelInMultiFrames[nIndex] = m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+					}
+					AllPixel[nCur++] = Std(onePixelInMultiFrames, nNumber);
+				}
+			}
+		}
+		TNoiseRes.TNoiseFrame = RMS(AllPixel, nCur);
 	}
 	return bRet;
 }
@@ -122,18 +191,39 @@ bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSNoiseType& SNoiseData)
 {
 	bool bRet = true;
-	bool bSubRes[SubFrameIndex::All];
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
+	bool* bSubRes = new bool[nChannelNum];
 	SNoiseData.SNoiseFrame = 0;
-	SNoiseData.SubFrameSNoiseData.resize(SubFrameIndex::All);
+	SNoiseData.SubFrameSNoiseData.resize(nChannelNum);
+
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+
+	if (m_bUse16SubFrame)
+	{
+		RealRoi.Up /= 2;
+		RealRoi.Left /= 2;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
+	}
+
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[SubFrameIndex::All];
+		std::vector<std::thread*> t(nChannelNum);
 
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameSNoise, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(SNoiseData.SubFrameSNoiseData[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameSNoise, this, nIndexStart, nNumber, &RealRoi, SubFrameIndex(i), std::ref(SNoiseData.SubFrameSNoiseData[i]), std::ref(bSubRes[i]), std::ref(DataContainer));
 		}
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -141,15 +231,17 @@ bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 	}
 	else
 	{
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
-			SubFrameSNoise(nIndexStart, nNumber, ROI, SubFrameIndex(i), SNoiseData.SubFrameSNoiseData[i], bSubRes[i]);
+			SubFrameSNoise(nIndexStart, nNumber, &RealRoi, SubFrameIndex(i), SNoiseData.SubFrameSNoiseData[i], bSubRes[i], DataContainer);
 		}
 	}
-	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+	for (uint32_t i = 0; i < nChannelNum; i++)
 	{
 		bRet = bRet && bSubRes[i];
 	}
+	delete[] bSubRes;
+
 	if (bRet)
 	{
 		ROIArea RealRoi;
@@ -591,7 +683,7 @@ bool CAlpAPSMPAlgorithm::BadPixelLocalToOtpType(std::vector<Local>& BadPixelLoca
 		uint16_t nRow = static_cast<uint16_t>(BadPixelLocal[nIndex].x + m_AlgorithmThre.nBadPixelLocalRowOffset);
 		uint16_t nCol = static_cast<uint16_t>(BadPixelLocal[nIndex].y + m_AlgorithmThre.nBadPixelLocalColOffset);
 		uint8_t uData1 = nCol & 0xFF;
-		uint8_t uData2 = ((nRow << 4) & 0xF0) +((nCol >> 8) & 0x0F);
+		uint8_t uData2 = ((nRow << 4) & 0xF0) + ((nCol >> 8) & 0x0F);
 		uint8_t uData3 = (nRow >> 4) & 0xFF;
 		OtpData[nCur++] = uData1;
 		OtpData[nCur++] = uData2;
@@ -927,14 +1019,16 @@ bool CAlpAPSMPAlgorithm::ReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* 
 
 bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSDataMeanType>& DataMean, std::vector<double>& ExpTime, APSDarkCurrentType& DarkCurrentRes)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+
 	if (DataMean.size() != ExpTime.size())
 	{
 		std::string strErr = "DarkCurrent: Size Error: Data Size: " + std::to_string(DataMean.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
-		WriteLog(strErr, SubFrameIndex::All);
+		WriteLog(strErr, nChannelNum);
 		return false;
 	}
-	DarkCurrentRes.SubFrameKValue.resize(SubFrameIndex::All);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	DarkCurrentRes.SubFrameKValue.resize(nChannelNum);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < nChannelNum; nChannelIndex++)
 	{
 		uint32_t nDataNum = DataMean.size();
 		std::vector<double> XData(nDataNum);
@@ -965,14 +1059,16 @@ bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSDataMeanType>& DataMean, std
 
 bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSTNoiseType>& TNoise, std::vector<double>& ExpTime, APSDarkCurrentType& DarkCurrentRes)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+
 	if (TNoise.size() != ExpTime.size())
 	{
 		std::string strErr = "DarkCurrent: Size Error: Data Size: " + std::to_string(TNoise.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
-		WriteLog(strErr, SubFrameIndex::All);
+		WriteLog(strErr, nChannelNum);
 		return false;
 	}
-	DarkCurrentRes.SubFrameKValue.resize(SubFrameIndex::All);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	DarkCurrentRes.SubFrameKValue.resize(nChannelNum);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < nChannelNum; nChannelIndex++)
 	{
 		uint32_t nDataNum = TNoise.size();
 		std::vector<double> XData(nDataNum);
@@ -1195,17 +1291,39 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 bool CAlpAPSMPAlgorithm::DataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSDataMeanType& DataMean)
 {
 	bool bRet = true;
-	bool bSubRes[SubFrameIndex::All];
-	DataMean.SubFrameDataMean.resize(SubFrameIndex::All);
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
+	bool* bSubRes = new bool[nChannelNum];
+	DataMean.SubFrameDataMean.resize(nChannelNum);
+	DataMean.DataMeanFrame = 0;
+
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+
+	if (m_bUse16SubFrame)
+	{
+		RealRoi.Up /= 2;
+		RealRoi.Left /= 2;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
+	}
+
 	if (m_bMultiThreadEnable)
 	{
-		std::thread* t[SubFrameIndex::All];
+		std::vector<std::thread*> t(nChannelNum);
 
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDataMean, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(DataMean.SubFrameDataMean[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDataMean, this, nIndexStart, nNumber, &RealRoi, SubFrameIndex(i), std::ref(DataMean.SubFrameDataMean[i]), std::ref(bSubRes[i]), std::ref(DataContainer));
 		}
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
 			t[i]->join();
 			delete t[i];
@@ -1213,38 +1331,51 @@ bool CAlpAPSMPAlgorithm::DataMean(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	}
 	else
 	{
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < nChannelNum; i++)
 		{
-			SubFrameDataMean(nIndexStart, nNumber, ROI, SubFrameIndex(i), DataMean.SubFrameDataMean[i], bSubRes[i]);
+			SubFrameDataMean(nIndexStart, nNumber, &RealRoi, SubFrameIndex(i), DataMean.SubFrameDataMean[i], bSubRes[i], DataContainer);
 		}
 	}
-	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+	for (uint32_t i = 0; i < nChannelNum; i++)
 	{
 		bRet = bRet && bSubRes[i];
+	}
+	delete[] bSubRes;
+
+	if (bRet)
+	{
+		for (uint32_t nChannelIndex = 0; nChannelIndex < nChannelNum; nChannelIndex++)
+		{
+			DataMean.DataMeanFrame += DataMean.SubFrameDataMean[nChannelIndex];
+		}
+
+		DataMean.DataMeanFrame /= nChannelNum;
 	}
 	return bRet;
 }
 
 bool CAlpAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean, std::vector<double>& ExpTime, APSLinearityType& LinearityRes)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+
 	if (LightMean.size() != ExpTime.size() && LightMean.size() != 0)
 	{
 		std::string strErr = "Linearity: Size Error: LightMean Size: " + std::to_string(LightMean.size()) + ", ExpTime Size: " + std::to_string(ExpTime.size());
-		WriteLog(strErr, SubFrameIndex::All);
+		WriteLog(strErr, nChannelNum);
 		return false;
 	}
 	for (uint32_t nIndex = 0; nIndex < LightMean.size(); nIndex++)
 	{
-		if (LightMean[nIndex].SubFrameDataMean.size() != SubFrameIndex::All)
+		if (LightMean[nIndex].SubFrameDataMean.size() != nChannelNum)
 		{
 			std::string strErr = "LightMean: Size Error: Index: " + std::to_string(nIndex) + ", Sub Frame Size: " + std::to_string(LightMean[nIndex].SubFrameDataMean.size());
-			WriteLog(strErr, SubFrameIndex::All);
+			WriteLog(strErr, nChannelNum);
 			return false;
 		}
 	}
 
-	LinearityRes.SubFrameLinearityData.resize(SubFrameIndex::All);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	LinearityRes.SubFrameLinearityData.resize(nChannelNum);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < nChannelNum; nChannelIndex++)
 	{
 		uint32_t nDataNum = LightMean.size();
 		std::vector<double> XData(nDataNum);
@@ -1283,14 +1414,16 @@ bool CAlpAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean, std:
 
 bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<APSTNoiseType>& LightTNoiseData, std::vector<APSDataMeanType>& LightMean, APSTNoiseType DarkTNoiseBase, APSOverallSystemGainType& GainRes)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+
 	if (LightTNoiseData.size() != LightMean.size())
 	{
 		std::string strErr = "OverallSystemGain: Size Error: LightTNoiseData Size: " + std::to_string(LightTNoiseData.size()) + ", LightMean Size: " + std::to_string(LightMean.size());
-		WriteLog(strErr, SubFrameIndex::All);
+		WriteLog(strErr, nChannelNum);
 		return false;
 	}
-	GainRes.SubFrameGainK.resize(SubFrameIndex::All);
-	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	GainRes.SubFrameGainK.resize(nChannelNum);
+	for (uint32_t nChannelIndex = 0; nChannelIndex < nChannelNum; nChannelIndex++)
 	{
 		uint32_t nDataNum = LightMean.size();
 		std::vector<double> XData(nDataNum);
@@ -1321,14 +1454,42 @@ bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<APSTNoiseType>& LightTNoi
 
 bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSaturationType& SaturationRes)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+	if (nChannelIndex >= nChannelNum)
+	{
+		std::string strErr = "Saturation: SubFrameIndex beyond the max num";
+		WriteLog(strErr, nChannelIndex);
+		return false;
+	}
+
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+
+	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
+
+	if (m_bUse16SubFrame)
+	{
+		RealRoi.Up /= 2;
+		RealRoi.Left /= 2;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
+	}
+
 	bool bRes = false;
-	SubFrameDataMean(nIndexStart, nNumber, ROI, nChannelIndex, SaturationRes.SaturationMean, bRes);
+	SubFrameDataMean(nIndexStart, nNumber, &RealRoi, nChannelIndex, SaturationRes.SaturationMean, bRes, DataContainer);
 	if (!bRes)
 	{
 		return false;
 	}
 	APSSubFrameTNoiseType TNoise;
-	SubFrameTNoise(nIndexStart, nNumber, ROI, nChannelIndex, TNoise, bRes);
+	SubFrameTNoise(nIndexStart, nNumber, &RealRoi, nChannelIndex, TNoise, bRes, DataContainer);
 	if (!bRes)
 	{
 		return false;
@@ -1349,6 +1510,14 @@ bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIA
 
 bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+	if (nChannelIndex >= nChannelNum)
+	{
+		std::string strErr = "Show: SubFrameIndex beyond the max num";
+		WriteLog(strErr, nChannelIndex);
+		return false;
+	}
+
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
 	{
@@ -1358,7 +1527,10 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+
+	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
+
+	if (0 == nNumber || nIndexStart >= DataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "Show: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -1370,23 +1542,36 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
-	ImgData.resize(m_nChannelRow);
-	for (uint32_t nIndex = 0; nIndex < m_nChannelRow; nIndex++)
+
+	uint32_t nChannelRow = m_nChannelRow;
+	uint32_t nChannelCol = m_nChannelCol;
+	if (m_bUse16SubFrame)
 	{
-		ImgData[nIndex].resize(m_nChannelCol);
+		RealRoi.Up /= 2;
+		RealRoi.Left /= 2;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
+		nChannelRow /= 2;
+		nChannelCol /= 2;
+	}
+
+	ImgData.resize(nChannelRow);
+	for (uint32_t nIndex = 0; nIndex < nChannelRow; nIndex++)
+	{
+		ImgData[nIndex].resize(nChannelCol);
 	}
 	if (!bNormalize)
 	{
-		for (uint32_t nRows = 0; nRows < m_nChannelRow; nRows++)
+		for (uint32_t nRows = 0; nRows < nChannelRow; nRows++)
 		{
-			for (uint32_t nCols = 0; nCols < m_nChannelCol; nCols++)
+			for (uint32_t nCols = 0; nCols < nChannelCol; nCols++)
 			{
 				if (PosInRoi(nRows, nCols, RealRoi))
 				{
 					double temp = 0;
 					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 					{
-						temp += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
+						temp += DataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
 					}
 					temp /= nNumber;
 					if (temp < 0)
@@ -1420,23 +1605,23 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	{
 		double dMaxValue = 0, dMinValue = 0;
 		Local temp;
-		CAPSDataContainer DataContainer;
-		DataContainer.Init(m_nChannelRow, m_nChannelCol, true);
+		CAPSDataContainer NormalizeDataContainer;
+		NormalizeDataContainer.Init(nChannelRow, nChannelCol, true);
 		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 		{
-			DataContainer += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex];
+			NormalizeDataContainer += DataContainer[nChannelIndex][nIndexStart + nIndex];
 		}
-		DataContainer /= nNumber;
-		Max(dMaxValue, temp, DataContainer, &RealRoi);
-		Min(dMinValue, temp, DataContainer, &RealRoi);
+		NormalizeDataContainer /= nNumber;
+		Max(dMaxValue, temp, NormalizeDataContainer, &RealRoi);
+		Min(dMinValue, temp, NormalizeDataContainer, &RealRoi);
 
-		for (uint32_t nRows = 0; nRows < m_nChannelRow; nRows++)
+		for (uint32_t nRows = 0; nRows < nChannelRow; nRows++)
 		{
-			for (uint32_t nCols = 0; nCols < m_nChannelCol; nCols++)
+			for (uint32_t nCols = 0; nCols < nChannelCol; nCols++)
 			{
 				if (PosInRoi(nRows, nCols, RealRoi))
 				{
-					double NewValue = (DataContainer.m_RawData[nRows][nCols] - dMinValue) / (dMaxValue - dMinValue) * 255;
+					double NewValue = (NormalizeDataContainer.m_RawData[nRows][nCols] - dMinValue) / (dMaxValue - dMinValue) * 255;
 					ImgData[nRows][nCols] = round(NewValue);
 				}
 				else
@@ -1451,6 +1636,14 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 
 bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData)
 {
+	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
+	if (nChannelIndex >= nChannelNum)
+	{
+		std::string strErr = "Show: SubFrameIndex beyond the max num";
+		WriteLog(strErr, nChannelIndex);
+		return false;
+	}
+
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
 	{
@@ -1460,7 +1653,9 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
+
+	if (0 == nNumber || nIndexStart >= DataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "Show: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -1472,21 +1667,34 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
-	ImgData.resize(m_nChannelRow);
-	for (uint32_t nIndex = 0; nIndex < m_nChannelRow; nIndex++)
+
+	uint32_t nChannelRow = m_nChannelRow;
+	uint32_t nChannelCol = m_nChannelCol;
+	if (m_bUse16SubFrame)
 	{
-		ImgData[nIndex].resize(m_nChannelCol);
+		RealRoi.Up /= 2;
+		RealRoi.Left /= 2;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
+		nChannelRow /= 2;
+		nChannelCol /= 2;
 	}
-	for (uint32_t nRows = 0; nRows < m_nChannelRow; nRows++)
+
+	ImgData.resize(nChannelRow);
+	for (uint32_t nIndex = 0; nIndex < nChannelRow; nIndex++)
 	{
-		for (uint32_t nCols = 0; nCols < m_nChannelCol; nCols++)
+		ImgData[nIndex].resize(nChannelCol);
+	}
+	for (uint32_t nRows = 0; nRows < nChannelRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nChannelCol; nCols++)
 		{
 			if (PosInRoi(nRows, nCols, RealRoi))
 			{
 				double temp = 0;
 				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 				{
-					temp += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
+					temp += DataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
 				}
 				ImgData[nRows][nCols] = temp / nNumber;
 			}
@@ -1899,7 +2107,7 @@ bool CAlpAPSMPAlgorithm::LinearityFit(std::vector<double>& XData, std::vector<do
 	return true;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameTNoiseType& TNoise, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameTNoiseType& TNoise, bool& bRes, RawDataContainer& DataContainer)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -1911,7 +2119,7 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	{
 		RealRoi = *ROI;
 	}
-	if (nNumber < 2 || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	if (nNumber < 2 || nIndexStart >= DataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -1948,7 +2156,7 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 		{
 			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 			{
-				double dValue = m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				double dValue = DataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 				onePixelInMultiFrames[nIndex] = dValue;
 				RowDataArray.m_RawData[nRows][nIndex] += dValue;
 				ColDataArray.m_RawData[nCols][nIndex] += dValue;
@@ -1991,7 +2199,7 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameSNoiseType& SNoiseData, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameSNoiseType& SNoiseData, bool& bRes, RawDataContainer& DataContainer)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2003,7 +2211,7 @@ void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	if (0 == nNumber || nIndexStart >= DataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameSNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -2032,7 +2240,7 @@ void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, 
 			double dValue = 0;
 			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 			{
-				dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+				dValue += DataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 			}
 			dValue = round(dValue / nNumber);
 			PixelSNoiseArray.m_RawData[nRows][nCols] = dValue;
@@ -2545,6 +2753,27 @@ void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROI
 			for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
 			{
 				m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols] -= BaseMean;
+				if (m_bUse16SubFrame)
+				{
+					uint32_t nSubFrameChannel = nChannelIndex * 4;
+					if ((nRows & 1) == 0 && (nCols & 1) == 0)
+					{
+
+					}
+					else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+					{
+						nSubFrameChannel += 1;
+					}
+					else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+					{
+						nSubFrameChannel += 2;
+					}
+					else
+					{
+						nSubFrameChannel += 3;
+					}
+					m_16SubRawDataContainer[nSubFrameChannel][nIndexStart + nIndex].m_RawData[nRows >> 1][nCols >> 1] -= BaseMean;
+				}
 			}
 		}
 	}
@@ -2607,6 +2836,27 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 				if (nSize > 0)
 				{
 					CurRawData.m_RawData[nBadpixelRows][nBadpixelCols] = round(dMeanData / nSize);
+					if (m_bUse16SubFrame)
+					{
+						uint32_t nSubFrameChannel = nChannelIndex * 4;
+						if ((nBadpixelRows & 1) == 0 && (nBadpixelCols & 1) == 0)
+						{
+
+						}
+						else if ((nBadpixelRows & 1) == 0 && (nBadpixelCols & 1) == 1)
+						{
+							nSubFrameChannel += 1;
+						}
+						else if ((nBadpixelRows & 1) == 1 && (nBadpixelCols & 1) == 0)
+						{
+							nSubFrameChannel += 2;
+						}
+						else
+						{
+							nSubFrameChannel += 3;
+						}
+						m_16SubRawDataContainer[nSubFrameChannel][nIndexStart + nFrameIndex].m_RawData[nBadpixelRows >> 1][nBadpixelCols >> 1] = round(dMeanData / nSize);
+					}
 				}
 			}
 		}
@@ -2614,7 +2864,7 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& DataMean, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& DataMean, bool& bRes, RawDataContainer& DataContainer)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -2626,7 +2876,7 @@ void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	if (0 == nNumber || nIndexStart >= DataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameDataMean: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -2649,7 +2899,7 @@ void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber
 			double dValue = 0;
 			for (uint32_t nFrameIndex = 0; nFrameIndex < nNumber; nFrameIndex++)
 			{
-				dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nFrameIndex].m_RawData[nRows][nCols];
+				dValue += DataContainer[nChannelIndex][nIndexStart + nFrameIndex].m_RawData[nRows][nCols];
 			}
 			dValue = round(dValue / nNumber);
 			DataMean += dValue;
@@ -2702,6 +2952,27 @@ void CAlpAPSMPAlgorithm::SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNu
 			for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
 			{
 				m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols] -= BaseMean[nCols - RealRoi.Left];
+				if (m_bUse16SubFrame)
+				{
+					uint32_t nSubFrameChannel = nChannelIndex * 4;
+					if ((nRows & 1) == 0 && (nCols & 1) == 0)
+					{
+
+					}
+					else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+					{
+						nSubFrameChannel += 1;
+					}
+					else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+					{
+						nSubFrameChannel += 2;
+					}
+					else
+					{
+						nSubFrameChannel += 3;
+					}
+					m_16SubRawDataContainer[nSubFrameChannel][nIndexStart + nIndex].m_RawData[nRows >> 1][nCols >> 1] -= BaseMean[nCols - RealRoi.Left];
+				}
 			}
 		}
 	}
@@ -2737,19 +3008,19 @@ void CAlpAPSMPAlgorithm::SubFrameColMean(uint32_t nIndexStart, uint32_t nNumber,
 	uint32_t nAACol = RealRoi.Right - RealRoi.Left + 1;
 	uint32_t nAARow = RealRoi.Down - RealRoi.Up + 1;
 	DataMean.resize(nAACol);
-		for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
+	for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
+	{
+		DataMean[nCols - RealRoi.Left] = 0;
+		for (uint32_t nRows = RealRoi.Up; nRows <= RealRoi.Down; nRows++)
 		{
-			DataMean[nCols - RealRoi.Left] = 0;
-			for (uint32_t nRows = RealRoi.Up; nRows <= RealRoi.Down; nRows++)
+			double dValue = 0;
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 			{
-				double dValue = 0;
-				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-				{
-					dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
-				}
-				DataMean[nCols - RealRoi.Left] += round(dValue / nNumber);
+				dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
 			}
-			DataMean[nCols - RealRoi.Left] /= nAARow;
+			DataMean[nCols - RealRoi.Left] += round(dValue / nNumber);
+		}
+		DataMean[nCols - RealRoi.Left] /= nAARow;
 	}
 	return;
 }
@@ -3232,88 +3503,88 @@ void CAlpAPSMPAlgorithm::SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex
 		if (nChannelIndex == Gb)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == B)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		else if (nChannelIndex == R)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == Gr)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		break;
 	case BayerBGGR:
 		if (nChannelIndex == B)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == Gb)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		else if (nChannelIndex == Gr)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == R)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		break;
 	case BayerRGGB:
 		if (nChannelIndex == R)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == Gr)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		else if (nChannelIndex == Gb)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == B)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		break;
 	case BayerGRBG:
 		if (nChannelIndex == Gr)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == R)
 		{
 			nTotalRows = (nSubRows << 1);
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		else if (nChannelIndex == B)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1);
+			nTotalCols = (nSubCols << 1);
 		}
 		else if (nChannelIndex == Gb)
 		{
 			nTotalRows = (nSubRows << 1) + 1;
-			nTotalCols = (nSubCols  << 1) + 1;
+			nTotalCols = (nSubCols << 1) + 1;
 		}
 		break;
 	case QuadBayerGBRG:
@@ -3663,4 +3934,55 @@ void CAlpAPSMPAlgorithm::SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex
 	}
 	TotalLocal.x = nTotalRows;
 	TotalLocal.y = nTotalCols;
+}
+
+void CAlpAPSMPAlgorithm::ImportDataTo16SubFrame(uint32_t nIndexStart, uint32_t nNumber)
+{
+	for (uint32_t nChannelIndex = 0; nChannelIndex < 16; nChannelIndex++)
+	{
+		if (m_16SubRawDataContainer[nChannelIndex].size() < nIndexStart + nNumber)
+		{
+			m_16SubRawDataContainer[nChannelIndex].resize(nIndexStart + nNumber);
+		}
+	}
+
+	uint32_t nSubFrameRow = (m_nChannelRow >> 1);
+	uint32_t nSubFrameCol = (m_nChannelCol >> 1);
+	for (uint32_t i = 0; i < nNumber; i++)
+	{
+		for (uint32_t nChannelIndex = 0; nChannelIndex < 16; nChannelIndex++)
+		{
+			CAPSDataContainer& CurContainer = m_16SubRawDataContainer[nChannelIndex][nIndexStart + i];
+			if (CurContainer.m_nRow != nSubFrameRow || CurContainer.m_nCol != nSubFrameCol)
+			{
+				CurContainer.Init(nSubFrameRow, nSubFrameCol);
+			}
+			for (uint32_t nRows = 0; nRows < nSubFrameRow; nRows++)
+			{
+				for (uint32_t nCols = 0; nCols < nSubFrameCol; nCols++)
+				{
+					double dValue = 0;
+					uint32_t nChannelRow = nRows << 1;
+					uint32_t nChannelCol = nCols << 1;
+
+					switch (nChannelIndex & 0x03)
+					{
+					case 0:
+						break;
+					case 1:
+						nChannelCol += 1;
+						break;
+					case 2:
+						nChannelRow += 1;
+						break;
+					case 3:
+						nChannelRow += 1;
+						nChannelCol += 1;
+						break;
+					}
+					CurContainer.m_RawData[nRows][nCols] = m_RawDataContainer[nChannelIndex >> 2][nIndexStart + i].m_RawData[nChannelRow][nChannelCol];
+				}
+			}
+		}
+	}
 }

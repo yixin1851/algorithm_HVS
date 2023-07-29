@@ -71,11 +71,19 @@ void CDialogAPSSNoise::SNoise()
 
 		QStringList RowName, ColName;
 		RowName << "SNoise" << "RowSNoise" << "ColSNoise";
-		ColName << "Gb" << "B" << "R" << "Gr" << "Total";
+		if (m_SNoiseData.SubFrameSNoiseData.size() == 4)
+		{
+			ColName << "Gb" << "B" << "R" << "Gr" << "Total";
+		}
+		else
+		{
+			ColName << "Gb1" << "Gb2" << "Gb3" << "Gb4" << "B1" << "B2" << "B3" << "B4" << "R1" << "R2" << "R3" << "R4" << "Gr1" << "Gr2" << "Gr3" << "Gr4" << "Total";
+
+		}
 
 		std::vector<std::vector<double>> Data(3);
 
-		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+		for (uint32_t nIndex = 0; nIndex < m_SNoiseData.SubFrameSNoiseData.size(); nIndex++)
 		{
 			Data[0].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].SNoise);
 			Data[1].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].RowSNoise);
@@ -106,7 +114,7 @@ void CDialogAPSSNoise::Export()
 		if (!outfile.fail())
 		{
 			outfile << "SNoise, RowSNoise, ColSNoise" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_SNoiseData.SubFrameSNoiseData.size(); nIndex++)
 			{
 				outfile << std::to_string(m_SNoiseData.SubFrameSNoiseData[nIndex].SNoise) << ",";
 				outfile << std::to_string(m_SNoiseData.SubFrameSNoiseData[nIndex].RowSNoise) << ",";

@@ -4,7 +4,7 @@
 class CAlp003AADVSMPAlgorithm : public CAlpDVSMPAlgorithm
 {
 public:
-	CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat);
+	CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code);
 	virtual ~CAlp003AADVSMPAlgorithm();
 	virtual bool ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber);
 

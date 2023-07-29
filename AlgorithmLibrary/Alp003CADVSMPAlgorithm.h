@@ -28,11 +28,11 @@ typedef struct
 
 typedef struct
 {
-	uint64_t Footer_vec : 32;
 	uint64_t Subframesize : 16;
 	uint64_t Max_row_index : 9;
 	uint64_t  : 6;
 	uint64_t Dropflag: 1;
+	uint64_t Footer_vec : 32;
 }Alp003CAFormatFooter;
 
 typedef struct
@@ -52,7 +52,7 @@ typedef struct
 class CAlp003CADVSMPAlgorithm : public CAlpDVSMPAlgorithm
 {
 public:
-	CAlp003CADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat);
+	CAlp003CADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code);
 	virtual ~CAlp003CADVSMPAlgorithm();
 	virtual bool ImportRawData(uint8_t* pBinData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber);
 
@@ -61,4 +61,6 @@ protected:
 	bool FrameModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRowStart, uint32_t nRowStop, uint32_t nColStart, uint32_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex);
 	bool EventModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRowStart, uint32_t nRowStop, uint32_t nColStart, uint32_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex);
 	void SetData(CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, uint8_t nSubFrameIndex, uint8_t nEventFlag);
+private:
+	bool m_b1_4Binning;
 };

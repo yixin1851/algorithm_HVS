@@ -52,7 +52,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="4" colspan="3">
+   <item row="0" column="4" colspan="2">
     <widget class="QComboBox" name="comboBoxPixelFormat">
      <item>
       <property name="text">
@@ -76,7 +76,7 @@
      </item>
     </widget>
    </item>
-   <item row="0" column="7">
+   <item row="0" column="6" colspan="3">
     <spacer name="horizontalSpacer_4">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -122,7 +122,21 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="5" colspan="3">
+   <item row="1" column="5" colspan="2">
+    <widget class="QLabel" name="label_11">
+     <property name="text">
+      <string>Code</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="7">
+    <widget class="QLineEdit" name="lineEditDvsCode">
+     <property name="text">
+      <string>0</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="8">
     <spacer name="horizontalSpacer">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
@@ -135,7 +149,72 @@
      </property>
     </spacer>
    </item>
-   <item row="2" column="0" colspan="6">
+   <item row="2" column="0" colspan="4">
+    <widget class="QGroupBox" name="groupBox">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>191</width>
+       <height>91</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>RawDataSize</string>
+     </property>
+     <widget class="QLineEdit" name="lineEditTotalRowNumber">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>20</y>
+        <width>81</width>
+        <height>21</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_4">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>20</y>
+        <width>71</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Row Num</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_5">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>60</y>
+        <width>54</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Col Num</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditTotalColNumber">
+      <property name="geometry">
+       <rect>
+        <x>80</x>
+        <y>60</y>
+        <width>81</width>
+        <height>21</height>
+       </rect>
+      </property>
+     </widget>
+    </widget>
+   </item>
+   <item row="2" column="4" colspan="5">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -279,7 +358,7 @@
      </property>
     </spacer>
    </item>
-   <item row="6" column="6" colspan="2">
+   <item row="6" column="5" colspan="4">
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="orientation">
       <enum>Qt::Horizontal</enum>

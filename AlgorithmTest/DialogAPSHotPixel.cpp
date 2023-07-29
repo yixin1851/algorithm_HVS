@@ -19,6 +19,8 @@ CDialogAPSHotPixel::CDialogAPSHotPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditHotLineRadius->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditHotPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 	ui.lineEditHotLineThre->setValidator(new QDoubleValidator(0, 1, 3, this));
+	ui.lineEditHotPixelRowOffset->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditHotPixelColOffset->setValidator(new QIntValidator(0, 100000, this));
 
 	ui.lineEditROIUp->setEnabled(false);
 	ui.lineEditROIRight->setEnabled(false);
@@ -35,6 +37,8 @@ CDialogAPSHotPixel::CDialogAPSHotPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditHotLineRadius->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadLineRadius));
 	ui.lineEditHotPixelThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dHotPixelThre));
 	ui.lineEditHotLineThre->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().dHotLineThre));
+	ui.lineEditHotPixelRowOffset->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadPixelLocalRowOffset));
+	ui.lineEditHotPixelColOffset->setText(QString::number(m_pAPSAlgoInterface->GetAlgorithmThre().nBadPixelLocalColOffset));
 
 	ui.tabWidgetView->insertTab(0, &m_widgetTableView, "HotPixelResult");
 	ui.tabWidgetView->insertTab(1, &m_widgetImageView[0], "Gb");
@@ -74,6 +78,8 @@ void CDialogAPSHotPixel::HotPixel()
 	tempThre.dHotLineThre = ui.lineEditHotLineThre->text().toDouble();
 	tempThre.nBadPixelRadius = ui.lineEditBadPixelRadius->text().toUInt();
 	tempThre.nBadLineRadius = ui.lineEditHotLineRadius->text().toUInt();
+	tempThre.nBadPixelLocalRowOffset = ui.lineEditHotPixelRowOffset->text().toUInt();
+	tempThre.nBadPixelLocalColOffset = ui.lineEditHotPixelColOffset->text().toUInt();
 
 	m_pAPSAlgoInterface->SetAlgorithmThre(tempThre);
 
@@ -260,6 +266,22 @@ void CDialogAPSHotPixel::Export()
 			}
 
 			outfile.close();
+		}
+
+		std::vector<uint8_t> OtpData;
+
+		if (m_pAPSAlgoInterface->BadPixelLocalToOtpType(m_HotPixel.BadPixelMask.LocalData, OtpData))
+		{
+			std::string strFile = dir.toStdString() + "//DpcInfo.bin";
+			outfile.open(strFile, std::ios::trunc | std::ios::binary);
+			if (!outfile.fail())
+			{
+				for (uint32_t i = 0; i < OtpData.size(); i++)
+				{
+					outfile << OtpData[i];
+				}
+				outfile.close();
+			}
 		}
 	}
 }

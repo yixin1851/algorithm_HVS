@@ -1,7 +1,7 @@
 #include "Alp003CAAPSMPAlgorithm.h"
 
-CAlp003CAAPSMPAlgorithm::CAlp003CAAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
-	: CAlpAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, nSiteNum, Pixelformat)
+CAlp003CAAPSMPAlgorithm::CAlp003CAAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
+	: CAlpAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, nSiteNum, Pixelformat, code)
 {
 	m_ActiveArea = { 0, 1223, 0, 1631 };
 	m_nChannelRow = 1224;
@@ -181,6 +181,10 @@ bool CAlp003CAAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, u
 				nIndex += nFooterSize;
 			}
 		}
+	}
+	if (m_bUse16SubFrame)
+	{
+		ImportDataTo16SubFrame(nIndexStart, nNumber);
 	}
 	return true;
 }

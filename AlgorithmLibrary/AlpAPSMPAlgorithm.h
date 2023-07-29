@@ -10,7 +10,7 @@ class CAlpAPSMPAlgorithm : public CAlpAPSMPAlgoInterface
 {
 public:
 	CAlpAPSMPAlgorithm() = delete;
-	CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat);
+	CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code);
 	virtual ~CAlpAPSMPAlgorithm();
 	virtual bool ImportRawData(uint8_t * pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, bool bHeader_Footer = false) = 0;
 	virtual bool TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSTNoiseType& TNoiseRes);
@@ -62,13 +62,13 @@ protected:
 	inline bool PosInRoi(uint32_t nRows, uint32_t nCols, ROIArea & ROI);
 
 	virtual bool LinearityFit(std::vector<double>& XData, std::vector<double>& YData, double& k, double& b);
-	virtual void SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameTNoiseType& TNoise, bool &bRes);
-	virtual void SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameSNoiseType& SNoiseData, bool& bRes);
+	virtual void SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameTNoiseType& TNoise, bool &bRes, RawDataContainer &DataContainer);
+	virtual void SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameSNoiseType& SNoiseData, bool& bRes, RawDataContainer &DataContainer);
 	virtual void SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes);
 	virtual void SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& HotpixelRes, bool& bRes);
 	virtual void SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& BaseMean, bool& bRes);
 	virtual void SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadPixelMask, bool& bRes);
-	virtual void SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& DataMean, bool& bRes);
+	virtual void SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& DataMean, bool& bRes, RawDataContainer& DataContainer);
 	
 	virtual void SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<double>& BaseMean, bool& bRes);
 	virtual void SubFrameColMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<double>& DataMean, bool& bRes);
@@ -78,6 +78,8 @@ protected:
 
 	void SetDataToSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double dValue);
 	void SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex nChannelIndex, Local& TotalLocal);
+
+	void ImportDataTo16SubFrame(uint32_t nIndexStart, uint32_t nNumber);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;
@@ -91,8 +93,10 @@ protected:
 	std::string m_strLogFilePath;
 	std::mutex m_LogMutex;
 	RawDataContainer m_RawDataContainer;
+	RawDataContainer m_16SubRawDataContainer;
 	APSAlgorithmThre m_AlgorithmThre;
 	uint32_t m_nSiteNum;
 	double m_dPedestal;
 	PixelFormatType m_PixelFormat;
+	bool m_bUse16SubFrame;
 };

@@ -63,6 +63,16 @@ typedef enum
 	QuadBayerGRBG,
 }PixelFormatType;
 
+typedef enum
+{
+	APS_Code_16_Subframe = 1,
+}APSCodeType;
+
+typedef enum
+{
+	DVS_Code_1_4_Bining = 1,
+}DVSCodeType;
+
 typedef std::vector<std::vector<uint8_t>> ImgType;
 typedef std::vector<std::vector<double>> APSType;
 
@@ -123,6 +133,7 @@ typedef struct
 
 typedef struct
 {
+	double TNoiseFrame;
 	std::vector<APSSubFrameTNoiseType> SubFrameTNoiseData;
 }APSTNoiseType;
 
@@ -221,6 +232,7 @@ typedef struct
 
 typedef struct
 {
+	double DataMeanFrame;
 	std::vector<double> SubFrameDataMean;
 }APSDataMeanType;
 
@@ -379,7 +391,7 @@ typedef enum
 class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
 {
 public:
-	static CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::QuadBayerGBRG);
+	static CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::QuadBayerGBRG, int code = 0);
 	virtual ~CAlpAPSMPAlgoInterface();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, bool bHeader_Footer = false) = 0;
 	virtual bool TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSTNoiseType& TNoiseRes) = 0;
@@ -424,7 +436,7 @@ private:
 class ALP_ALGO_DLL_API CAlpDVSMPAlgoInterface
 {
 public:
-	static CAlpDVSMPAlgoInterface * CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG);
+	static CAlpDVSMPAlgoInterface * CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG, int code = 0);
 	virtual ~CAlpDVSMPAlgoInterface();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes) = 0;
@@ -453,5 +465,5 @@ private:
 	static uint32_t m_nSiteNumber;
 };
 
-ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::QuadBayerGBRG);
-ALP_ALGO_DLL_API CAlpDVSMPAlgoInterface* CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG);
+ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface* CreateAPSAlgoInterface(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::QuadBayerGBRG, int code = 0);
+ALP_ALGO_DLL_API CAlpDVSMPAlgoInterface* CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG, int code = 0);

@@ -8,7 +8,7 @@
 
 constexpr uint32_t DVS_MaxThreadNum = 8;
 
-CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
+CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 {
 	m_nSiteNum = nSiteNum;
 	m_bLogEnable = false;

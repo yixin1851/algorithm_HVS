@@ -1,7 +1,7 @@
 #include "Alp003AADVSMPAlgorithm.h"
 
-CAlp003AADVSMPAlgorithm::CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat) :
-	CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat)
+CAlp003AADVSMPAlgorithm::CAlp003AADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code) :
+	CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat, code)
 {
 	m_nTotalRow = 1224;
 	m_nTotalCol = 1632;

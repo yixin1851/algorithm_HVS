@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>822</width>
-    <height>563</height>
+    <height>650</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -57,7 +57,7 @@
       <property name="geometry">
        <rect>
         <x>120</x>
-        <y>450</y>
+        <y>540</y>
         <width>51</width>
         <height>26</height>
        </rect>
@@ -70,7 +70,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>500</y>
+        <y>580</y>
         <width>71</width>
         <height>41</height>
        </rect>
@@ -122,7 +122,7 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>450</y>
+        <y>540</y>
         <width>77</width>
         <height>26</height>
        </rect>
@@ -135,7 +135,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>290</y>
+        <y>380</y>
         <width>80</width>
         <height>21</height>
        </rect>
@@ -148,7 +148,7 @@
       <property name="geometry">
        <rect>
         <x>100</x>
-        <y>320</y>
+        <y>410</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -161,7 +161,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>320</y>
+        <y>410</y>
         <width>54</width>
         <height>16</height>
        </rect>
@@ -174,7 +174,7 @@
       <property name="geometry">
        <rect>
         <x>100</x>
-        <y>350</y>
+        <y>440</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -187,7 +187,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>350</y>
+        <y>440</y>
         <width>54</width>
         <height>16</height>
        </rect>
@@ -200,7 +200,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>380</y>
+        <y>470</y>
         <width>54</width>
         <height>16</height>
        </rect>
@@ -213,7 +213,7 @@
       <property name="geometry">
        <rect>
         <x>100</x>
-        <y>380</y>
+        <y>470</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -226,7 +226,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>410</y>
+        <y>500</y>
         <width>54</width>
         <height>16</height>
        </rect>
@@ -239,7 +239,7 @@
       <property name="geometry">
        <rect>
         <x>100</x>
-        <y>410</y>
+        <y>500</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -330,7 +330,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>260</y>
+        <y>350</y>
         <width>80</width>
         <height>21</height>
        </rect>
@@ -363,6 +363,58 @@
       </property>
       <property name="text">
        <string>HotLineRadius</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_11">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>270</y>
+        <width>61</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>RowOffset</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditHotPixelRowOffset">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>270</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_12">
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>310</y>
+        <width>61</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>ColOffset</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditHotPixelColOffset">
+      <property name="geometry">
+       <rect>
+        <x>100</x>
+        <y>310</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
       </property>
      </widget>
     </widget>

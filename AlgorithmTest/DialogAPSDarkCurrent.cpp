@@ -128,11 +128,18 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 
 			QStringList RowName, ColName;
 			RowName << " ";
-			ColName << "Gb" << "B" << "R" << "Gr";
+			if (m_DarkCurrent.SubFrameKValue.size() == 4)
+			{
+				ColName << "Gb" << "B" << "R" << "Gr";
+			}
+			else
+			{
+				ColName << "Gb1" << "Gb2" << "Gb3" << "Gb4" << "B1" << "B2" << "B3" << "B4" << "R1" << "R2" << "R3" << "R4" << "Gr1" << "Gr2" << "Gr3" << "Gr4";
+			}
 
 			std::vector<std::vector<double>> Data(1);
 
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < m_DarkCurrent.SubFrameKValue.size(); nIndex++)
 			{
 				Data[0].push_back(m_DarkCurrent.SubFrameKValue[nIndex]);
 			}
@@ -140,12 +147,12 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 			m_widgetTableView.SetData(RowName, ColName, Data);
 
 			QVector<double> XData;
-			QVector<double> YData[SubFrameIndex::All];
+			std::vector<QVector<double>> YData(m_DarkCurrent.SubFrameKValue.size());
 
 			for (uint32_t nIndex = 0; nIndex < ExpTime.size(); nIndex++)
 			{
 				XData.push_back(ExpTime[nIndex]);
-				for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
+				for (uint32_t nChannel = 0; nChannel < m_DarkCurrent.SubFrameKValue.size(); nChannel++)
 				{
 					if (bUseMeanFunc)
 					{
@@ -158,10 +165,33 @@ void CDialogAPSDarkCurrent::DarkCurrent()
 				}
 			}
 
-			m_widgetChartView.SetLine("Gb", XData, YData[Gb]);
-			m_widgetChartView.SetLine("B", XData, YData[B]);
-			m_widgetChartView.SetLine("R", XData, YData[R]);
-			m_widgetChartView.SetLine("Gr", XData, YData[Gr]);
+			if (m_DarkCurrent.SubFrameKValue.size() == 4)
+			{
+				m_widgetChartView.SetLine("Gb", XData, YData[Gb]);
+				m_widgetChartView.SetLine("B", XData, YData[B]);
+				m_widgetChartView.SetLine("R", XData, YData[R]);
+				m_widgetChartView.SetLine("Gr", XData, YData[Gr]);
+			}
+			else
+			{
+				m_widgetChartView.SetLine("Gb1", XData, YData[0]);
+				m_widgetChartView.SetLine("Gb2", XData, YData[1]);
+				m_widgetChartView.SetLine("Gb3", XData, YData[2]);
+				m_widgetChartView.SetLine("Gb4", XData, YData[3]);
+				m_widgetChartView.SetLine("B1", XData, YData[4]);
+				m_widgetChartView.SetLine("B2", XData, YData[5]);
+				m_widgetChartView.SetLine("B3", XData, YData[6]);
+				m_widgetChartView.SetLine("B4", XData, YData[7]);
+				m_widgetChartView.SetLine("R1", XData, YData[8]);
+				m_widgetChartView.SetLine("R2", XData, YData[9]);
+				m_widgetChartView.SetLine("R3", XData, YData[10]);
+				m_widgetChartView.SetLine("R4", XData, YData[11]);
+				m_widgetChartView.SetLine("Gr1", XData, YData[12]);
+				m_widgetChartView.SetLine("Gr2", XData, YData[13]);
+				m_widgetChartView.SetLine("Gr3", XData, YData[14]);
+				m_widgetChartView.SetLine("Gr4", XData, YData[15]);
+
+			}
 		}
 		else
 		{
@@ -183,7 +213,14 @@ void CDialogAPSDarkCurrent::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb,B,R,Gr" << std::endl;
+			if (m_DarkCurrent.SubFrameKValue.size() == 4)
+			{
+				outfile << "Gb,B,R,Gr" << std::endl;
+			}
+			else
+			{
+				outfile << "Gb1,Gb2,Gb3,Gb4,B1,B2,B3,B4,R1,R2,R3,R4,Gr1,Gr2,Gr3,Gr4" << std::endl;
+			}
 			for (uint32_t nIndex = 0; nIndex < m_DarkCurrent.SubFrameKValue.size(); nIndex++)
 			{
 				outfile << std::to_string(m_DarkCurrent.SubFrameKValue[nIndex]) << ",";

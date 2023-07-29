@@ -4,11 +4,21 @@
 #define DVS_FOOTER_003CA 0x0101FFFF
 #define DVS_FOOTER_DROP_003CA 0x0303FFFF
 
-CAlp003CADVSMPAlgorithm::CAlp003CADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat)
-	:CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat)
+CAlp003CADVSMPAlgorithm::CAlp003CADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
+	:CAlpDVSMPAlgorithm(Sensortype, strLogDir, nSiteNum, Pixelformat, code)
 {
-	m_nTotalRow = 1224;
-	m_nTotalCol = 1632;
+	if ((code & DVS_Code_1_4_Bining) == DVS_Code_1_4_Bining)
+	{
+		m_b1_4Binning = true;
+		m_nTotalRow = 612;
+		m_nTotalCol = 816;
+	}
+	else
+	{
+		m_nTotalRow = 1224;
+		m_nTotalCol = 1632;
+		m_b1_4Binning = false;
+	}
 	m_ActiveArea = { 0, m_nTotalRow - 1, 0, m_nTotalCol - 1 };
 }
 
@@ -30,18 +40,39 @@ bool CAlp003CADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 		m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true, m_PixelFormat);
 		uint8_t nSubFrameIndex = 0;
 		uint64_t nTimeStamp = 0;
-		while (nNeedSubFrameIndex != 16)
+		if (m_b1_4Binning)
 		{
-			if (Decode(pBinData, &m_RawDataContainer[nIndexStart + nIndex], m_nTotalRow / 4, m_nTotalCol / 4, &pos, nLens, nSubFrameIndex, nTimeStamp) && nSubFrameIndex == nNeedSubFrameIndex)
+			while (nNeedSubFrameIndex != 4)
 			{
-				++nNeedSubFrameIndex;
+				if (Decode(pBinData, &m_RawDataContainer[nIndexStart + nIndex], m_nTotalRow / 2, m_nTotalCol / 2, &pos, nLens, nSubFrameIndex, nTimeStamp) && nSubFrameIndex == nNeedSubFrameIndex)
+				{
+					++nNeedSubFrameIndex;
+				}
+				else
+				{
+					std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
+					WriteLog(strErr);
+					m_nErrCode = EVS_DECODE_ERROR;
+					return false;
+				}
 			}
-			else
+
+		}
+		else
+		{
+			while (nNeedSubFrameIndex != 16)
 			{
-				std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
-				WriteLog(strErr);
-				m_nErrCode = EVS_DECODE_ERROR;
-				return false;
+				if (Decode(pBinData, &m_RawDataContainer[nIndexStart + nIndex], m_nTotalRow / 4, m_nTotalCol / 4, &pos, nLens, nSubFrameIndex, nTimeStamp) && nSubFrameIndex == nNeedSubFrameIndex)
+				{
+					++nNeedSubFrameIndex;
+				}
+				else
+				{
+					std::string strErr = "ImportRawData: DVS Decoder error: Index: " + std::to_string(nIndex) + ", Pos: " + std::to_string(pos);
+					WriteLog(strErr);
+					m_nErrCode = EVS_DECODE_ERROR;
+					return false;
+				}
 			}
 		}
 	}
@@ -126,10 +157,15 @@ bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 {
 	bool bRet = false;
 
-	nRowStart *= 4;
-	nColStart *= 4;
-	nRowStop *= 4;
-	nColStop *= 4;
+	uint32_t nStep = 4;
+	if (m_b1_4Binning)
+	{
+		nStep = 2;
+	}
+	nRowStart *= nStep;
+	nColStart *= nStep;
+	nRowStop *= nStep;
+	nColStop *= nStep;
 
 	uint32_t nRow = nRowStart;
 	uint32_t nCol = nColStart;
@@ -152,19 +188,19 @@ bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 			EventGroup = (Alp003CAFormatEventGroup*)(pucBinData + nCurIndex);
 
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix0);
-			nCol += 4;
+			nCol += nStep;
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix1);
-			nCol += 4;
+			nCol += nStep;
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix2);
-			nCol += 4;
+			nCol += nStep;
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix3);
-			nCol += 4;
+			nCol += nStep;
 
 			nCurIndex++;
 
 			if (nCol == nColStop)
 			{
-				nRow += 4;
+				nRow += nStep;
 				nCol = nColStart;
 			}
 			else if (nCol > nColStop)
@@ -189,10 +225,16 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 {
 	bool bRet = false;
 
-	nRowStart *= 4;
-	nColStart *= 4;
-	nRowStop *= 4;
-	nColStop *= 4;
+	uint32_t nStep = 4;
+	if (m_b1_4Binning)
+	{
+		nStep = 2;
+	}
+
+	nRowStart *= nStep;
+	nColStart *= nStep;
+	nRowStop *= nStep;
+	nColStop *= nStep;
 
 	uint32_t nRow = nRowStart;
 	uint32_t nCol = nColStart;
@@ -221,26 +263,26 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 				{
 					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix0);
 				}
-				nCol += 4;
+				nCol += nStep;
 				if (EventGroup->Pix1)
 				{
 					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix1);
 				}
-				nCol += 4;
+				nCol += nStep;
 				if (EventGroup->Pix2)
 				{
 					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix2);
 				}
-				nCol += 4;
+				nCol += nStep;
 				if (EventGroup->Pix3)
 				{
 					SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix3);
 				}
-				nCol += 4;
+				nCol += nStep;
 
 				if (nCol == nColStop)
 				{
-					nRow += 4;
+					nRow += nStep;
 					nCol = nColStart;
 				}
 				else if (nCol > nColStop)
@@ -252,10 +294,10 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 			{
 				VoidByte = (Alp003CAFormatVoidByte*)(pucBinData + nCurIndex);
 
-				nCol += ((static_cast<size_t>(VoidByte->Voidbytelen) + 1) << 4);
+				nCol += ((static_cast<size_t>(VoidByte->Voidbytelen) + 1) << 2) * nStep;
 				if (nCol == nColStop)
 				{
-					nRow += 4;
+					nRow += nStep;
 					nCol = nColStart;
 				}
 				else if (nCol > nColStop)
@@ -280,64 +322,85 @@ bool CAlp003CADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 
 void CAlp003CADVSMPAlgorithm::SetData(CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, uint8_t nSubFrameIndex, uint8_t nEventFlag)
 {
-	switch (nSubFrameIndex)
+	if (m_b1_4Binning)
 	{
-	case 0:
-		break;
-	case 1:
-		nCol += 2;
-		break;
-	case 2:
-		nRow += 2;
-		break;
-	case 3:
-		nRow += 2;
-		nCol += 2;
-		break;
-	case 4:
-		nCol += 1;
-		break;
-	case 5:
-		nCol += 3;
-		break;
-	case 6:
-		nRow += 2;
-		nCol += 1;
-		break;
-	case 7:
-		nRow += 2;
-		nCol += 3;
-		break;
-	case 8:
-		nRow += 1;
-		break;
-	case 9:
-		nRow += 1;
-		nCol += 2;
-		break;
-	case 10:
-		nRow += 3;
-		break;
-	case 11:
-		nRow += 3;
-		nCol += 2;
-		break;
-	case 12:
-		nRow += 1;
-		nCol += 1;
-		break;
-	case 13:
-		nRow += 1;
-		nCol += 3;
-		break;
-	case 14:
-		nRow += 3;
-		nCol += 1;
-		break;
-	case 15:
-		nRow += 3;
-		nCol += 3;
-		break;
+		switch (nSubFrameIndex)
+		{
+		case 0:
+			break;
+		case 1:
+			nCol += 1;
+			break;
+		case 2:
+			nRow += 1;
+			break;
+		case 3:
+			nRow += 1;
+			nCol += 1;
+			break;
+		}
+	}
+	else
+	{
+		switch (nSubFrameIndex)
+		{
+		case 0:
+			break;
+		case 1:
+			nCol += 2;
+			break;
+		case 2:
+			nRow += 2;
+			break;
+		case 3:
+			nRow += 2;
+			nCol += 2;
+			break;
+		case 4:
+			nCol += 1;
+			break;
+		case 5:
+			nCol += 3;
+			break;
+		case 6:
+			nRow += 2;
+			nCol += 1;
+			break;
+		case 7:
+			nRow += 2;
+			nCol += 3;
+			break;
+		case 8:
+			nRow += 1;
+			break;
+		case 9:
+			nRow += 1;
+			nCol += 2;
+			break;
+		case 10:
+			nRow += 3;
+			break;
+		case 11:
+			nRow += 3;
+			nCol += 2;
+			break;
+		case 12:
+			nRow += 1;
+			nCol += 1;
+			break;
+		case 13:
+			nRow += 1;
+			nCol += 3;
+			break;
+		case 14:
+			nRow += 3;
+			nCol += 1;
+			break;
+		case 15:
+			nRow += 3;
+			nCol += 3;
+			break;
+		}
 	}
 	DVSData->SetData(nRow, nCol, nEventFlag);
 }
