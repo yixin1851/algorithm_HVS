@@ -10,3 +10,5 @@ void GetSensitivityUniformityData2(std::string datapath, std::string outpath);
 void GetStationaryNoise(std::string datapath, std::string outpath, uint32_t nIndexStart, uint32_t nDataLen);
 
 void GetCenterImageSensitivityData(std::string datapath, std::string outpath);
+
+void Get16SubframeRaw(std::string datapath);

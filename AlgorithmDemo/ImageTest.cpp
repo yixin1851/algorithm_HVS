@@ -7,6 +7,7 @@
 #include "AlpMPAlgoInterface.h"
 
 static CAlpDVSMPAlgoInterface* gDVSInterface = nullptr;
+static CAlpAPSMPAlgoInterface* gAPSInterface = nullptr;
 
 void FindFiles(std::string strPath, std::vector<std::string>& FileQuene)
 {
@@ -85,7 +86,7 @@ void GetCenterImageSensitivityData(std::string datapath, std::string outpath)
 		{
 			std::cout << "ImportData pass " << time << "," << nIndex + 1 << "/" << FileQuene.size() << std::endl;
 
-			SpatialResponseUniformityData data;
+			DVSSpatialResponseUniformityType data;
 			gDVSInterface->SpatialResponseUniformity(20, 60, nullptr, 3, On_OffEvents, data);
 
 			//std::string strSub1 = FileQuene[nIndex].substr(0, FileQuene[nIndex].find_last_of('/'));
@@ -119,6 +120,65 @@ void GetCenterImageSensitivityData(std::string datapath, std::string outpath)
 	}
 	delete gDVSInterface;
 	imageData.close();
+}
+
+void Get16SubframeRaw(std::string datapath)
+{
+	std::vector<std::string> FileQuene;
+
+	gAPSInterface = CreateAPSAlgoInterface(ALP_003CA, UNPACK10, "D:/", QuadBayerRGGB, 1);
+	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface->SetLogEnable(true);
+	gAPSInterface->SetRawDataSize(6144,8192);
+	gAPSInterface->SetActiveArea({ 0, 6144 / 2 - 1, 0, 8192 / 2 - 1 });
+	bool bRet = false;
+
+	std::ifstream infile;
+	infile.open(datapath, std::ios::binary | std::ios::in);
+	if (!infile.fail())
+	{
+		infile.seekg(0, std::ios::end);
+		uint64_t length = infile.tellg();
+		infile.seekg(0, std::ios::beg);
+		uint8_t* pRawData = new uint8_t[length];
+		infile.read((char*)pRawData, length);
+		infile.close();
+
+		bRet = gAPSInterface->ImportRawData(pRawData, length, 0, 1);
+		delete[] pRawData;
+	}
+	else
+	{
+		bRet = false;
+	}
+	if (bRet)
+	{
+		std::ofstream outfile;
+		for (uint32_t n = 0; n < 16; n++)
+		{
+			std::string outpath = ".\\" + std::to_string(n) + ".raw";
+			outfile.open(outpath, std::ios::binary | std::ios::trunc);
+			APSType Data;
+			gAPSInterface->Show(0, 1, nullptr, SubFrameIndex(n), Data);
+
+			for (uint32_t nRow = 0; nRow < Data.size(); nRow++)
+			{
+				for (uint32_t nCol = 0; nCol < Data[0].size(); nCol++)
+				{
+					uint8_t a = uint16_t(Data[nRow][nCol]) & 0xFF;
+					uint8_t b = (uint16_t(Data[nRow][nCol]) >> 8)& 0xFF;
+
+					outfile << a;
+					outfile << b;
+				}
+			}
+			outfile.close();
+		}
+	}
+	else
+	{
+		std::cout << "ImportData fail " << std::endl;
+	}
 }
 
 void GetImageSensitivityData(std::string datapath, std::string outpath)
@@ -163,7 +223,7 @@ void GetImageSensitivityData(std::string datapath, std::string outpath)
 		{
 			std::cout << "ImportData pass " << time << "," << nIndex + 1 << "/" << FileQuene.size() << std::endl;
 
-			ImageContrastSensitivityData data;
+			DVSImageContrastSensitivityType data;
 			gDVSInterface->ImageContrastSensitivity(80, 80, nullptr, 3, On_OffEvents, data);
 
 			std::string strSub1 = FileQuene[nIndex].substr(0, FileQuene[nIndex].find_last_of('/'));
@@ -229,7 +289,7 @@ void GetSensitivityUniformityData(std::string datapath, std::string outpath)
 		{
 			std::cout << "ImportData pass " << time << "," << nIndex + 1 << "/" << FileQuene.size() << std::endl;
 
-			SpatialResponseUniformityData data;
+			DVSSpatialResponseUniformityType data;
 
 			auto thre = gDVSInterface->GetAlgorithmThre();
 			thre.nSpatialResponseUniformityColBlockNum = 5;
@@ -300,7 +360,7 @@ void GetSensitivityUniformityData2(std::string datapath, std::string outpath)
 		{
 			std::cout << "ImportData pass " << time << "," << nIndex + 1 << "/" << FileQuene.size() << std::endl;
 
-			SpatialResponseUniformityData data;
+			DVSSpatialResponseUniformityType data;
 
 			auto thre = gDVSInterface->GetAlgorithmThre();
 			thre.nSpatialResponseUniformityColBlockNum = 5;
@@ -372,9 +432,9 @@ void GetStationaryNoise(std::string datapath, std::string outpath, uint32_t nInd
 		{
 			std::cout << "ImportData pass " << time << "," << nIndex + 1 << "/" << FileQuene.size() << std::endl;
 
-			StationaryNoiseData Sdata;
-			StationaryUniformityData SUdata;
-			HotpixelData Hdata;
+			DVSStationaryNoiseType Sdata;
+			DVSStationaryUniformityType SUdata;
+			DVSHotpixelType Hdata;
 
 			auto thre = gDVSInterface->GetAlgorithmThre();
 			thre.nStationaryUniformityColBlockNum = 5;
@@ -472,9 +532,9 @@ void GetStationaryNoise2(std::string datapath, std::string outpath, uint32_t nIn
 
 			for (uint32_t nDataLen = 10; nDataLen <= 50; nDataLen += 10)
 			{
-				StationaryNoiseData Sdata;
-				StationaryUniformityData SUdata;
-				HotpixelData Hdata;
+				DVSStationaryNoiseType Sdata;
+				DVSStationaryUniformityType SUdata;
+				DVSHotpixelType Hdata;
 
 				auto thre = gDVSInterface->GetAlgorithmThre();
 				thre.nStationaryUniformityColBlockNum = 5;
