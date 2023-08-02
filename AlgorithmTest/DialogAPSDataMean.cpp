@@ -98,7 +98,7 @@ void CDialogAPSDataMean::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//DataMean.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//DataMean.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

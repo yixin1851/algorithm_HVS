@@ -61,7 +61,7 @@
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>140</y>
+        <y>180</y>
         <width>71</width>
         <height>41</height>
        </rect>
@@ -79,26 +79,6 @@
         <height>22</height>
        </rect>
       </property>
-      <item>
-       <property name="text">
-        <string>Gb</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>B</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>R</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>Gr</string>
-       </property>
-      </item>
      </widget>
      <widget class="QLabel" name="label_2">
       <property name="geometry">
@@ -124,6 +104,19 @@
       </property>
       <property name="text">
        <string>Normalize</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="pushButtonExport">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>130</y>
+        <width>77</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Export</string>
       </property>
      </widget>
     </widget>

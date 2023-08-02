@@ -43,7 +43,7 @@ int main()
 	//OneTestItem();
 	//UnInit();
 
-	std::string path = "K:\\share_all\\to_zhangtaiyong\\APX003CA\\APX003CA_RGB芯片打平行光图像异常现象_20230728\\参考数据\\349685742_Unpack10_20230606T084117_QSCcali.8192X6144.unpack10_rggb.vcmpos_0.raw";
+	std::string path = "D:\\Data\\taiyong\\RGB12BIT-2.raw";
 	Get16SubframeRaw(path);
 	system("pause");
 	return 0;

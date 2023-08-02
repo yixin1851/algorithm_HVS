@@ -208,7 +208,7 @@ void CDialogAPSDarkCurrent::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//DarkCurrent.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//DarkCurrent.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

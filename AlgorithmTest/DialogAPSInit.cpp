@@ -87,7 +87,7 @@ void CDialogAPSInit::Init()
 {
 	int32_t nSensorType = ui.comboBoxSensorType->currentIndex();
 	int32_t nRawType = ui.comboBoxRawType->currentIndex();
-	std::string strLogDir = ui.lineEditLogDir->text().toStdString();
+	std::string strLogDir = ui.lineEditLogDir->text().toLocal8Bit().toStdString();
 	bool bMultiThreadEnable = ui.checkBoxMultiThreadEnable->isChecked();
 	bool bLogEnable = ui.checkBoxLogEnable->isChecked();
 	int32_t nPixelFormat = ui.comboBoxPixelFormat->currentIndex();

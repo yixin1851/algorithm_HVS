@@ -1,5 +1,6 @@
 #include "DialogDVSShow.h"
 #include "WidgetChartView.h"
+#include <fstream>
 
 CDialogDVSShow::CDialogDVSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgoInterface, CAlpDVSMPAlgoInterface* pDVSAlgoInterface)
 	: QDialog(parent), m_pAPSAlgoInterface(pAPSAlgoInterface), m_pDVSAlgoInterface(pDVSAlgoInterface)
@@ -203,4 +204,39 @@ void CDialogDVSShow::MenuClicked(QAction* act)
 		}
 		DataView->show();
 	}
+}
+
+void CDialogDVSShow::on_pushButtonExport_clicked()
+{
+	QString dir = QFileDialog::getExistingDirectory(this, tr("Choose Save Directory"), "../", QFileDialog::ShowDirsOnly);
+
+	if (dir != "")
+	{
+
+		ImgType Img;
+		uint32_t nCurIndex = ui.comboBoxIndex->currentIndex();
+		if (m_pDVSAlgoInterface->Show(nCurIndex, 0, 2, 1, Img))
+		{
+			std::string strFile = dir.toLocal8Bit().toStdString() + "//dvs_16bit_" + std::to_string(Img.size()) + "_" + std::to_string(Img[0].size()) + ".raw";
+			std::ofstream outfile;
+			outfile.open(strFile, std::ios::binary | std::ios::trunc);
+			if (!outfile.fail())
+			{
+				for (uint32_t nRow = 0; nRow < Img.size(); nRow++)
+				{
+					for (uint32_t nCol = 0; nCol < Img[0].size(); nCol++)
+					{
+						uint8_t a = Img[nRow][nCol];
+						uint8_t b = 0;
+
+						outfile << a;
+						outfile << b;
+					}
+				}
+				outfile.close();
+			}
+		}
+	}
+
+
 }

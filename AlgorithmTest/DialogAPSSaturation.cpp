@@ -94,7 +94,7 @@ void CDialogAPSSaturation::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//Saturation.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//Saturation.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

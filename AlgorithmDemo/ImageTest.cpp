@@ -126,11 +126,11 @@ void Get16SubframeRaw(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003CA, UNPACK10, "D:/", QuadBayerRGGB, 1);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_003CA, UNPACK12, "D:/", QuadBayerRGGB, 1);
 	gAPSInterface->SetMultiThreadEnable(true);
 	gAPSInterface->SetLogEnable(true);
-	gAPSInterface->SetRawDataSize(6144,8192);
-	gAPSInterface->SetActiveArea({ 0, 6144 / 2 - 1, 0, 8192 / 2 - 1 });
+	gAPSInterface->SetRawDataSize(2064,3088);
+	gAPSInterface->SetActiveArea({ 0, 2064 / 2 - 1, 0, 3088 / 2 - 1 });
 	bool bRet = false;
 
 	std::ifstream infile;

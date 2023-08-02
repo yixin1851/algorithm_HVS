@@ -125,7 +125,7 @@ void CDialogDVSSpatialResponseUniformity::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//SpatialResponseUniformity.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//SpatialResponseUniformity.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

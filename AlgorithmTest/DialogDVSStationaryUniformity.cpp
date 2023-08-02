@@ -78,7 +78,7 @@ void CDialogStationaryUniformity::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//StationaryUniformity.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//StationaryUniformity.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

@@ -1,5 +1,6 @@
 #include "DialogAPSShow.h"
 #include <QStringList>
+#include <fstream>
 #include "WidgetChartView.h"
 
 CDialogAPSShow::CDialogAPSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgoInterface, CAlpDVSMPAlgoInterface* pDVSAlgoInterface)
@@ -18,8 +19,36 @@ CDialogAPSShow::CDialogAPSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	uint32_t nRow = 0, nCol = 0;
 	QStringList RowList, ColList;
 	m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
-	nRow /= 2;
-	nCol /= 2;
+	if ((m_pAPSAlgoInterface->GetCode() & APS_Code_16_Subframe) == APS_Code_16_Subframe)
+	{
+		nRow /= 4;
+		nCol /= 4;
+		ui.comboBoxChannel->addItem("Gb1");
+		ui.comboBoxChannel->addItem("Gb2");
+		ui.comboBoxChannel->addItem("Gb3");
+		ui.comboBoxChannel->addItem("Gb4");
+		ui.comboBoxChannel->addItem("B1");
+		ui.comboBoxChannel->addItem("B2");
+		ui.comboBoxChannel->addItem("B3");
+		ui.comboBoxChannel->addItem("B4");
+		ui.comboBoxChannel->addItem("R1");
+		ui.comboBoxChannel->addItem("R2");
+		ui.comboBoxChannel->addItem("R3");
+		ui.comboBoxChannel->addItem("R4");
+		ui.comboBoxChannel->addItem("Gr1");
+		ui.comboBoxChannel->addItem("Gr2");
+		ui.comboBoxChannel->addItem("Gr3");
+		ui.comboBoxChannel->addItem("Gr4");
+	}
+	else
+	{
+		nRow /= 2;
+		nCol /= 2;
+		ui.comboBoxChannel->addItem("Gb");
+		ui.comboBoxChannel->addItem("B");
+		ui.comboBoxChannel->addItem("R");
+		ui.comboBoxChannel->addItem("Gr");
+	}
 	for (uint32_t nRows = 1; nRows <= nRow; nRows++)
 	{
 		RowList << QString("%1").arg(nRows, 4, 10, QLatin1Char(' '));
@@ -164,6 +193,54 @@ void CDialogAPSShow::on_tableView_customContextMenuRequested(const QPoint& pos)
 		}
 		m_CustomMenu->exec(QCursor::pos());
 	}
+}
+
+void CDialogAPSShow::on_pushButtonExport_clicked()
+{
+	QString dir = QFileDialog::getExistingDirectory(this, tr("Choose Save Directory"), "../", QFileDialog::ShowDirsOnly);
+
+	if (dir != "")
+	{
+		QStringList ChannelName;
+
+		if ((m_pAPSAlgoInterface->GetCode() & APS_Code_16_Subframe) == APS_Code_16_Subframe)
+		{
+			ChannelName << "Gb1" << "Gb2" << "Gb3" << "Gb4" << "B1" << "B2" << "B3" << "B4" << "R1" << "R2" << "R3" << "R4" << "Gr1" << "Gr2" << "Gr3" << "Gr4";
+		}
+		else
+		{
+			ChannelName << "Gb" << "B" << "R" << "Gr";
+		}
+
+		APSType Img;
+		uint32_t nCurIndex = ui.comboBoxIndex->currentIndex();
+		for (uint32_t nChannel = 0; nChannel < ChannelName.size(); nChannel++)
+		{
+			if (m_pAPSAlgoInterface->Show(nCurIndex, 1, nullptr, SubFrameIndex(nChannel), Img))
+			{
+				std::string strFile = dir.toLocal8Bit().toStdString() + "//aps_16bit_"+ ChannelName[nChannel].toStdString() + "_" + std::to_string(Img.size()) + "_" + std::to_string(Img[0].size()) + ".raw";
+				std::ofstream outfile;
+				outfile.open(strFile, std::ios::binary | std::ios::trunc);
+				if (!outfile.fail())
+				{
+					for (uint32_t nRow = 0; nRow < Img.size(); nRow++)
+					{
+						for (uint32_t nCol = 0; nCol < Img[0].size(); nCol++)
+						{
+							uint8_t a = uint16_t(Img[nRow][nCol]) & 0xFF;
+							uint8_t b = (uint16_t(Img[nRow][nCol]) >> 8) & 0xFF;
+
+							outfile << a;
+							outfile << b;
+						}
+					}
+					outfile.close();
+				}
+			}
+		}
+	}
+
+
 }
 
 void CDialogAPSShow::MenuClicked(QAction* act)

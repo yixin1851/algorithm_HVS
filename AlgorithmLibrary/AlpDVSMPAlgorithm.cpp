@@ -24,7 +24,7 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	m_AlgorithmThre.nSpatialResponseUniformityColBlockNum = 5;
 	//m_AlgorithmThre.nFindPeakNum = 3;
 	//m_AlgorithmThre.dFindPeakThre = 0.75;
-
+	m_nCode = code;
 	m_AlgorithmThre.nPeakCycle = 20;
 	m_PixelFormat = Pixelformat;
 
@@ -1667,6 +1667,11 @@ void CAlpDVSMPAlgorithm::SetRawDataSize(uint32_t nRow, uint32_t nCol)
 std::string CAlpDVSMPAlgorithm::GetVersion()
 {
 	return DVS_MP_ALGORITHM_VERSION;
+}
+
+int CAlpDVSMPAlgorithm::GetCode()
+{
+	return m_nCode;
 }
 
 uint32_t CAlpDVSMPAlgorithm::GetErrCode()

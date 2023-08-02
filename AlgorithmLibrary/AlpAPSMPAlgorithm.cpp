@@ -50,6 +50,7 @@ CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype
 	m_AlgorithmThre.nBadPixelMaxLen = 200;
 	m_AlgorithmThre.nBadPixelLocalRowOffset = 104; // for 003CA
 	m_AlgorithmThre.nBadPixelLocalColOffset = 52;  // for 003CA
+	m_nCode = code;
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
 
@@ -1785,6 +1786,11 @@ bool CAlpAPSMPAlgorithm::SaveBin(uint8_t* pRawData, uint64_t nLens, std::string 
 std::string CAlpAPSMPAlgorithm::GetVersion()
 {
 	return APS_MP_ALGORITHM_VERSION;
+}
+
+int CAlpAPSMPAlgorithm::GetCode()
+{
+	return m_nCode;
 }
 
 bool CAlpAPSMPAlgorithm::WriteLog(std::string strMessage, uint32_t nAPSSubFrameIndex)

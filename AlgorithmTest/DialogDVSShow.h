@@ -16,6 +16,7 @@ private slots:
     void UpDateTable(int nIndex);
     void on_tableView_customContextMenuRequested(const QPoint& pos);
     void MenuClicked(QAction* act);
+    void on_pushButtonExport_clicked();
 private:
     Ui::DialogDCVSShow ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;

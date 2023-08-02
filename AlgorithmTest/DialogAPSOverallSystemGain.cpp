@@ -191,7 +191,7 @@ void CDialogAPSOverallSystemGain::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//OverallSystemGain.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//OverallSystemGain.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

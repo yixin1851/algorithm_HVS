@@ -15,6 +15,7 @@ private slots:
     void Show(int nIndex);
     void UpDateTable(int nIndex);
     void on_tableView_customContextMenuRequested(const QPoint& pos);
+    void on_pushButtonExport_clicked();
     void MenuClicked(QAction* act);
 private:
     Ui::DialogAPSShow ui;

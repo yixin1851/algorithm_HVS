@@ -47,6 +47,7 @@ public:
 	virtual uint32_t GetDataNum();
 	virtual bool SaveBin(uint8_t* pRawData, uint64_t nLens, std::string strSavePath);
 	virtual std::string GetVersion();
+	virtual int GetCode();
 protected:
 	virtual bool WriteLog(std::string strMessage, uint32_t nAPSSubFrameIndex);
 	virtual double Mean(std::vector<double>& RawData, uint32_t nLens);
@@ -99,4 +100,5 @@ protected:
 	double m_dPedestal;
 	PixelFormatType m_PixelFormat;
 	bool m_bUse16SubFrame;
+	int m_nCode;
 };

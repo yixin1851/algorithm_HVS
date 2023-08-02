@@ -182,7 +182,7 @@ void CDialogAPSLinearity::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//Linearity.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//Linearity.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

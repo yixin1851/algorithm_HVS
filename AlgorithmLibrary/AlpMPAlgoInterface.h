@@ -428,6 +428,7 @@ public:
 	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
 	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
+	virtual int GetCode() = 0;
 private:
 	static uint32_t m_nSiteNumber;
 };
@@ -460,6 +461,7 @@ public:
 	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
 	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
+	virtual int GetCode() = 0;
 	virtual uint32_t GetErrCode() = 0;
 private:
 	static uint32_t m_nSiteNumber;

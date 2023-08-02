@@ -108,7 +108,7 @@ void CDialogAPSSNoise::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//SNoise.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//SNoise.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

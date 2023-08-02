@@ -72,7 +72,7 @@ void CDialogStationaryNoise::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//StationaryNoise.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//StationaryNoise.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

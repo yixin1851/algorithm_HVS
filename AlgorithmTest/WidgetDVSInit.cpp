@@ -32,7 +32,7 @@ void CWidgetDVSInit::Browser()
 void CWidgetDVSInit::Init()
 {
 	int32_t nSensorType = ui.comboBoxSensorType->currentIndex();
-	std::string strLogDir = ui.lineEditLogDir->text().toStdString();
+	std::string strLogDir = ui.lineEditLogDir->text().toLocal8Bit().toStdString();
 	bool bMultiThreadEnable = ui.checkBoxMultiThreadEnable->isChecked();
 	bool bLogEnable = ui.checkBoxLogEnable->isChecked();
 	PixelFormatType PixelFormat = PixelFormatType(ui.comboBoxPixelFormat->currentIndex());

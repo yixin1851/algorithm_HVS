@@ -89,7 +89,7 @@ void CDialogDVSImageContrastSensitivity::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//ImageContrastSensitivity.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//ImageContrastSensitivity.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

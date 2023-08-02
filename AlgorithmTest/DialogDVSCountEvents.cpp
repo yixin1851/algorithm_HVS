@@ -111,7 +111,7 @@ void CDialogCountEvents::Export()
 
 	if (dir != "" && m_Data.nDataNumber != 0)
 	{
-		std::string strFile = dir.toStdString() + "//CountEvents.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//CountEvents.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

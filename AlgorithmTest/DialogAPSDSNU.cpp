@@ -122,7 +122,7 @@ void CDialogAPSDSNU::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//DSNU.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//DSNU.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

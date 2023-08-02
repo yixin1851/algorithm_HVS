@@ -34,6 +34,7 @@ public:
 	virtual void SetActiveArea(ROIArea ActiveArea);
 	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol);
 	virtual std::string GetVersion();
+	virtual int GetCode();
 	virtual uint32_t GetErrCode();
 protected:
 	virtual void ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, DVSEventsNumberCountType& EventsNumberCountRes);
@@ -64,4 +65,5 @@ protected:
 	uint32_t m_nSiteNum;
 	uint32_t m_nErrCode;
 	PixelFormatType m_PixelFormat;
+	int m_nCode;
 };

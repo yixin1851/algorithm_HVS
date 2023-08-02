@@ -110,7 +110,7 @@ void CDialogAPSPedestal::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//PedestalVariation.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//PedestalVariation.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

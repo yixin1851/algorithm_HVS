@@ -173,7 +173,7 @@ void CDialogAPSHotPixel::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//HotPixel.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//HotPixel.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
@@ -272,7 +272,7 @@ void CDialogAPSHotPixel::Export()
 
 		if (m_pAPSAlgoInterface->BadPixelLocalToOtpType(m_HotPixel.BadPixelMask.LocalData, OtpData))
 		{
-			std::string strFile = dir.toStdString() + "//DpcInfo.bin";
+			std::string strFile = dir.toLocal8Bit().toStdString() + "//DpcInfo.bin";
 			outfile.open(strFile, std::ios::trunc | std::ios::binary);
 			if (!outfile.fail())
 			{

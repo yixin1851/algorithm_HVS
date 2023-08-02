@@ -101,7 +101,7 @@ void CDialogDVSAccompaniedPeakAndDelayedPeak::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//AccompaniedPeakAndDelayedPeak.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//AccompaniedPeakAndDelayedPeak.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())

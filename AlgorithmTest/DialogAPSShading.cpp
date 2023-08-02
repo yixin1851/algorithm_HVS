@@ -148,7 +148,7 @@ void CDialogAPSShading::Export()
 
 	if (dir != "")
 	{
-		std::string strFile = dir.toStdString() + "//Shading.csv";
+		std::string strFile = dir.toLocal8Bit().toStdString() + "//Shading.csv";
 		std::ofstream outfile;
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
