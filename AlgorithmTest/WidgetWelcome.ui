@@ -42,6 +42,9 @@
    </item>
    <item row="1" column="1">
     <widget class="QPushButton" name="pushButtonDVS">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
      <property name="text">
       <string>DVS</string>
      </property>

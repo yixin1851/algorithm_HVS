@@ -64,6 +64,7 @@ CDialogAPSShow::CDialogAPSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	ui.tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	ui.tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	ui.tableView->setContextMenuPolicy(Qt::CustomContextMenu);
+	ui.tableView->installEventFilter(this);
 
 	m_CustomMenu = new QMenu(ui.tableView);
 	m_DispRowData = new QAction(this);
@@ -79,6 +80,7 @@ CDialogAPSShow::CDialogAPSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	connect(ui.comboBoxIndex, SIGNAL(currentIndexChanged(int)), this, SLOT(UpDateTable(int)), Qt::QueuedConnection);
 	connect(ui.comboBoxChannel, SIGNAL(currentIndexChanged(int)), this, SLOT(UpDateTable(int)), Qt::QueuedConnection);
 	connect(m_CustomMenu, SIGNAL(triggered(QAction *)), this, SLOT(MenuClicked(QAction *)), Qt::QueuedConnection);
+	connect(ui.widgetDoubleSlider, SIGNAL(ValueChangedFinished()), this, SLOT(ChangeRange()), Qt::UniqueConnection);
 
 	emit(ui.comboBoxIndex->currentIndexChanged(0));
 }
@@ -113,6 +115,7 @@ void CDialogAPSShow::UpDateTable(int nIndex)
 
 			m_RawDataModel->appendRow(add_items);
 		}
+		ChangeRange();
 	}
 	else
 	{
@@ -279,4 +282,75 @@ void CDialogAPSShow::MenuClicked(QAction* act)
 		}
 		DataView->show();
 	}
+}
+
+void CDialogAPSShow::ChangeRange()
+{
+	int minValue = ui.widgetDoubleSlider->minValue();
+	int maxValue = ui.widgetDoubleSlider->maxValue();
+
+	for (int nRows = 0; nRows < m_RawDataModel->rowCount(); nRows++)
+	{
+		for (int nCols = 0; nCols < m_RawDataModel->columnCount(); nCols++)
+		{
+			double value = m_RawDataModel->data(m_RawDataModel->index(nRows, nCols)).toDouble();
+			if (value >= minValue && value <= maxValue)
+			{
+				if (m_RawDataModel->data(m_RawDataModel->index(nRows, nCols), Qt::BackgroundRole) != QBrush(Qt::transparent))
+				{
+					m_RawDataModel->setData(m_RawDataModel->index(nRows, nCols), QBrush(Qt::transparent), Qt::BackgroundRole);
+				}
+			}
+			else
+			{
+				if (m_RawDataModel->data(m_RawDataModel->index(nRows, nCols), Qt::BackgroundRole) != QBrush(Qt::red))
+				{
+					m_RawDataModel->setData(m_RawDataModel->index(nRows, nCols), QBrush(Qt::red), Qt::BackgroundRole);
+				}
+			}
+		}
+	}
+}
+
+bool CDialogAPSShow::eventFilter(QObject* object, QEvent* event)
+{
+	if (object == ui.tableView)
+	{
+		if (event->type() == QEvent::KeyPress) {
+			QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+			if (keyEvent->matches(QKeySequence::Copy)) {
+				CopySelectFromTable();
+				event->accept();
+				return true;
+			}
+		}
+	}
+	return QDialog::eventFilter(object, event);
+}
+
+void CDialogAPSShow::CopySelectFromTable()
+{
+	QModelIndexList indexList = ui.tableView->selectionModel()->selectedIndexes();
+	if (indexList.isEmpty())
+		return;
+	int startRow = indexList.first().row();
+	int endRow = indexList.last().row();
+	int startCol = indexList.first().column();
+	int endCol = indexList.last().column();
+
+	//从tableview界面拿数据
+	QStringList clipboardTextList;
+	for (int i = startRow; i <= endRow; i++)
+	{
+		QStringList rowText;
+		for (int j = startCol; j <= endCol; j++)
+		{
+			rowText.append(m_RawDataModel->data(m_RawDataModel->index(i, j)).toString());
+		}
+		clipboardTextList.append(rowText.join('\t'));
+	}
+	QString clipboardText = clipboardTextList.join('\n');
+
+	//将数据放入剪贴板
+	QApplication::clipboard()->setText(clipboardText);
 }

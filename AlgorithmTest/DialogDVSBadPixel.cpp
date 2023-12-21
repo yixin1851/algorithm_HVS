@@ -13,9 +13,7 @@ CDialogDVSBadPixel::CDialogDVSBadPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditPeakNum->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditDeadPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
-	ui.lineEditErrorPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 	ui.lineEditDeadPixelThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dDeadPixelThre));
-	ui.lineEditErrorPixelThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dErrorPixelThre));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(BadPixel()), Qt::QueuedConnection);
@@ -29,11 +27,9 @@ void CDialogDVSBadPixel::BadPixel()
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 	uint32_t nPeakNum = ui.lineEditPeakNum->text().toUInt();
 	double dDeadPixelThre = ui.lineEditDeadPixelThre->text().toDouble();
-	double dErrorPixelThre = ui.lineEditErrorPixelThre->text().toDouble();
 	uint32_t nLightType = ui.comboBoxLightType->currentIndex();
 	auto temp = m_pDVSAlgoInterface->GetAlgorithmThre();
 	temp.dDeadPixelThre = dDeadPixelThre;
-	temp.dErrorPixelThre = dErrorPixelThre;
 
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
 	ui.tabBadPixelResult->Clear();
@@ -54,7 +50,7 @@ void CDialogDVSBadPixel::BadPixel()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		ColName << "DeadPixelNum" << "ErrorPixelNum" << "ClusterNum";
+		ColName << "DeadPixelNum" << "ClusterNum";
 
 		std::vector<std::vector<double>> Data;
 
@@ -69,7 +65,6 @@ void CDialogDVSBadPixel::BadPixel()
 
 			std::vector<double> OffData;
 			OffData.push_back(m_Data.nOffEventsDeadPixelNum);
-			OffData.push_back(m_Data.nOffEventsErrorPixelNum);
 			OffData.push_back(m_Data.nOffEventsClusterNum);
 			Data.push_back(OffData);
 
@@ -91,7 +86,6 @@ void CDialogDVSBadPixel::BadPixel()
 
 			std::vector<double> OnData;
 			OnData.push_back(m_Data.nOnEventsDeadPixelNum);
-			OnData.push_back(m_Data.nOnEventsErrorPixelNum);
 			OnData.push_back(m_Data.nOnEventsClusterNum);
 			Data.push_back(OnData);
 
@@ -126,9 +120,9 @@ void CDialogDVSBadPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "DeadPixelNum," << "ErrorPixelNum," << "ClusterNum" << std::endl;
-			outfile << std::to_string(m_Data.nOffEventsDeadPixelNum) << "," << std::to_string(m_Data.nOffEventsErrorPixelNum) << std::to_string(m_Data.nOffEventsClusterNum) << std::endl;
-			outfile << std::to_string(m_Data.nOnEventsDeadPixelNum) << "," << std::to_string(m_Data.nOnEventsErrorPixelNum) << std::to_string(m_Data.nOnEventsClusterNum) << std::endl;
+			outfile << "DeadPixelNum," << "ClusterNum" << std::endl;
+			outfile << std::to_string(m_Data.nOffEventsDeadPixelNum) << "," << std::to_string(m_Data.nOffEventsClusterNum) << std::endl;
+			outfile << std::to_string(m_Data.nOnEventsDeadPixelNum) << "," << std::to_string(m_Data.nOnEventsClusterNum) << std::endl;
 
 			outfile << "BadPixelMask" << std::endl;
 

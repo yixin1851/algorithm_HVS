@@ -33,6 +33,7 @@ CDialogDVSShow::CDialogDVSShow(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgo
 	ui.tableView->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	ui.tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	ui.tableView->setContextMenuPolicy(Qt::CustomContextMenu);
+	ui.tableView->installEventFilter(this);
 
 	m_CustomMenu = new QMenu(ui.tableView);
 	m_DispRowData = new QAction(this);
@@ -239,4 +240,47 @@ void CDialogDVSShow::on_pushButtonExport_clicked()
 	}
 
 
+}
+
+bool CDialogDVSShow::eventFilter(QObject* object, QEvent* event)
+{
+	if (object == ui.tableView)
+	{
+		if (event->type() == QEvent::KeyPress) {
+			QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
+			if (keyEvent->matches(QKeySequence::Copy)) {
+				CopySelectFromTable();
+				event->accept();
+				return true;
+			}
+		}
+	}
+	return QDialog::eventFilter(object, event);
+}
+
+void CDialogDVSShow::CopySelectFromTable()
+{
+	QModelIndexList indexList = ui.tableView->selectionModel()->selectedIndexes();
+	if (indexList.isEmpty())
+		return;
+	int startRow = indexList.first().row();
+	int endRow = indexList.last().row();
+	int startCol = indexList.first().column();
+	int endCol = indexList.last().column();
+
+	//从tableview界面拿数据
+	QStringList clipboardTextList;
+	for (int i = startRow; i <= endRow; i++)
+	{
+		QStringList rowText;
+		for (int j = startCol; j <= endCol; j++)
+		{
+			rowText.append(m_RawDataModel->data(m_RawDataModel->index(i, j)).toString());
+		}
+		clipboardTextList.append(rowText.join('\t'));
+	}
+	QString clipboardText = clipboardTextList.join('\n');
+
+	//将数据放入剪贴板
+	QApplication::clipboard()->setText(clipboardText);
 }

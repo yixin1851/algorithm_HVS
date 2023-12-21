@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>DialogDVSBadPixel</class>
- <widget class="QDialog" name="DialogDVSBadPixel">
+ <class>DialogAPSLinearityO</class>
+ <widget class="QDialog" name="DialogAPSLinearityO">
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
   </property>
@@ -9,87 +9,29 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>698</width>
-    <height>432</height>
+    <width>822</width>
+    <height>490</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>BadPixel</string>
+   <string>Linearity(O)</string>
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout" stretch="1,1">
    <item>
     <widget class="QGroupBox" name="groupBox">
-     <property name="minimumSize">
-      <size>
-       <width>181</width>
-       <height>0</height>
-      </size>
-     </property>
      <property name="maximumSize">
       <size>
-       <width>181</width>
+       <width>200</width>
        <height>16777215</height>
       </size>
      </property>
      <property name="title">
       <string>Setting</string>
      </property>
-     <widget class="QLabel" name="label_Res">
+     <widget class="QLineEdit" name="lineEditIndex">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>270</y>
-        <width>71</width>
-        <height>41</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButtonExport">
-      <property name="geometry">
-       <rect>
-        <x>110</x>
-        <y>230</y>
-        <width>51</width>
-        <height>26</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Export</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEditNumber">
-      <property name="geometry">
-       <rect>
-        <x>100</x>
-        <y>70</y>
-        <width>71</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>1</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="pushButtonStart">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>230</y>
-        <width>77</width>
-        <height>26</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Start</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEditIndexStart">
-      <property name="geometry">
-       <rect>
-        <x>100</x>
+        <x>90</x>
         <y>30</y>
         <width>71</width>
         <height>21</height>
@@ -99,17 +41,43 @@
        <string>0</string>
       </property>
      </widget>
-     <widget class="QLabel" name="label_3">
+     <widget class="QPushButton" name="pushButtonExport">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>70</y>
-        <width>54</width>
-        <height>16</height>
+        <x>120</x>
+        <y>360</y>
+        <width>51</width>
+        <height>26</height>
        </rect>
       </property>
       <property name="text">
-       <string>Number</string>
+       <string>Export</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_Res">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>410</y>
+        <width>151</width>
+        <height>41</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditNumber">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>70</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>1</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_2">
@@ -122,27 +90,53 @@
        </rect>
       </property>
       <property name="text">
-       <string>IndexStart</string>
+       <string>Index</string>
       </property>
      </widget>
-     <widget class="QLabel" name="label">
+     <widget class="QLabel" name="label_3">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>110</y>
-        <width>81</width>
+        <y>70</y>
+        <width>54</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>DeadPixelThre</string>
+       <string>number</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEditDeadPixelThre">
+     <widget class="QPushButton" name="pushButtonStart">
       <property name="geometry">
        <rect>
-        <x>100</x>
-        <y>110</y>
+        <x>20</x>
+        <y>360</y>
+        <width>77</width>
+        <height>26</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Start</string>
+      </property>
+     </widget>
+     <widget class="QCheckBox" name="checkBoxROI">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>200</y>
+        <width>80</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>ROI</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditROIUp">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>230</y>
         <width>71</width>
         <height>21</height>
        </rect>
@@ -151,110 +145,130 @@
        <string>0</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEditPeakNum">
+     <widget class="QLabel" name="label_4">
       <property name="geometry">
        <rect>
-        <x>100</x>
-        <y>150</y>
+        <x>10</x>
+        <y>230</y>
+        <width>54</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Up</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditROIDown">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>260</y>
         <width>71</width>
         <height>21</height>
        </rect>
       </property>
       <property name="text">
-       <string>1</string>
+       <string>0</string>
       </property>
-     </widget>
-     <widget class="QComboBox" name="comboBoxLightType">
-      <property name="geometry">
-       <rect>
-        <x>100</x>
-        <y>190</y>
-        <width>75</width>
-        <height>22</height>
-       </rect>
-      </property>
-      <item>
-       <property name="text">
-        <string>OffEventsOnly</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>OnEventsOnly</string>
-       </property>
-      </item>
-      <item>
-       <property name="text">
-        <string>On/OffEvents</string>
-       </property>
-      </item>
      </widget>
      <widget class="QLabel" name="label_5">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>150</y>
-        <width>71</width>
+        <y>260</y>
+        <width>54</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>PeakNum</string>
+       <string>Down</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_6">
       <property name="geometry">
        <rect>
         <x>10</x>
-        <y>190</y>
-        <width>61</width>
+        <y>290</y>
+        <width>54</width>
         <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>LightType</string>
+       <string>Left</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditROILeft">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>290</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_7">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>320</y>
+        <width>54</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Right</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditROIRight">
+      <property name="geometry">
+       <rect>
+        <x>90</x>
+        <y>320</y>
+        <width>71</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>110</y>
+        <width>91</width>
+        <height>16</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>LinearityRadius</string>
+      </property>
+     </widget>
+     <widget class="QLineEdit" name="lineEditRadius">
+      <property name="geometry">
+       <rect>
+        <x>110</x>
+        <y>110</y>
+        <width>51</width>
+        <height>21</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
       </property>
      </widget>
     </widget>
    </item>
    <item>
-    <widget class="QTabWidget" name="tabWidgetView">
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
-     <widget class="CWidgetTableView" name="tabBadPixelResult">
-      <attribute name="title">
-       <string>BadPixelResult</string>
-      </attribute>
-     </widget>
-     <widget class="CWidgetImageView" name="tabOffEventsBadPixelMask">
-      <attribute name="title">
-       <string>OffEventsBadPixelMask</string>
-      </attribute>
-     </widget>
-     <widget class="CWidgetImageView" name="tabOnEventsBadPixelMask">
-      <attribute name="title">
-       <string>OnEventsBadPixelMask</string>
-      </attribute>
-     </widget>
-    </widget>
+    <widget class="QTabWidget" name="tabWidgetView"/>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>CWidgetTableView</class>
-   <extends>QWidget</extends>
-   <header>WidgetTableView.h</header>
-   <container>1</container>
-  </customwidget>
-  <customwidget>
-   <class>CWidgetImageView</class>
-   <extends>QWidget</extends>
-   <header>WidgetImageView.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

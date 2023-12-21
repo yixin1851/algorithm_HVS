@@ -16,6 +16,9 @@
 #include "DialogAPSSaturation.h"
 #include "DialogAPSPedestal.h"
 #include "DialogAPSReadNoise.h"
+#include "DialogAPSLinearityO.h"
+#include "DialogAPSOETC.h"
+#include "DialogAPSPTCTest.h"
 
 CDialogAPSFunction::CDialogAPSFunction(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgoInterface, CAlpDVSMPAlgoInterface* pDVSAlgoInterface)
 	: QDialog(parent), m_pAPSAlgoInterface(pAPSAlgoInterface), m_pDVSAlgoInterface(pDVSAlgoInterface)
@@ -32,6 +35,8 @@ CDialogAPSFunction::CDialogAPSFunction(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	connect(ui.pushButtonDarkCurrent, SIGNAL(clicked()), this, SLOT(DarkCurrent()));
 	connect(ui.pushButtonDSNU, SIGNAL(clicked()), this, SLOT(DSNU()));
 	connect(ui.pushButtonLinearity, SIGNAL(clicked()), this, SLOT(Linearity()));
+	connect(ui.pushButtonLinearityO, SIGNAL(clicked()), this, SLOT(LinearityO()));
+	connect(ui.pushButtonOETC, SIGNAL(clicked()), this, SLOT(OETC()));
 	connect(ui.pushButtonBadPixel, SIGNAL(clicked()), this, SLOT(BadPixel()));
 	connect(ui.pushButtonOverallSystemGain, SIGNAL(clicked()), this, SLOT(OverallSystemGain()));
 	connect(ui.pushButtonDataMean, SIGNAL(clicked()), this, SLOT(DataMean()));
@@ -39,6 +44,7 @@ CDialogAPSFunction::CDialogAPSFunction(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	connect(ui.pushButtonShow, SIGNAL(clicked()), this, SLOT(Show()));
 	connect(ui.pushButtonPedestal, SIGNAL(clicked()), this, SLOT(Pedestal()));
 	connect(ui.pushButtonReadNoise, SIGNAL(clicked()), this, SLOT(ReadNoise()));
+	connect(ui.pushButtonPTCTest, SIGNAL(clicked()), this, SLOT(PTC()));
 
 	if (m_pAPSAlgoInterface)
 	{
@@ -135,6 +141,18 @@ void CDialogAPSFunction::Linearity()
 	Linearity.exec();
 }
 
+void CDialogAPSFunction::LinearityO()
+{
+	CDialogAPSLinearityO LinearityO(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
+	LinearityO.exec();
+}
+
+void CDialogAPSFunction::OETC()
+{
+	CDialogAPSOETC OETC(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
+	OETC.exec();
+}
+
 void CDialogAPSFunction::OverallSystemGain()
 {
 	CDialogAPSOverallSystemGain OverallSystemGain(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
@@ -163,5 +181,11 @@ void CDialogAPSFunction::ReadNoise()
 {
 	CDialogAPSReadNoise ReadNoise(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
 	ReadNoise.exec();
+}
+
+void CDialogAPSFunction::PTC()
+{
+	CDialogAPSPTC PTCTest(nullptr, m_pAPSAlgoInterface, m_pDVSAlgoInterface);
+	PTCTest.exec();
 }
 

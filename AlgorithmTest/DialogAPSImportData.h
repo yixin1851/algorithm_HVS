@@ -11,11 +11,16 @@ class CDialogAPSImportData :
     Q_OBJECT
 public:
     CDialogAPSImportData(QDialog* parent = nullptr, CAlpAPSMPAlgoInterface* pAPSAlgoInterface = nullptr, CAlpDVSMPAlgoInterface* pDVSAlgoInterface = nullptr);
-protected:
-    virtual void FindFiles(std::string strPath, std::vector<std::string> &FileQuene);
 private slots:
-    virtual void Browser();
+    virtual void SingleBrowser();
+    virtual void MultiBrowser();
+
     virtual void ImportData();
+
+private:
+    virtual void SingleImportData();
+    virtual void MultiImportData();
+
 private:
     Ui::DialogAPSImportData ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;

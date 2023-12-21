@@ -43,8 +43,49 @@ int main()
 	//OneTestItem();
 	//UnInit();
 
-	std::string path = "D:\\Data\\taiyong\\RGB12BIT-2.raw";
-	Get16SubframeRaw(path);
+	//std::string path = "D:\\Data\\taiyong\\RGB12BIT-2.raw";
+	//Get16SubframeRaw(path);
+
+	std::string path;
+
+
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Pedestal_variation\\Dark_33ms_1.74x_01.raw";
+	//GetPedestalVariation(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\DSNU\\1.74\\";
+	//GetDSNU(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\FPN&Temporal_noise&Defect_Pixels_dark\\1.74";
+	//GetFPN(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\FPN&Temporal_noise&Defect_Pixels_dark\\1.74";
+	//GetTNoise(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Defect_Pixels_light&light_noise";
+	//GetTNoise(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Read_Noise\\1.74_0.5ms\\";
+	//GetReadNoise(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\FPN&Temporal_noise&Defect_Pixels_dark\\1.74";
+	//GetDefectPixelsDark(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Defect_Pixels_light&light_noise";
+	//GetDefectPixelsLight(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Linearity\\1.74x\\";
+	//GetLinearity(path);
+
+	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\OETC\\";
+	//GetOETC(path);
+
+	path = "D:\\Data\\Linearity\\x1\\";
+	GetLinearity(path);
+
+	//path = "D:\\Data\\OETC\\x1\\";
+	//GetOETC(path);
+
 	system("pause");
 	return 0;
 }

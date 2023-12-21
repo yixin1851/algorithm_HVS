@@ -52,13 +52,17 @@ void CDialogDVSHotPixel::HotPixel()
 
 		QStringList RowName, ColName;
 		RowName << "";
-		ColName << "HotPixelNum" << "HotLineNum" << "ClusterNum";
+		ColName << "HotPixelNum" << "HotLineNum" << "SingletNum" << "CoupletNum" << "TripletNum" << "FourConnectedNum" << "ClusterNum";
 
 		std::vector<std::vector<double>> Data(1);
-		Data[0].resize(3);
+		Data[0].resize(7);
 		Data[0][0] = m_Data.HotPixelNum;
 		Data[0][1] = m_Data.HotLineNum;
-		Data[0][2] = m_Data.ClusterNum;
+		Data[0][2] = m_Data.SingletNum;
+		Data[0][3] = m_Data.CoupletNum;
+		Data[0][4] = m_Data.TripletNum;
+		Data[0][5] = m_Data.FourConnectedNum;
+		Data[0][6] = m_Data.ClusterNum;
 
 		ui.tabHotPixelResult->SetData(RowName, ColName, Data);
 
@@ -96,8 +100,14 @@ void CDialogDVSHotPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "HotPixelNum, HotLineNum" << std::endl;
-			outfile << std::to_string(m_Data.HotPixelNum) << "," << std::to_string(m_Data.HotLineNum) << std::endl;
+			outfile << "HotPixelNum, HotLineNum, SingletNum, CoupletNum, TripletNum, FourConnectedNum, ClusterNum"<< std::endl;
+			outfile << std::to_string(m_Data.HotPixelNum) << "," \
+				<< std::to_string(m_Data.HotLineNum) << ","  \
+				<< std::to_string(m_Data.SingletNum) << "," \
+				<< std::to_string(m_Data.CoupletNum) << "," \
+				<< std::to_string(m_Data.TripletNum) << "," \
+				<< std::to_string(m_Data.FourConnectedNum) << "," \
+				<< std::to_string(m_Data.ClusterNum) << std::endl;
 			outfile << "HotPixelMask" << std::endl;
 
 			for (uint32_t nIndex = 0; nIndex < m_Data.HotPixelMask.BadPixelNum; nIndex++)

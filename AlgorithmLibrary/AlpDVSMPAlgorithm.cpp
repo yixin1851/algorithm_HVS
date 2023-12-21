@@ -15,7 +15,6 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	m_SensorType = Sensortype;
 	m_bMultiThreadEnable = false;
 	m_AlgorithmThre.dDeadPixelThre = 0.8;
-	m_AlgorithmThre.dErrorPixelThre = 0.8;
 	m_AlgorithmThre.dHotLineThre = 0.5;
 	m_AlgorithmThre.dHotPixelThre = 0.8;
 	m_AlgorithmThre.nStationaryUniformityRowBlockNum = 5;
@@ -247,6 +246,10 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 	HotpixelRes.HotPixelMask.Flag.clear();
 	HotpixelRes.HotPixelMask.BadPixelNum = 0;
 	HotpixelRes.ClusterNum = 0;
+	HotpixelRes.SingletNum = 0;
+	HotpixelRes.CoupletNum = 0;
+	HotpixelRes.TripletNum = 0;
+	HotpixelRes.FourConnectedNum = 0;
 	HotpixelRes.HotLineNum = 0;
 
 	std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
@@ -328,7 +331,23 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 						}
 					}
 				}
-				if (AreaSize > 1)
+				if (AreaSize == 1)
+				{
+					HotpixelRes.SingletNum++;
+				}
+				else if (AreaSize == 2)
+				{
+					HotpixelRes.CoupletNum++;
+				}
+				else if (AreaSize == 3)
+				{
+					HotpixelRes.TripletNum++;
+				}
+				else if (AreaSize == 4)
+				{
+					HotpixelRes.FourConnectedNum++;
+				}
+				else if (AreaSize > 4)
 				{
 					HotpixelRes.ClusterNum++;
 				}
@@ -632,9 +651,19 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			}
 		}
 
-		ImageContrastSensitivityRes.R_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
-		ImageContrastSensitivityRes.B_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
-		ImageContrastSensitivityRes.Gr_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+		if (ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb] != 0)
+		{
+			ImageContrastSensitivityRes.R_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+			ImageContrastSensitivityRes.B_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+			ImageContrastSensitivityRes.Gr_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+		}
+		else
+		{
+			std::string strErr = "ImageContrastSensitivity: Off events number is zero";
+			WriteLog(strErr);
+			m_nErrCode = EVENTS_EQU_ZERO;
+			return false;
+		}
 	}
 
 	if (Light & DVSLightTrigerType::OnEventsOnly)
@@ -669,10 +698,19 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			}
 		}
 
-		ImageContrastSensitivityRes.R_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
-		ImageContrastSensitivityRes.B_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
-		ImageContrastSensitivityRes.Gr_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
-
+		if (ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb] != 0)
+		{
+			ImageContrastSensitivityRes.R_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
+			ImageContrastSensitivityRes.B_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
+			ImageContrastSensitivityRes.Gr_Gb_OnEventsRatio = 100 * ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OnEventsRatio[SubFrameIndex::Gb];
+		}
+		else
+		{
+			std::string strErr = "ImageContrastSensitivity: On events number is zero";
+			WriteLog(strErr);
+			m_nErrCode = EVENTS_EQU_ZERO;
+			return false;
+		}
 	}
 
 	return true;
@@ -728,15 +766,25 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			double OffEventsPeakNumber = 0;
 			double NextOffEventsPeakNumber = 0;
 			double NextOnEventsPeakNumber = 0;
-			for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < nPeakNum && nPeakStartNum >= nIndex; nIndex++)
 			{
 				OffEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex]].m_OffEventsNum[nChannel];
 				NextOffEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OffEventsNum[nChannel];
 				NextOnEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OnEventsNum[nChannel];
 			}
 
-			AccompaniedPeakAndDelayedPeakRes.dAccompaniedPeakOffEventsRatio[nChannel] = NextOnEventsPeakNumber / OffEventsPeakNumber * 100;
-			AccompaniedPeakAndDelayedPeakRes.dDelayedPeakOffEventsRatio[nChannel] = NextOffEventsPeakNumber / OffEventsPeakNumber * 100;
+			if (OffEventsPeakNumber != 0)
+			{
+				AccompaniedPeakAndDelayedPeakRes.dAccompaniedPeakOffEventsRatio[nChannel] = NextOnEventsPeakNumber / OffEventsPeakNumber * 100;
+				AccompaniedPeakAndDelayedPeakRes.dDelayedPeakOffEventsRatio[nChannel] = NextOffEventsPeakNumber / OffEventsPeakNumber * 100;
+			}
+			else
+			{
+				std::string strErr = "AccompaniedPeakAndDelayedPeakRes: Off events number is zero";
+				WriteLog(strErr);
+				m_nErrCode = EVENTS_EQU_ZERO;
+				return false;
+			}
 		}
 	}
 
@@ -766,21 +814,30 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			double OnEventsPeakNumber = 0;
 			double NextOffEventsPeakNumber = 0;
 			double NextOnEventsPeakNumber = 0;
-			for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < nPeakNum && nPeakStartNum >= nIndex; nIndex++)
 			{
 				OnEventsPeakNumber += m_RawDataContainer[Peak->OnEventsPeakPos[nPeakStartNum - nIndex]].m_OnEventsNum[nChannel];
 				NextOffEventsPeakNumber += m_RawDataContainer[Peak->OnEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OffEventsNum[nChannel];
 				NextOnEventsPeakNumber += m_RawDataContainer[Peak->OnEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OnEventsNum[nChannel];
 			}
-
-			AccompaniedPeakAndDelayedPeakRes.dAccompaniedPeakOnEventsRatio[nChannel] = NextOffEventsPeakNumber / OnEventsPeakNumber * 100;
-			AccompaniedPeakAndDelayedPeakRes.dDelayedPeakOnEventsRatio[nChannel] = NextOnEventsPeakNumber / OnEventsPeakNumber * 100;
+			if (OnEventsPeakNumber != 0)
+			{
+				AccompaniedPeakAndDelayedPeakRes.dAccompaniedPeakOnEventsRatio[nChannel] = NextOffEventsPeakNumber / OnEventsPeakNumber * 100;
+				AccompaniedPeakAndDelayedPeakRes.dDelayedPeakOnEventsRatio[nChannel] = NextOnEventsPeakNumber / OnEventsPeakNumber * 100;
+			}
+			else
+			{
+				std::string strErr = "AccompaniedPeakAndDelayedPeakRes: On events number is zero";
+				WriteLog(strErr);
+				m_nErrCode = EVENTS_EQU_ZERO;
+				return false;
+			}
 		}
 	}
 	return true;
 }
 
-bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes)
+bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes)
 {
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
@@ -805,15 +862,33 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		}
 	}
 
-	uint32_t nRowSize = m_ActiveArea.Down - m_ActiveArea.Up + 1;
-	uint32_t nColSize = m_ActiveArea.Right - m_ActiveArea.Left + 1;
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+
+	if (RealRoi.Down >= m_nTotalRow || RealRoi.Right >= m_nTotalCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "SpatialResponseUniformity: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nTotalRow) + ", Col: " + std::to_string(m_nTotalCol);
+		WriteLog(strErr);
+		m_nErrCode = DATA_ROI_SET_ERROR;
+		return false;
+	}
+
+	uint32_t nRowSize = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nColSize = RealRoi.Right - RealRoi.Left + 1;
 	uint32_t nAllSize = nRowSize * nColSize;
 
 	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		if (Peak->nOffEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
-			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
+			std::string strErr = "SpatialResponseUniformity: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
@@ -828,9 +903,9 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		uint32_t nRowBlockSize = nRowSize / m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum;
 		uint32_t nColBlockSize = nColSize / m_AlgorithmThre.nSpatialResponseUniformityColBlockNum;
 
-		for (uint32_t nRows = m_ActiveArea.Up; nRows < m_ActiveArea.Up + nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
+		for (uint32_t nRows = RealRoi.Up; nRows < RealRoi.Up + nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
 		{
-			for (uint32_t nCols = m_ActiveArea.Left; nCols < m_ActiveArea.Left + nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
+			for (uint32_t nCols = RealRoi.Left; nCols < RealRoi.Left + nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
 			{
 				double dValue = 0;
 				SubFrameIndex nChannel = All;
@@ -844,8 +919,8 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 						++dValue;
 					}
 				}
-				OffEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
-				OffEventsUniformityBlockData[nChannel].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
+				OffEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - RealRoi.Up) / nRowBlockSize][(nCols - RealRoi.Left) / nColBlockSize] += dValue / nPeakNum;
+				OffEventsUniformityBlockData[nChannel].m_RawData[(nRows - RealRoi.Up) / nRowBlockSize][(nCols - RealRoi.Left) / nColBlockSize] += dValue / nPeakNum;
 			}
 		}
 
@@ -859,7 +934,18 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			Local temp;
 			Max(dMaxValue, temp, OffEventsUniformityBlockData[nChannel]);
 			Min(dMinValue, temp, OffEventsUniformityBlockData[nChannel]);
-			SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			if (dMeanValue != 0)
+			{
+				SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			}
+			else
+			{
+				std::string strErr = "SpatialResponseUniformity: Off events number is zero";
+				WriteLog(strErr);
+				m_nErrCode = EVENTS_EQU_ZERO;
+				return false;
+			}
+
 			//SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue);
 			SpatialResponseUniformityRes.OffEventsUniformityBlockData[nChannel].swap(OffEventsUniformityBlockData[nChannel].m_RawData);
 		}
@@ -884,9 +970,9 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		uint32_t nRowBlockSize = nRowSize / m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum;
 		uint32_t nColBlockSize = nColSize / m_AlgorithmThre.nSpatialResponseUniformityColBlockNum;
 
-		for (uint32_t nRows = m_ActiveArea.Up; nRows < m_ActiveArea.Up + nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
+		for (uint32_t nRows = RealRoi.Up; nRows < RealRoi.Up + nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
 		{
-			for (uint32_t nCols = m_ActiveArea.Left; nCols < m_ActiveArea.Left + nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
+			for (uint32_t nCols = RealRoi.Left; nCols < RealRoi.Left + nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
 			{
 				double dValue = 0;
 				for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
@@ -899,8 +985,8 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 				SubFrameIndex nChannel = All;
 				GetChannel(nRows, nCols, nChannel);
 
-				OnEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
-				OnEventsUniformityBlockData[nChannel].m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize] += dValue / nPeakNum;
+				OnEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - RealRoi.Up) / nRowBlockSize][(nCols - RealRoi.Left) / nColBlockSize] += dValue / nPeakNum;
+				OnEventsUniformityBlockData[nChannel].m_RawData[(nRows - RealRoi.Up) / nRowBlockSize][(nCols - RealRoi.Left) / nColBlockSize] += dValue / nPeakNum;
 			}
 		}
 
@@ -914,7 +1000,18 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			Local temp;
 			Max(dMaxValue, temp, OnEventsUniformityBlockData[nChannel]);
 			Min(dMinValue, temp, OnEventsUniformityBlockData[nChannel]);
-			SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			if (dMeanValue != 0)
+			{
+				SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
+			}
+			else
+			{
+				std::string strErr = "SpatialResponseUniformity: On events number is zero";
+				WriteLog(strErr);
+				m_nErrCode = EVENTS_EQU_ZERO;
+				return false;
+			}
+
 			//SpatialResponseUniformityRes.dOnEventsUniformityRatio[nChannel] = dMaxValue - dMinValue;
 			SpatialResponseUniformityRes.OnEventsUniformityBlockData[nChannel].swap(OnEventsUniformityBlockData[nChannel].m_RawData);
 		}
@@ -966,7 +1063,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.OffEventsBadPixelMask.LocalData.clear();
 		BadpixelRes.nOffEventsClusterNum = 0;
 		BadpixelRes.nOffEventsDeadPixelNum = 0;
-		BadpixelRes.nOffEventsErrorPixelNum = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -979,7 +1075,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 			for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
 			{
 				double dDeadPixelRatio = 0;
-				double dErrorPixelRatio = 0;
 
 				for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
 				{
@@ -988,13 +1083,8 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					{
 						++dDeadPixelRatio;
 					}
-					else if (ON_EVENT_FLAG == nValue)
-					{
-						++dErrorPixelRatio;
-					}
 				}
 				dDeadPixelRatio /= nPeakNum;
-				dErrorPixelRatio /= nPeakNum;
 
 				if (dDeadPixelRatio > m_AlgorithmThre.dDeadPixelThre)
 				{
@@ -1003,14 +1093,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					BadpixelRes.OffEventsBadPixelMask.Flag.push_back(DVS_DEAD_PIXEL_FLAG);
 					BadpixelRes.nOffEventsDeadPixelNum++;
 					BadPixelMask[nRows][nCols] = DVS_DEAD_PIXEL_FLAG;
-				}
-				else if (dErrorPixelRatio > m_AlgorithmThre.dErrorPixelThre)
-				{
-					BadpixelRes.OffEventsBadPixelMask.BadPixelNum++;
-					BadpixelRes.OffEventsBadPixelMask.LocalData.push_back({ nRows, nCols });
-					BadpixelRes.OffEventsBadPixelMask.Flag.push_back(DVS_ERROR_PIXEL_FLAG);
-					BadpixelRes.nOffEventsErrorPixelNum++;
-					BadPixelMask[nRows][nCols] = DVS_ERROR_PIXEL_FLAG;
 				}
 			}
 		}
@@ -1072,7 +1154,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.OnEventsBadPixelMask.LocalData.clear();
 		BadpixelRes.nOnEventsClusterNum = 0;
 		BadpixelRes.nOnEventsDeadPixelNum = 0;
-		BadpixelRes.nOnEventsErrorPixelNum = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1085,7 +1166,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 			for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
 			{
 				double dDeadPixelRatio = 0;
-				double dErrorPixelRatio = 0;
 
 				for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
 				{
@@ -1094,13 +1174,8 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					{
 						++dDeadPixelRatio;
 					}
-					else if (OFF_EVENT_FLAG == nValue)
-					{
-						++dErrorPixelRatio;
-					}
 				}
 				dDeadPixelRatio /= nPeakNum;
-				dErrorPixelRatio /= nPeakNum;
 
 				if (dDeadPixelRatio > m_AlgorithmThre.dDeadPixelThre)
 				{
@@ -1109,14 +1184,6 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					BadpixelRes.OnEventsBadPixelMask.Flag.push_back(DVS_DEAD_PIXEL_FLAG);
 					BadpixelRes.nOnEventsDeadPixelNum++;
 					BadPixelMask[nRows][nCols] = DVS_DEAD_PIXEL_FLAG;
-				}
-				else if (dErrorPixelRatio > m_AlgorithmThre.dErrorPixelThre)
-				{
-					BadpixelRes.OnEventsBadPixelMask.BadPixelNum++;
-					BadpixelRes.OnEventsBadPixelMask.LocalData.push_back({ nRows, nCols });
-					BadpixelRes.OnEventsBadPixelMask.Flag.push_back(DVS_ERROR_PIXEL_FLAG);
-					BadpixelRes.nOnEventsErrorPixelNum++;
-					BadPixelMask[nRows][nCols] = DVS_ERROR_PIXEL_FLAG;
 				}
 			}
 		}
@@ -1186,7 +1253,7 @@ bool CAlpDVSMPAlgorithm::Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEv
 			{
 				ImgData[nRows][nCols] = OnEventFlag;
 			}
-			else if(nValue == OFF_EVENT_FLAG)
+			else if (nValue == OFF_EVENT_FLAG)
 			{
 				ImgData[nRows][nCols] = OffEventFlag;
 			}

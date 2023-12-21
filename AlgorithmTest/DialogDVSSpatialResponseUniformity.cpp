@@ -18,6 +18,26 @@ CDialogDVSSpatialResponseUniformity::CDialogDVSSpatialResponseUniformity(QDialog
 	ui.lineEditColBlockNum->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nSpatialResponseUniformityColBlockNum));
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(SpatialResponseUniformity()), Qt::QueuedConnection);
+
+	ui.lineEditROIUp->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditROIRight->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditROILeft->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditROIDown->setValidator(new QIntValidator(0, 100000, this));
+
+	ui.lineEditROIUp->setEnabled(false);
+	ui.lineEditROIRight->setEnabled(false);
+	ui.lineEditROILeft->setEnabled(false);
+	ui.lineEditROIDown->setEnabled(false);
+	auto temp = m_pDVSAlgoInterface->GetActiveArea();
+	ui.lineEditROIUp->setText(QString::number(temp.Up));
+	ui.lineEditROILeft->setText(QString::number(temp.Left));
+	ui.lineEditROIDown->setText(QString::number(temp.Down));
+	ui.lineEditROIRight->setText(QString::number(temp.Right));
+	connect(ui.checkBoxROI, SIGNAL(clicked(bool)), ui.lineEditROIUp, SLOT(setEnabled(bool)));
+	connect(ui.checkBoxROI, SIGNAL(clicked(bool)), ui.lineEditROIDown, SLOT(setEnabled(bool)));
+	connect(ui.checkBoxROI, SIGNAL(clicked(bool)), ui.lineEditROILeft, SLOT(setEnabled(bool)));
+	connect(ui.checkBoxROI, SIGNAL(clicked(bool)), ui.lineEditROIRight, SLOT(setEnabled(bool)));
+
 }
 
 
@@ -34,6 +54,18 @@ void CDialogDVSSpatialResponseUniformity::SpatialResponseUniformity()
 	temp.nSpatialResponseUniformityRowBlockNum = nRowBlockNum;
 	temp.nSpatialResponseUniformityColBlockNum = nColBlockNum;
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
+
+	ROIArea* roi = nullptr;
+	ROIArea tempRoi;
+
+	if (ui.checkBoxROI->isChecked())
+	{
+		tempRoi.Up = ui.lineEditROIUp->text().toUInt();
+		tempRoi.Down = ui.lineEditROIDown->text().toUInt();
+		tempRoi.Left = ui.lineEditROILeft->text().toUInt();
+		tempRoi.Right = ui.lineEditROIRight->text().toUInt();
+		roi = &tempRoi;
+	}
 
 	ui.tabUniformityRes->Clear();
 
@@ -53,7 +85,7 @@ void CDialogDVSSpatialResponseUniformity::SpatialResponseUniformity()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->SpatialResponseUniformity(nIndexStart, nNumber, nullptr, nPeakNum, DVSLightTrigerType(nLigtType + 1), m_Data);
+	bRet = m_pDVSAlgoInterface->SpatialResponseUniformity(nIndexStart, nNumber, roi, nullptr, nPeakNum, DVSLightTrigerType(nLigtType + 1), m_Data);
 	auto end = clock();
 	time = end - start;
 	if (bRet)

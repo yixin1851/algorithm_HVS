@@ -26,11 +26,14 @@ private slots:
     void DarkCurrent();
     void DSNU();
     void Linearity();
+    void LinearityO();
+    void OETC();
     void OverallSystemGain();
     void DataMean();
     void Saturation();
     void Pedestal();
     void ReadNoise();
+    void PTC();
 private:
     Ui::DialogAPSFunction ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;

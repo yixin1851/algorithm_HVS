@@ -232,6 +232,27 @@ typedef struct
 
 typedef struct
 {
+	double DR_dB;
+	double ReadNoise;
+	double ReadNoise_e;
+	double FWC;
+	double FWC_e;
+	double ConversionGain;
+	std::vector<double> ReadNoiseData;
+	std::vector<double> TNoiseData;
+	std::vector<double> DataMean;
+}APSOETCType;
+
+typedef struct
+{
+	double MaxSSNR;
+	std::vector<double> SNoiseData;
+	std::vector<double> DataMean;
+	std::vector<double> SSNR;
+}APSSSNRType;
+
+typedef struct
+{
 	double DataMeanFrame;
 	std::vector<double> SubFrameDataMean;
 }APSDataMeanType;
@@ -264,6 +285,8 @@ typedef struct
 	uint32_t nBadPixelMaxLen;
 	uint32_t nBadPixelLocalRowOffset;
 	uint32_t nBadPixelLocalColOffset;
+	uint32_t nLinearityRadius;
+	uint32_t nOECTRadius;
 }APSAlgorithmThre;
 
 typedef struct
@@ -415,6 +438,8 @@ public:
 	virtual bool Linearity(std::vector<APSDataMeanType>& LightMean, std::vector<double>& ExpTime, APSLinearityType& LinearityRes) = 0;
 	virtual bool OverallSystemGain(std::vector<APSTNoiseType>& LightTNoiseData, std::vector<APSDataMeanType>& LightMean, APSTNoiseType DarkTNoiseBase, APSOverallSystemGainType &GainRes) = 0;
 	virtual bool Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSaturationType& SaturationRes) = 0;
+	virtual bool OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSOETCType& OETCRes) = 0;
+	virtual bool Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSSNRType& SSNRRes) = 0;
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData) = 0;
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData) = 0;
 	virtual void SetMultiThreadEnable(bool bEnable = true) = 0;
@@ -428,6 +453,7 @@ public:
 	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
 	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
+	virtual int GetCode() = 0;
 private:
 	static uint32_t m_nSiteNumber;
 };
@@ -460,6 +486,7 @@ public:
 	virtual void SetActiveArea(ROIArea ActiveArea) = 0;
 	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol) = 0;
 	virtual std::string GetVersion() = 0;
+	virtual int GetCode() = 0;
 	virtual uint32_t GetErrCode() = 0;
 private:
 	static uint32_t m_nSiteNumber;

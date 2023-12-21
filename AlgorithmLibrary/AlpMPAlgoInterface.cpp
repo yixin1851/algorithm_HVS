@@ -50,6 +50,11 @@ CAlpDVSMPAlgoInterface::~CAlpDVSMPAlgoInterface()
 
 CAlpDVSMPAlgoInterface* CAlpDVSMPAlgoInterface::CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat, int code)
 {
+	if (Pixelformat < BayerGBRG || Pixelformat > BayerGRBG)
+	{
+		return nullptr;
+	}
+
 	if (Sensortype == ALP_003AA)
 	{
 		return new CAlp003AADVSMPAlgorithm(Sensortype, strLogDir, m_nSiteNumber++, Pixelformat, code);

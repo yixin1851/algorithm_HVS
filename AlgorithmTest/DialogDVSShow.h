@@ -17,6 +17,10 @@ private slots:
     void on_tableView_customContextMenuRequested(const QPoint& pos);
     void MenuClicked(QAction* act);
     void on_pushButtonExport_clicked();
+protected:
+    bool eventFilter(QObject* object, QEvent* event);
+private:
+    void CopySelectFromTable();
 private:
     Ui::DialogDCVSShow ui;
     CAlpAPSMPAlgoInterface* m_pAPSAlgoInterface;

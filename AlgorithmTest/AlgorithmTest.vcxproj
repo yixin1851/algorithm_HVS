@@ -108,8 +108,11 @@
     <ClCompile Include="DialogAPSImportData.cpp" />
     <ClCompile Include="DialogAPSInit.cpp" />
     <ClCompile Include="DialogAPSLinearity.cpp" />
+    <ClCompile Include="DialogAPSLinearityO.cpp" />
+    <ClCompile Include="DialogAPSOETC.cpp" />
     <ClCompile Include="DialogAPSOverallSystemGain.cpp" />
     <ClCompile Include="DialogAPSPedestal.cpp" />
+    <ClCompile Include="DialogAPSPTCTest.cpp" />
     <ClCompile Include="DialogAPSReadNoise.cpp" />
     <ClCompile Include="DialogAPSSaturation.cpp" />
     <ClCompile Include="DialogAPSShading.cpp" />
@@ -125,6 +128,7 @@
     <ClCompile Include="DialogDVSSpatialResponseUniformity.cpp" />
     <ClCompile Include="DialogDVSStationaryUniformity.cpp" />
     <ClCompile Include="DialogDVSFindPeak.cpp" />
+    <ClCompile Include="DoubleSlider.cpp" />
     <ClCompile Include="WidgetChartView.cpp" />
     <ClCompile Include="DialogDVSCountEvents.cpp" />
     <ClCompile Include="DialogDVSFunction.cpp" />
@@ -150,8 +154,11 @@
     <QtUic Include="DialogAPSImportData.ui" />
     <QtUic Include="DialogAPSInit.ui" />
     <QtUic Include="DialogAPSLinearity.ui" />
+    <QtUic Include="DialogAPSLinearityO.ui" />
+    <QtUic Include="DialogAPSOETC.ui" />
     <QtUic Include="DialogAPSOverallSystemGain.ui" />
     <QtUic Include="DialogAPSPedestal.ui" />
+    <QtUic Include="DialogAPSPTC.ui" />
     <QtUic Include="DialogAPSReadNoise.ui" />
     <QtUic Include="DialogAPSSaturation.ui" />
     <QtUic Include="DialogAPSShading.ui" />
@@ -227,6 +234,10 @@
     <QtMoc Include="DialogAPSSaturation.h" />
     <QtMoc Include="DialogAPSPedestal.h" />
     <QtMoc Include="DialogAPSReadNoise.h" />
+    <QtMoc Include="DialogAPSLinearityO.h" />
+    <QtMoc Include="DialogAPSOETC.h" />
+    <QtMoc Include="DoubleSlider.h" />
+    <QtMoc Include="DialogAPSPTCTest.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>

@@ -148,6 +148,18 @@
     <ClCompile Include="DialogAPSReadNoise.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DialogAPSLinearityO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSOETC.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DoubleSlider.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DialogAPSPTCTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <QtUic Include="WidgetTableView.ui">
@@ -253,6 +265,15 @@
       <Filter>Form Files</Filter>
     </QtUic>
     <QtUic Include="DialogAPSReadNoise.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSLinearityO.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSOETC.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+    <QtUic Include="DialogAPSPTC.ui">
       <Filter>Form Files</Filter>
     </QtUic>
   </ItemGroup>
@@ -363,6 +384,18 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="DialogAPSReadNoise.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSLinearityO.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSOETC.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DoubleSlider.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="DialogAPSPTCTest.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
