@@ -87,7 +87,7 @@ void GetCenterImageSensitivityData(std::string datapath, std::string outpath)
 			std::cout << "ImportData pass " << time << "," << nIndex + 1 << "/" << FileQuene.size() << std::endl;
 
 			DVSSpatialResponseUniformityType data;
-			gDVSInterface->SpatialResponseUniformity(20, 60, nullptr, 3, On_OffEvents, data);
+			gDVSInterface->SpatialResponseUniformity(20, 60, nullptr, nullptr, 3, On_OffEvents, data);
 
 			//std::string strSub1 = FileQuene[nIndex].substr(0, FileQuene[nIndex].find_last_of('/'));
 			//std::string strSub2 = strSub1.substr(0, strSub1.find_last_of('/'));
@@ -858,7 +858,7 @@ void GetSensitivityUniformityData(std::string datapath, std::string outpath)
 			thre.nSpatialResponseUniformityColBlockNum = 5;
 			thre.nSpatialResponseUniformityRowBlockNum = 5;
 			gDVSInterface->SetAlgorithmThre(thre);
-			gDVSInterface->SpatialResponseUniformity(70, 80, nullptr, 3, On_OffEvents, data);
+			gDVSInterface->SpatialResponseUniformity(70, 80, nullptr, nullptr, 3, On_OffEvents, data);
 
 			std::string strSub1 = FileQuene[nIndex].substr(0, FileQuene[nIndex].find_last_of('/'));
 			std::string strSub2 = strSub1.substr(0, strSub1.find_last_of('/'));
@@ -934,7 +934,7 @@ void GetSensitivityUniformityData2(std::string datapath, std::string outpath)
 			imageData << FileQuene[nIndex] << ", ";
 			for (uint32_t n = 0; n < 10; n++)
 			{
-				gDVSInterface->SpatialResponseUniformity(n * 160 + 80, 80, nullptr, 3, On_OffEvents, data);
+				gDVSInterface->SpatialResponseUniformity(n * 160 + 80, 80, nullptr, nullptr, 3, On_OffEvents, data);
 				if (!imageData.fail())
 				{
 					imageData << std::to_string(data.dOnEventsUniformityRatio[All]) << ", " << std::to_string(data.dOffEventsUniformityRatio[All]) << ", ";

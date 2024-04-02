@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 void GetImageSensitivityData(std::string datapath, std::string outpath);
 
@@ -30,3 +31,7 @@ void GetReadNoise(std::string datapath);
 void GetDefectPixelsDark(std::string datapath);
 
 void GetDefectPixelsLight(std::string datapath);
+
+void DPC_On_ChipTest();
+
+void FindFiles(std::string strPath, std::vector<std::string>& FileQuene);

@@ -20,6 +20,8 @@
 #define APS_BAD_PIXEL_CLUSTER_FLAG 0x14
 #define APS_BAD_PIXEL_LADDER_FLAG 0x18
 
+#define APX003CA_ON_CHIP_CALIBRATION_FLAG 100
+
 #define DVS_DEAD_PIXEL_FLAG 0x01
 #define DVS_HOT_PIXEL_FLAG 0x04
 
@@ -96,6 +98,7 @@ typedef struct
 	uint32_t BadPixelNum;
 	std::vector<Local> LocalData;
 	std::vector<uint8_t> Flag;
+	std::vector<float> DiffData;
 }BadPixelMaskType;
 
 typedef struct
@@ -426,8 +429,8 @@ public:
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber) = 0;
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber, APSDataMeanType& BaseMean) = 0;
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nBaseIndexStart, uint32_t nBaseNumber) = 0;
-	virtual bool DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& BadPixelMask) = 0;
-	virtual bool BadPixelLocalToOtpType(std::vector<Local> &BadPixelLocal, std::vector<uint8_t>& OtpData) = 0;
+	virtual bool DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal) = 0;
+	virtual bool BadPixelLocalToOtpType(std::vector<Local> BadPixelLocal, std::vector<uint8_t>& OtpData) = 0;
 	virtual bool YShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSYShadingType& YShadingRes) = 0;
 	virtual bool ColorShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSColorShadingType& ColorShadingRes) = 0;
 	virtual bool OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSOpticalCenterType& OpticalCenterRes) = 0;

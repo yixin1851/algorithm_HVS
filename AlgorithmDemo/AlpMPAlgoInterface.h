@@ -20,8 +20,9 @@
 #define APS_BAD_PIXEL_CLUSTER_FLAG 0x14
 #define APS_BAD_PIXEL_LADDER_FLAG 0x18
 
+#define APX003CA_ON_CHIP_CALIBRATION_FLAG 100
+
 #define DVS_DEAD_PIXEL_FLAG 0x01
-#define DVS_ERROR_PIXEL_FLAG 0x02
 #define DVS_HOT_PIXEL_FLAG 0x04
 
 typedef enum
@@ -97,6 +98,7 @@ typedef struct
 	uint32_t BadPixelNum;
 	std::vector<Local> LocalData;
 	std::vector<uint8_t> Flag;
+	std::vector<float> DiffData;
 }BadPixelMaskType;
 
 typedef struct
@@ -286,7 +288,7 @@ typedef struct
 	uint32_t nBadPixelLocalRowOffset;
 	uint32_t nBadPixelLocalColOffset;
 	uint32_t nLinearityRadius;
-	uint32_t nOECTRadius;
+	uint32_t nOETCRadius;
 }APSAlgorithmThre;
 
 typedef struct
@@ -294,7 +296,6 @@ typedef struct
 	double dHotPixelThre;
 	double dHotLineThre;
 	double dDeadPixelThre;
-	double dErrorPixelThre;
 	uint32_t nPeakCycle;
 	uint32_t nStationaryUniformityRowBlockNum;
 	uint32_t nStationaryUniformityColBlockNum;
@@ -379,12 +380,10 @@ typedef struct
 typedef struct
 {
 	uint32_t nOffEventsDeadPixelNum;
-	uint32_t nOffEventsErrorPixelNum;
 	uint32_t nOffEventsClusterNum;
 	BadPixelMaskType OffEventsBadPixelMask;
 
 	uint32_t nOnEventsDeadPixelNum;
-	uint32_t nOnEventsErrorPixelNum;
 	uint32_t nOnEventsClusterNum;
 	BadPixelMaskType OnEventsBadPixelMask;
 }DVSBadpixelType;
@@ -393,6 +392,10 @@ typedef struct
 {
 	uint32_t HotPixelNum;
 	uint32_t HotLineNum;
+	uint32_t SingletNum;
+	uint32_t CoupletNum;
+	uint32_t TripletNum;
+	uint32_t FourConnectedNum;
 	uint32_t ClusterNum;
 	BadPixelMaskType HotPixelMask;
 }DVSHotpixelType;
@@ -409,6 +412,8 @@ typedef enum
 	DATA_LENS_ERROR = 0x80000007,
 	DATA_ROI_SET_ERROR = 0x80000008,
 	SAVE_DATA_ERROR = 0x80000009,
+	BEYOND_MAX_RES_NUM = 0x8000000A,
+	EVENTS_EQU_ZERO = 0x8000000B,
 }DvsErrCode;
 
 class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
@@ -424,8 +429,8 @@ public:
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber) = 0;
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber, APSDataMeanType& BaseMean) = 0;
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nBaseIndexStart, uint32_t nBaseNumber) = 0;
-	virtual bool DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& BadPixelMask) = 0;
-	virtual bool BadPixelLocalToOtpType(std::vector<Local> &BadPixelLocal, std::vector<uint8_t>& OtpData) = 0;
+	virtual bool DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal) = 0;
+	virtual bool BadPixelLocalToOtpType(std::vector<Local> BadPixelLocal, std::vector<uint8_t>& OtpData) = 0;
 	virtual bool YShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSYShadingType& YShadingRes) = 0;
 	virtual bool ColorShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSColorShadingType& ColorShadingRes) = 0;
 	virtual bool OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSOpticalCenterType& OpticalCenterRes) = 0;
@@ -472,7 +477,7 @@ public:
 	virtual bool FindPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo& Peak, DVSLightTrigerType Light) = 0;
 	virtual bool ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSImageContrastSensitivityType& ImageContrastSensitivityRes) = 0;
 	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSAccompaniedPeakAndDelayedPeakType& AccompaniedPeakAndDelayedPeakRes) = 0;
-	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes) = 0;
+	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes) = 0;
 	virtual bool BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSBadpixelType& BadpixelRes) = 0;
 	virtual bool Show(uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag, uint8_t OffEventFlag, ImgType& ImgData) = 0;
 	virtual void SetMultiThreadEnable(bool bEnable = true) = 0;

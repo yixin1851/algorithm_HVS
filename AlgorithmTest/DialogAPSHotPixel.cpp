@@ -106,7 +106,15 @@ void CDialogAPSHotPixel::HotPixel()
 		if (bRet)
 		{
 			auto start = clock();
-			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, m_HotPixel);
+			std::vector<Local> PixelsInfo;
+			for (int i = 0; i < m_HotPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				if (APX003CA_ON_CHIP_CALIBRATION_FLAG == m_HotPixel.BadPixelMask.Flag[i])
+				{
+					PixelsInfo.push_back(m_HotPixel.BadPixelMask.LocalData[i]);
+				}
+			}	
+			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, PixelsInfo);
 			auto end = clock();
 			time = end - start;
 		}
@@ -253,7 +261,11 @@ void CDialogAPSHotPixel::Export()
 				outfile << std::to_string(m_HotPixel.BadPixelMask.Flag[i]) << ",";
 			}
 			outfile << std::endl;
-
+			for (uint32_t i = 0; i < m_HotPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				outfile << std::to_string(m_HotPixel.BadPixelMask.DiffData[i]) << ",";
+			}
+			outfile << std::endl;
 			std::vector<uint8_t> OtpData;
 
 			if (m_pAPSAlgoInterface->BadPixelLocalToOtpType(m_HotPixel.BadPixelMask.LocalData, OtpData))

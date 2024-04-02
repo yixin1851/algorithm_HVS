@@ -21,6 +21,9 @@
     <ClCompile Include="ImageTest.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="DPC_On_Chip_Test.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImageTest.h">

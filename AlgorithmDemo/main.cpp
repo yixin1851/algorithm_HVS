@@ -80,9 +80,9 @@ int main()
 	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\OETC\\";
 	//GetOETC(path);
 
-	path = "D:\\Data\\Linearity\\x1\\";
-	GetLinearity(path);
-
+	//path = "D:\\Data\\Linearity\\x1\\";
+	//GetLinearity(path);
+	DPC_On_ChipTest();
 	//path = "D:\\Data\\OETC\\x1\\";
 	//GetOETC(path);
 

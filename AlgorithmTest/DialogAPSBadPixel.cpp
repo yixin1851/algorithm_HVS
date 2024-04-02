@@ -99,7 +99,15 @@ void CDialogAPSBadPixel::BadPixel()
 		if (bRet)
 		{
 			auto start = clock();
-			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, m_BadPixel);
+			std::vector<Local> PixelsInfo;
+			for (int i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+			{
+				if (APX003CA_ON_CHIP_CALIBRATION_FLAG == m_BadPixel.BadPixelMask.Flag[i])
+				{
+					PixelsInfo.push_back(m_BadPixel.BadPixelMask.LocalData[i]);
+				}
+			}
+			bRet = m_pAPSAlgoInterface->DPC(nIndexStart, nNumber, roi, PixelsInfo);
 			auto end = clock();
 			time = end - start;
 		}

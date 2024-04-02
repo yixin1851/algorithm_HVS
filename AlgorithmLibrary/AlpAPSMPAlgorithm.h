@@ -20,8 +20,8 @@ public:
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber);
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber, APSDataMeanType& BaseMean);
 	virtual bool BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nBaseIndexStart, uint32_t nBaseNumber);
-	virtual bool DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& BadPixelMask);
-	virtual bool BadPixelLocalToOtpType(std::vector<Local>& BadPixelLocal, std::vector<uint8_t>& OtpData);
+	virtual bool DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal);
+	virtual bool BadPixelLocalToOtpType(std::vector<Local> BadPixelLocal, std::vector<uint8_t>& OtpData);
 	virtual bool YShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSYShadingType& ShadingRes);
 	virtual bool ColorShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSColorShadingType& ShadingRes);
 	virtual bool OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSOpticalCenterType& OpticalCenterRes);
@@ -70,7 +70,7 @@ protected:
 	virtual void SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes);
 	virtual void SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& HotpixelRes, bool& bRes);
 	virtual void SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& BaseMean, bool& bRes);
-	virtual void SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadPixelMask, bool& bRes);
+	virtual void SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<Local>& BadPixelList, bool& bRes);
 	virtual void SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& DataMean, bool& bRes, RawDataContainer& DataContainer);
 	
 	virtual void SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<double>& BaseMean, bool& bRes);
@@ -81,6 +81,9 @@ protected:
 
 	void SetDataToSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double dValue);
 	void SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex nChannelIndex, Local& TotalLocal);
+	void GetDataFromSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double &dValue);
+	void TotalLocalToSubFrameLocal(Local TotalLocal, SubFrameIndex &nChannelIndex, Local &SubLocal);
+
 	void SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, SubFrameIndex nChannelIndex, APSReadNoiseType& ReadNoiseRes, bool& bRes, RawDataContainer& DataContainer);
 
 	void ImportDataTo16SubFrame(uint32_t nIndexStart, uint32_t nNumber);

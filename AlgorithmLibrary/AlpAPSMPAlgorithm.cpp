@@ -22,6 +22,18 @@ bool operator< (const Local& lh, const Local& rh)
 	}
 }
 
+typedef struct
+{
+	Local l;
+	uint8_t flag;
+	float Diff;
+}BadPixelInfo;
+
+bool operator< (const BadPixelInfo& lh, const BadPixelInfo& rh)
+{
+	return lh.Diff < rh.Diff;
+}
+
 CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 {
 	m_nSiteNum = nSiteNum;
@@ -295,6 +307,7 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	BadpixelRes.BadPixelMask.BadPixelNum = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
+	BadpixelRes.BadPixelMask.DiffData.clear();
 
 	BadpixelRes.SubFrameBadpixelData.resize(SubFrameIndex::All);
 	if (m_bMultiThreadEnable)
@@ -324,6 +337,7 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	}
 	if (bRet)
 	{
+		std::vector<BadPixelInfo> BadPixelList;
 		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			BadpixelRes.BadPixelNum += BadpixelRes.SubFrameBadpixelData[i].BadPixelNum;
@@ -335,9 +349,21 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 			{
 				BadpixelRes.BadPixelMask.BadPixelNum++;
 				SubFrameLocalToTotalLocal(BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.LocalData[n], SubFrameIndex(i), Total);
-				BadpixelRes.BadPixelMask.LocalData.push_back(Total);
-				BadpixelRes.BadPixelMask.Flag.push_back(BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.Flag[n]);
+				BadPixelInfo Temp;
+				Temp.l = Total;
+				Temp.Diff = BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.DiffData[n];
+				Temp.flag = BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.Flag[n];
+				BadPixelList.push_back(Temp);
 			}
+		}
+		std::sort(BadPixelList.begin(), BadPixelList.end());
+		std::reverse(BadPixelList.begin(), BadPixelList.end());
+
+		for (uint32_t i = 0; i < BadPixelList.size(); i++)
+		{
+			BadpixelRes.BadPixelMask.LocalData.push_back(BadPixelList[i].l);
+			BadpixelRes.BadPixelMask.Flag.push_back(BadPixelList[i].flag);
+			BadpixelRes.BadPixelMask.DiffData.push_back(BadPixelList[i].Diff);
 		}
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
@@ -407,6 +433,7 @@ bool CAlpAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	HotpixelRes.BadPixelMask.LocalData.clear();
 	HotpixelRes.BadPixelMask.Flag.clear();
 	HotpixelRes.SubFrameBadpixelData.resize(SubFrameIndex::All);
+	HotpixelRes.BadPixelMask.DiffData.clear();
 
 	if (m_bMultiThreadEnable)
 	{
@@ -435,20 +462,33 @@ bool CAlpAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	}
 	if (bRet)
 	{
+		std::vector<BadPixelInfo> BadPixelList;
 		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
 			HotpixelRes.BadPixelNum += HotpixelRes.SubFrameBadpixelData[i].BadPixelNum;
 			HotpixelRes.ClusterNum += HotpixelRes.SubFrameBadpixelData[i].ClusterNum;
 			HotpixelRes.CoupletNum += HotpixelRes.SubFrameBadpixelData[i].CoupletNum;
 			HotpixelRes.SingletNum += HotpixelRes.SubFrameBadpixelData[i].SingletNum;
-			Local Global;
+			Local Total;
 			for (uint32_t n = 0; n < HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.BadPixelNum; n++)
 			{
 				HotpixelRes.BadPixelMask.BadPixelNum++;
-				SubFrameLocalToTotalLocal(HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.LocalData[n], SubFrameIndex(i), Global);
-				HotpixelRes.BadPixelMask.LocalData.push_back(Global);
-				HotpixelRes.BadPixelMask.Flag.push_back(HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.Flag[n]);
+				SubFrameLocalToTotalLocal(HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.LocalData[n], SubFrameIndex(i), Total);
+				BadPixelInfo Temp;
+				Temp.l = Total;
+				Temp.Diff = HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.DiffData[n];
+				Temp.flag = HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.Flag[n];
+				BadPixelList.push_back(Temp);
 			}
+		}
+		std::sort(BadPixelList.begin(), BadPixelList.end());
+		std::reverse(BadPixelList.begin(), BadPixelList.end());
+
+		for (uint32_t i = 0; i < BadPixelList.size(); i++)
+		{
+			HotpixelRes.BadPixelMask.LocalData.push_back(BadPixelList[i].l);
+			HotpixelRes.BadPixelMask.Flag.push_back(BadPixelList[i].flag);
+			HotpixelRes.BadPixelMask.DiffData.push_back(BadPixelList[i].Diff);
 		}
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
@@ -636,10 +676,21 @@ bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nB
 	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSBadpixelType& BadPixelMask)
+bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
 {
 	bool bRet = true;
 	bool bSubRes[SubFrameIndex::All];
+
+	std::vector<Local> SubFrameBadPixelLocal[SubFrameIndex::All];
+
+	for (uint32_t n = 0; n < BadPixelLocal.size(); n++)
+	{
+		auto total = BadPixelLocal[n];
+		SubFrameIndex channel = SubFrameIndex::All;
+		Local subLocal;
+		TotalLocalToSubFrameLocal(total, channel, subLocal);
+		SubFrameBadPixelLocal[channel].push_back(subLocal);
+	}
 
 	if (m_bMultiThreadEnable)
 	{
@@ -647,7 +698,7 @@ bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* RO
 
 		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDPC, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(BadPixelMask.SubFrameBadpixelData[i]), std::ref(bSubRes[i]));
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SubFrameDPC, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), std::ref(SubFrameBadPixelLocal[i]), std::ref(bSubRes[i]));
 		}
 		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
@@ -659,7 +710,7 @@ bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* RO
 	{
 		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
 		{
-			SubFrameDPC(nIndexStart, nNumber, ROI, SubFrameIndex(i), BadPixelMask.SubFrameBadpixelData[i], bSubRes[i]);
+			SubFrameDPC(nIndexStart, nNumber, ROI, SubFrameIndex(i), SubFrameBadPixelLocal[i], bSubRes[i]);
 		}
 	}
 	for (uint32_t i = 0; i < SubFrameIndex::All; i++)
@@ -669,7 +720,7 @@ bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* RO
 	return bRet;
 }
 
-bool CAlpAPSMPAlgorithm::BadPixelLocalToOtpType(std::vector<Local>& BadPixelLocal, std::vector<uint8_t>& OtpData)
+bool CAlpAPSMPAlgorithm::BadPixelLocalToOtpType(std::vector<Local> BadPixelLocal, std::vector<uint8_t>& OtpData)
 {
 	if (BadPixelLocal.size() > m_AlgorithmThre.nBadPixelMaxLen)
 	{
@@ -2560,7 +2611,9 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 	BadpixelRes.ClusterNum = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
+	BadpixelRes.BadPixelMask.DiffData.clear();
 	BadpixelRes.BadPixelMask.BadPixelNum = 0;
+	std::map<Local, float> DiffMap;
 
 	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
 	{
@@ -2621,6 +2674,8 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 
 					BadpixelRes.BadPixelNum++;
 					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 1;
+					Local temp = { nRows - m_AlgorithmThre.nBadPixelRadius , nCols - m_AlgorithmThre.nBadPixelRadius };
+					DiffMap[temp] = abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle;
 				}
 			}
 		}
@@ -2678,6 +2733,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 				{
 					BadpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
 					BadpixelRes.BadPixelMask.Flag.push_back(uFlag);
+					BadpixelRes.BadPixelMask.DiffData.push_back(DiffMap[Search[n]]);
 					BadpixelRes.BadPixelMask.BadPixelNum++;
 				}
 				ConnectedAreaFlag--;
@@ -2789,7 +2845,9 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 	HotpixelRes.ClusterNum = 0;
 	HotpixelRes.BadPixelMask.LocalData.clear();
 	HotpixelRes.BadPixelMask.Flag.clear();
+	HotpixelRes.BadPixelMask.DiffData.clear();
 	HotpixelRes.BadPixelMask.BadPixelNum = 0;
+	std::map<Local, float> DiffMap;
 
 	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
 	{
@@ -2849,6 +2907,8 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 					//HotpixelRes.BadPixelMask.Flag.push_back(APS_HOT_PIXEL_FLAG);
 					//HotpixelRes.BadPixelMask.BadPixelNum++;
 					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 1;
+					Local temp = { nRows - m_AlgorithmThre.nBadPixelRadius , nCols - m_AlgorithmThre.nBadPixelRadius };
+					DiffMap[temp] = abs(dCurrentPixel - dSurroundPixle);
 				}
 			}
 		}
@@ -2907,6 +2967,8 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 				{
 					HotpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
 					HotpixelRes.BadPixelMask.Flag.push_back(uFlag);
+
+					HotpixelRes.BadPixelMask.DiffData.push_back(DiffMap[Search[n]]);
 					HotpixelRes.BadPixelMask.BadPixelNum++;
 				}
 				ConnectedAreaFlag--;
@@ -3050,7 +3112,7 @@ void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROI
 	return;
 }
 
-void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& SubFrameBadPixel, bool& bRes)
+void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<Local>& BadPixelList, bool& bRes)
 {
 	bRes = true;
 	ROIArea RealRoi = { 0 };
@@ -3077,10 +3139,10 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 		return;
 	}
 
-	for (uint32_t nBadPixelIndex = 0; nBadPixelIndex < SubFrameBadPixel.BadPixelMask.BadPixelNum; nBadPixelIndex++)
+	for (uint32_t nBadPixelIndex = 0; nBadPixelIndex < BadPixelList.size(); nBadPixelIndex++)
 	{
-		uint32_t nBadpixelRows = SubFrameBadPixel.BadPixelMask.LocalData[nBadPixelIndex].x;
-		uint32_t nBadpixelCols = SubFrameBadPixel.BadPixelMask.LocalData[nBadPixelIndex].y;
+		uint32_t nBadpixelRows = BadPixelList[nBadPixelIndex].x;
+		uint32_t nBadpixelCols = BadPixelList[nBadPixelIndex].y;
 
 		for (uint32_t nFrameIndex = 0; nFrameIndex < nNumber; nFrameIndex++)
 		{
@@ -3093,7 +3155,7 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 				{
 					for (uint32_t nCurCols = nBadpixelCols - 1; nCurCols <= nBadpixelCols + 1; nCurCols++)
 					{
-						if (nCurCols >= RealRoi.Left && nCurCols <= RealRoi.Right && SubFrameBadPixel.BadPixelMask.LocalData.end() == std::find(SubFrameBadPixel.BadPixelMask.LocalData.begin(), SubFrameBadPixel.BadPixelMask.LocalData.end(), Local{ nCurRows, nCurCols }))
+						if (nCurCols >= RealRoi.Left && nCurCols <= RealRoi.Right && BadPixelList.end() == std::find(BadPixelList.begin(), BadPixelList.end(), Local{ nCurRows, nCurCols }))
 						{
 							dMeanData += CurRawData.m_RawData[nCurRows][nCurCols];
 							nSize++;
@@ -4201,6 +4263,835 @@ void CAlpAPSMPAlgorithm::SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex
 	}
 	TotalLocal.x = nTotalRows;
 	TotalLocal.y = nTotalCols;
+}
+
+void CAlpAPSMPAlgorithm::GetDataFromSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double& dValue)
+{
+	switch (m_PixelFormat)
+	{
+	case BayerGBRG:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		break;
+	case BayerBGGR:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		break;
+	case BayerRGGB:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		break;
+	case BayerGRBG:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[nRows >> 1][nCols >> 1];
+		}
+		break;
+	case QuadBayerGBRG:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		break;
+	case QuadBayerBGGR:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		break;
+	case QuadBayerRGGB:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		break;
+	case QuadBayerGRBG:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[Gr][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[R][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE)][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			dValue = m_RawDataContainer[B][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE)];
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			dValue = m_RawDataContainer[Gb][nIndex].m_RawData[((nRows >> 1) & 0xFFFE) + 1][((nCols >> 1) & 0xFFFE) + 1];
+		}
+		break;
+	}
+}
+
+void CAlpAPSMPAlgorithm::TotalLocalToSubFrameLocal(Local TotalLocal, SubFrameIndex& nChannelIndex, Local& SubLocal)
+{
+	uint32_t nRows = TotalLocal.x;
+	uint32_t nCols = TotalLocal.y;
+	uint32_t nSubRows = 0;
+	uint32_t nSubCols = 0;
+
+	switch (m_PixelFormat)
+	{
+	case BayerGBRG:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::B;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::R;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+		}
+		nSubRows = nRows >> 1;
+		nSubCols = nCols >> 1;
+		break;
+	case BayerBGGR:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::B;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::R;
+		}
+		nSubRows = nRows >> 1;
+		nSubCols = nCols >> 1;
+		break;
+	case BayerRGGB:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::R;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::B;
+		}		
+		nSubRows = nRows >> 1;
+		nSubCols = nCols >> 1;
+		break;
+	case BayerGRBG:
+		if ((nRows & 1) == 0 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+		}
+		else if ((nRows & 1) == 0 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::R;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 0)
+		{
+			nChannelIndex = SubFrameIndex::B;
+		}
+		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+		}
+		nSubRows = nRows >> 1;
+		nSubCols = nCols >> 1;
+		break;
+	case QuadBayerGBRG:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		break;
+	case QuadBayerBGGR:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		break;
+	case QuadBayerRGGB:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		break;
+	case QuadBayerGRBG:
+		if ((nRows & 3) == 0 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 0 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::Gr;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 1 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::R;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 2 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE);
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 0)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 1)
+		{
+			nChannelIndex = SubFrameIndex::B;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 2)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE);
+		}
+		else if ((nRows & 3) == 3 && (nCols & 3) == 3)
+		{
+			nChannelIndex = SubFrameIndex::Gb;
+			nSubRows = ((nRows >> 1) & 0xFFFE) + 1;
+			nSubCols = ((nCols >> 1) & 0xFFFE) + 1;
+		}
+		break;
+	}
+	SubLocal.x = nSubRows;
+	SubLocal.y = nSubCols;
 }
 
 void CAlpAPSMPAlgorithm::SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, SubFrameIndex nChannelIndex, APSReadNoiseType& ReadNoiseRes, bool& bRes, RawDataContainer& DataContainer)
