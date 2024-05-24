@@ -67,6 +67,15 @@ void CDialogAPSInit::RawDataInfoInit(int nIndex)
 		ui.lineEditLeft->setText(QString::number(0));
 		ui.lineEditRight->setText(QString::number(1631));
 	}
+	else if (nIndex == SensorType::ALP_004AB)
+	{
+		ui.lineEditTotalRowNumber->setText(QString::number(1540));
+		ui.lineEditTotalColNumber->setText(QString::number(2688));
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(769));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1343));
+	}
 }
 
 void CDialogAPSInit::ChangeUpDown()

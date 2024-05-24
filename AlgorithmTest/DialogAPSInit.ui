@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>512</width>
+    <width>566</width>
     <height>357</height>
    </rect>
   </property>
@@ -25,22 +25,27 @@
     <widget class="QComboBox" name="comboBoxSensorType">
      <item>
       <property name="text">
-       <string>03AA</string>
+       <string>003AA</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>03BA</string>
+       <string>003BA</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>03BB</string>
+       <string>003BB</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>03CA</string>
+       <string>003CA</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>004AB</string>
       </property>
      </item>
     </widget>
