@@ -11,6 +11,7 @@
 #include "Alp003CAAPSMPAlgorithm.h"
 #include "Alp004ABAPSMPAlgorithm.h"
 #include "Alp004ABDVSMPAlgorithm.h"
+#include "Alp014AAAPSMPAlgorithm.h"
 
 //#include "vld.h"
 
@@ -38,6 +39,10 @@ CAlpAPSMPAlgoInterface* CAlpAPSMPAlgoInterface::CreateAPSAlgoInterface(SensorTyp
 	else if (Sensortype == ALP_004AB)
 	{
 		return new CAlp004ABAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat, code);
+	}
+	else if (Sensortype == ALP_014AA)
+	{
+		return new CAlp014AAAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, m_nSiteNumber++, Pixelformat, code);
 	}
 	else
 	{

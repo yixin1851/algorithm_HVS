@@ -69,6 +69,9 @@
     <ClInclude Include="Alp004ABDVSMPAlgorithm.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Alp014AAAPSMPAlgorithm.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlpAPSMPAlgorithm.cpp">
@@ -117,6 +120,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Alp004ABDVSMPAlgorithm.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Alp014AAAPSMPAlgorithm.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -50,41 +50,37 @@ int main()
 
 
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Pedestal_variation\\Dark_33ms_1.74x_01.raw";
-	//GetPedestalVariation(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\Pedestal_variation\\x1_33ms_30fps";
+	GetPedestalVariation(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\DSNU\\1.74\\";
-	//GetDSNU(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\DSNU\\x16\\";
+	GetDSNU(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\FPN&Temporal_noise&Defect_Pixels_dark\\1.74";
-	//GetFPN(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
+	GetFPN(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\FPN&Temporal_noise&Defect_Pixels_dark\\1.74";
-	//GetTNoise(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
+	GetTNoise(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Defect_Pixels_light&light_noise";
-	//GetTNoise(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\Defect_Pixels_light&light_noise\\x1";
+	GetTNoise(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Read_Noise\\1.74_0.5ms\\";
-	//GetReadNoise(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\Read_Noise\\x16\\";
+	GetReadNoise(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\FPN&Temporal_noise&Defect_Pixels_dark\\1.74";
-	//GetDefectPixelsDark(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
+	GetDefectPixelsDark(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Defect_Pixels_light&light_noise";
-	//GetDefectPixelsLight(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\Defect_Pixels_light&light_noise\\x1";
+	GetDefectPixelsLight(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\Linearity\\1.74x\\";
-	//GetLinearity(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\Linearity\\x1\\";
+	GetLinearity(path);
 
-	//path = "D:\\Data\\oppo客户测试需求_小demo#5_v01_360M_v3_oppo文件命名格式\\OETC\\";
-	//GetOETC(path);
+	path = "D:\\Data\\003CA-MONO-1#1\\OETC\\x1\\";
+	GetOETC(path);
 
-	//path = "D:\\Data\\Linearity\\x1\\";
-	//GetLinearity(path);
-	DPC_On_ChipTest();
-	//path = "D:\\Data\\OETC\\x1\\";
-	//GetOETC(path);
+	//DPC_On_ChipTest();
 
 	system("pause");
 	return 0;

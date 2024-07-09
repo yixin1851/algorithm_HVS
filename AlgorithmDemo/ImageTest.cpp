@@ -185,15 +185,9 @@ void GetLinearity(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003CA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, row / 2 - 1, 0, col / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -223,7 +217,7 @@ void GetLinearity(std::string datapath)
 	if (bRet)
 	{
 		APSSSNRType res;
-		gAPSInterface->Linearity(0, 121, nullptr, SubFrameIndex::Gr, res);
+		gAPSInterface->Linearity(0, 121, nullptr, SubFrameIndex::Gb, res);
 
 		std::cout << "maxSSNR: " << res.MaxSSNR << std::endl;
 
@@ -249,15 +243,9 @@ void GetPedestalVariation(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003CA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2480;
-	uint32_t col = 3280;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, row / 2 - 1, 0, col / 2 - 1 });
 	bool bRet = false;
 
 	if (datapath.find(".raw") != -1)
@@ -297,14 +285,8 @@ void GetPedestalVariation(std::string datapath)
 		APSPedestalVariationType res;
 		gAPSInterface->PedestalVariation(0, 1, nullptr, res);
 
-		std::cout << "pedestalR_Max:" << res.PedestalMax[2] << std::endl;
-		std::cout << "pedestalR_Min:" << res.PedestalMax[2] << std::endl;
-		std::cout << "pedestalGr_Max:" << res.PedestalMax[3] << std::endl;
-		std::cout << "pedestalGr_Min:" << res.PedestalMax[3] << std::endl;
 		std::cout << "pedestalGb_Max:" << res.PedestalMax[0] << std::endl;
 		std::cout << "pedestalGb_Min:" << res.PedestalMin[0] << std::endl;
-		std::cout << "pedestalB_Max:" << res.PedestalMax[1] << std::endl;
-		std::cout << "pedestalB_Min:" << res.PedestalMax[1] << std::endl;
 	}
 	else
 	{
@@ -316,15 +298,8 @@ void GetDSNU(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
-
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, 2448 / 2 - 1, 0, 3168 / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -356,9 +331,7 @@ void GetDSNU(std::string datapath)
 		APSDSNUType res;
 		gAPSInterface->DSNU(0, 5, nullptr, res);
 
-		std::cout << "RangeR:" << res.RangeR << std::endl;
 		std::cout << "RangeG:" << res.RangeG << std::endl;
-		std::cout << "RangeB:" << res.RangeB << std::endl;
 		std::cout << "signal_max:" << res.SignalMax << std::endl;
 		std::cout << "deltaSignal_max:" << res.DeltaSignalMax << std::endl;
 		std::cout << "deltaSignalLocal_centre_max:" << res.DeltaSignalCentreMax << std::endl;
@@ -375,15 +348,9 @@ void GetFPN(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, 2448 / 2 - 1, 0, 3168 / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -416,15 +383,8 @@ void GetFPN(std::string datapath)
 		gAPSInterface->SNoise(0, 5, nullptr, res);
 
 		std::cout << "frame:" << res.SNoiseFrame << std::endl;
-		std::cout << "row_R:" << res.SubFrameSNoiseData[2].RowSNoise << std::endl;
-		std::cout << "col_R:" << res.SubFrameSNoiseData[2].ColSNoise << std::endl;
-		std::cout << "row_Gr:" << res.SubFrameSNoiseData[3].RowSNoise << std::endl;
-		std::cout << "col_Gr:" << res.SubFrameSNoiseData[3].ColSNoise << std::endl;
 		std::cout << "row_Gb:" << res.SubFrameSNoiseData[0].RowSNoise << std::endl;
 		std::cout << "col_Gb:" << res.SubFrameSNoiseData[0].ColSNoise << std::endl;
-		std::cout << "row_B:" << res.SubFrameSNoiseData[1].RowSNoise << std::endl;
-		std::cout << "col_B:" << res.SubFrameSNoiseData[1].ColSNoise << std::endl;
-
 	}
 	else
 	{
@@ -436,15 +396,9 @@ void GetTNoise(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, 2448 / 2 - 1, 0, 3168 / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -476,30 +430,12 @@ void GetTNoise(std::string datapath)
 		APSTNoiseType res;
 		gAPSInterface->TNoise(0, 5, nullptr, res);
 
-		std::cout << "rowTemp_R:" << res.SubFrameTNoiseData[2].RowTemp << std::endl;
-		std::cout << "colTemp_R:" << res.SubFrameTNoiseData[2].ColTemp << std::endl;
-		std::cout << "tempRNRatio_R:" << res.SubFrameTNoiseData[2].TempRNRatio << std::endl;
-		std::cout << "tempRNRatio_R:" << res.SubFrameTNoiseData[2].TempCNRatio << std::endl;
-
-		std::cout << "rowTemp_Gr:" << res.SubFrameTNoiseData[3].RowTemp << std::endl;
-		std::cout << "colTemp_Gr:" << res.SubFrameTNoiseData[3].ColTemp << std::endl;
-		std::cout << "tempRNRatio_Gr:" << res.SubFrameTNoiseData[3].TempRNRatio << std::endl;
-		std::cout << "tempRNRatio_Gr:" << res.SubFrameTNoiseData[3].TempCNRatio << std::endl;
 
 		std::cout << "rowTemp_Gb:" << res.SubFrameTNoiseData[0].RowTemp << std::endl;
 		std::cout << "colTemp_Gb:" << res.SubFrameTNoiseData[0].ColTemp << std::endl;
 		std::cout << "tempRNRatio_Gb:" << res.SubFrameTNoiseData[0].TempRNRatio << std::endl;
 		std::cout << "tempRNRatio_Gb:" << res.SubFrameTNoiseData[0].TempCNRatio << std::endl;
 
-		std::cout << "rowTemp_Gb:" << res.SubFrameTNoiseData[0].RowTemp << std::endl;
-		std::cout << "colTemp_Gb:" << res.SubFrameTNoiseData[0].ColTemp << std::endl;
-		std::cout << "tempRNRatio_Gb:" << res.SubFrameTNoiseData[0].TempRNRatio << std::endl;
-		std::cout << "tempRNRatio_Gb:" << res.SubFrameTNoiseData[0].TempCNRatio << std::endl;
-
-		std::cout << "rowTemp_B:" << res.SubFrameTNoiseData[1].RowTemp << std::endl;
-		std::cout << "colTemp_B:" << res.SubFrameTNoiseData[1].ColTemp << std::endl;
-		std::cout << "tempRNRatio_B:" << res.SubFrameTNoiseData[1].TempRNRatio << std::endl;
-		std::cout << "tempRNRatio_B:" << res.SubFrameTNoiseData[1].TempCNRatio << std::endl;
 	}
 	else
 	{
@@ -511,15 +447,9 @@ void GetReadNoise(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, 2448 / 2 - 1, 0, 3168 / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -563,15 +493,8 @@ void GetDefectPixelsDark(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
-
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, 2448 / 2 - 1, 0, 3168 / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -619,15 +542,9 @@ void GetDefectPixelsLight(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({ 0, 2448 / 2 - 1, 0, 3168 / 2 - 1 });
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -678,15 +595,9 @@ void GetOETC(std::string datapath)
 {
 	std::vector<std::string> FileQuene;
 
-	gAPSInterface = CreateAPSAlgoInterface(ALP_003CA, UNPACK10, "D:/", QuadBayerGBRG, 0);
-	gAPSInterface->SetMultiThreadEnable(true);
+	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
 
-	uint32_t row = 2448;
-	uint32_t col = 3264;
-
-	gAPSInterface->SetRawDataSize(row, col);
-	gAPSInterface->SetActiveArea({0, row / 2 - 1, 0, col / 2 -1});
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -716,7 +627,7 @@ void GetOETC(std::string datapath)
 	if (bRet)
 	{
 		APSOETCType res;
-		gAPSInterface->OETC(0, 46, nullptr, SubFrameIndex::Gr, res);
+		gAPSInterface->OETC(0, 46, nullptr, SubFrameIndex::Gb, res);
 
 		std::cout << "DR(db): " << res.DR_dB << std::endl;
 		std::cout << "ReadNoise(e-): " << res.ReadNoise_e << std::endl;

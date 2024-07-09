@@ -31,7 +31,8 @@ typedef enum
 	ALP_003BA,
 	ALP_003BB,
 	ALP_003CA,
-	ALP_004AA,
+	ALP_004AB,
+	ALP_014AA,
 }SensorType;
 
 typedef enum
