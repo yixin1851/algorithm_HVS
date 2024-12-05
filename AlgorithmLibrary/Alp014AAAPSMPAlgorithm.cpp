@@ -3,20 +3,41 @@
 CAlp014AAAPSMPAlgorithm::CAlp014AAAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 	: CAlpAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, nSiteNum, Pixelformat, code)
 {
-	m_ActiveArea = { 0, 959, 0, 1279 };
-	m_nChannelRow = 960;
-	m_nChannelCol = 1280;
-	m_nTotalRow = 960;
-	m_nTotalCol = 1280;
+	if ((code & APSCodeType::APS_Code_HVS) == APSCodeType::APS_Code_HVS)
+	{
+		m_ActiveArea = { 0, 479, 0, 1279 };
+		m_nChannelRow = 480;
+		m_nChannelCol = 1280;
+		m_nTotalRow = 480;
+		m_nTotalCol = 1280;
 
-	m_AlgorithmThre.nDSNURowBlockNum = 24;
-	m_AlgorithmThre.nDSNUColBlockNum = 32;
-	m_AlgorithmThre.nDSNURowBlockSize = 40;
-	m_AlgorithmThre.nDSNUColBlockSize = 40;
-	m_AlgorithmThre.nPedestalVariationRowBlockNum = 8;
-	m_AlgorithmThre.nPedestalVariationColBlockNum = 8;
-	m_AlgorithmThre.nPedestalVariationRowBlockSize = 120;
-	m_AlgorithmThre.nPedestalVariationColBlockSize = 160;
+		m_AlgorithmThre.nDSNURowBlockNum = 12;
+		m_AlgorithmThre.nDSNUColBlockNum = 32;
+		m_AlgorithmThre.nDSNURowBlockSize = 40;
+		m_AlgorithmThre.nDSNUColBlockSize = 40;
+		m_AlgorithmThre.nPedestalVariationRowBlockNum = 8;
+		m_AlgorithmThre.nPedestalVariationColBlockNum = 8;
+		m_AlgorithmThre.nPedestalVariationRowBlockSize = 60;
+		m_AlgorithmThre.nPedestalVariationColBlockSize = 160;
+	}
+	else
+	{
+		m_ActiveArea = { 0, 959, 0, 1279 };
+		m_nChannelRow = 960;
+		m_nChannelCol = 1280;
+		m_nTotalRow = 960;
+		m_nTotalCol = 1280;
+
+		m_AlgorithmThre.nDSNURowBlockNum = 24;
+		m_AlgorithmThre.nDSNUColBlockNum = 32;
+		m_AlgorithmThre.nDSNURowBlockSize = 40;
+		m_AlgorithmThre.nDSNUColBlockSize = 40;
+		m_AlgorithmThre.nPedestalVariationRowBlockNum = 8;
+		m_AlgorithmThre.nPedestalVariationColBlockNum = 8;
+		m_AlgorithmThre.nPedestalVariationRowBlockSize = 120;
+		m_AlgorithmThre.nPedestalVariationColBlockSize = 160;
+	}
+
 	m_AlgorithmThre.nOETCRadius = 128;
 	m_AlgorithmThre.nLinearityRadius = 32;
 
@@ -1163,7 +1184,7 @@ bool CAlp014AAAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean,
 	}
 	for (uint32_t nIndex = 0; nIndex < LightMean.size(); nIndex++)
 	{
-		if (LightMean[nIndex].SubFrameDataMean.size() != nChannelNum)
+		if (LightMean[nIndex].SubFrameDataMean.size() < nChannelNum)
 		{
 			std::string strErr = "LightMean: Size Error: Index: " + std::to_string(nIndex) + ", Sub Frame Size: " + std::to_string(LightMean[nIndex].SubFrameDataMean.size());
 			WriteLog(strErr, nChannelNum);
@@ -1742,7 +1763,7 @@ bool CAlp014AAAPSMPAlgorithm::GetBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 		{
 			t[i] = new std::thread(&CAlp014AAAPSMPAlgorithm::SubFrameBlockMean, this, nIndexStart, nNumber, ROI, SubFrameIndex(i), nRowBlockNum, nColBlockNum, nSubRowBlockSize, nSubColBlockSize, std::ref(BlockData[i]), std::ref(bSubRes[i]));
 		}
-		for (uint32_t i = 0; i < SubFrameIndex::All; i++)
+		for (uint32_t i = 0; i < m_nMaxSubFramesNum; i++)
 		{
 			t[i]->join();
 			delete t[i];

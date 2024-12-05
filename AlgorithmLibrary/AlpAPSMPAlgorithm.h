@@ -3,6 +3,8 @@
 #include "APSDataContainer.h"
 #include <mutex>
 
+bool operator< (const Local& lh, const Local& rh);
+
 typedef std::vector<CAPSDataContainer> SingleChannelRawData;
 typedef std::vector<SingleChannelRawData> RawDataContainer;
 

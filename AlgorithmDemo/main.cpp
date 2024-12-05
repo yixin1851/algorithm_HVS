@@ -51,34 +51,35 @@ int main()
 
 
 	path = "D:\\Data\\003CA-MONO-1#1\\Pedestal_variation\\x1_33ms_30fps";
+	//GetPedestalVariation(path);
+
+	path = "D:\\Data\\014AA\\60_16_66";
+	GetDSNU(path);
 	GetPedestalVariation(path);
 
-	path = "D:\\Data\\003CA-MONO-1#1\\DSNU\\x16\\";
-	GetDSNU(path);
-
-	path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
+	//path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
 	GetFPN(path);
 
-	path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
+	//path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
 	GetTNoise(path);
 
-	path = "D:\\Data\\003CA-MONO-1#1\\Defect_Pixels_light&light_noise\\x1";
-	GetTNoise(path);
+	//path = "D:\\Data\\003CA-MONO-1#1\\Defect_Pixels_light&light_noise\\x1";
+	//GetTNoise(path);
 
-	path = "D:\\Data\\003CA-MONO-1#1\\Read_Noise\\x16\\";
+	//path = "D:\\Data\\003CA-MONO-1#1\\Read_Noise\\x16\\";
 	GetReadNoise(path);
 
-	path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
+	//path = "D:\\Data\\003CA-MONO-1#1\\FPN&Temporal_noise&Defect_Pixels_dark\\x16";
 	GetDefectPixelsDark(path);
 
-	path = "D:\\Data\\003CA-MONO-1#1\\Defect_Pixels_light&light_noise\\x1";
-	GetDefectPixelsLight(path);
+	//path = "D:\\Data\\003CA-MONO-1#1\\Defect_Pixels_light&light_noise\\x1";
+	//GetDefectPixelsLight(path);
 
 	path = "D:\\Data\\003CA-MONO-1#1\\Linearity\\x1\\";
-	GetLinearity(path);
+	//GetLinearity(path);
 
 	path = "D:\\Data\\003CA-MONO-1#1\\OETC\\x1\\";
-	GetOETC(path);
+	//GetOETC(path);
 
 	//DPC_On_ChipTest();
 

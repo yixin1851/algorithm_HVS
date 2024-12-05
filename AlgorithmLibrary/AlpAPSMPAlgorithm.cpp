@@ -4673,7 +4673,7 @@ void CAlpAPSMPAlgorithm::TotalLocalToSubFrameLocal(Local TotalLocal, SubFrameInd
 		else if ((nRows & 1) == 1 && (nCols & 1) == 1)
 		{
 			nChannelIndex = SubFrameIndex::B;
-		}		
+		}
 		nSubRows = nRows >> 1;
 		nSubCols = nCols >> 1;
 		break;

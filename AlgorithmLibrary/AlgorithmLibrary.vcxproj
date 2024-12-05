@@ -153,6 +153,7 @@
     <ClInclude Include="Alp004ABAPSMPAlgorithm.h" />
     <ClInclude Include="Alp004ABDVSMPAlgorithm.h" />
     <ClInclude Include="Alp014AAAPSMPAlgorithm.h" />
+    <ClInclude Include="Alp014AADVSMPAlgorithm.h" />
     <ClInclude Include="AlpAPSMPAlgorithm.h" />
     <ClInclude Include="AlpDVSMPAlgorithm.h" />
     <ClInclude Include="AlpLib\include\AlpCodec\DVSDecoder\DVSDecoder.h" />
@@ -176,6 +177,7 @@
     <ClCompile Include="Alp004ABAPSMPAlgorithm.cpp" />
     <ClCompile Include="Alp004ABDVSMPAlgorithm.cpp" />
     <ClCompile Include="Alp014AAAPSMPAlgorithm.cpp" />
+    <ClCompile Include="Alp014AADVSMPAlgorithm.cpp" />
     <ClCompile Include="AlpAPSMPAlgorithm.cpp" />
     <ClCompile Include="AlpDVSMPAlgorithm.cpp" />
     <ClCompile Include="AlpMPAlgoInterface.cpp" />

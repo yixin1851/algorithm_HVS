@@ -300,6 +300,7 @@ void GetDSNU(std::string datapath)
 
 	gAPSInterface = CreateAPSAlgoInterface(ALP_014AA, UNPACK10, "D:/", QuadBayerGBRG, 0);
 	gAPSInterface->SetLogEnable(true);
+	gAPSInterface->SetMultiThreadEnable(true);
 	bool bRet = false;
 
 	FindFiles(datapath, FileQuene);
@@ -329,7 +330,7 @@ void GetDSNU(std::string datapath)
 	if (bRet)
 	{
 		APSDSNUType res;
-		gAPSInterface->DSNU(0, 5, nullptr, res);
+		bool bRet = gAPSInterface->DSNU(0, 5, nullptr, res);
 
 		std::cout << "RangeG:" << res.RangeG << std::endl;
 		std::cout << "signal_max:" << res.SignalMax << std::endl;
@@ -524,7 +525,7 @@ void GetDefectPixelsDark(std::string datapath)
 	if (bRet)
 	{
 		APSBadpixelType res;
-		gAPSInterface->HotPixel(0, 5, nullptr, res);
+		gAPSInterface->HotPixel(0, 20, nullptr, res);
 
 		std::cout << "Singlets:" << res.SingletNum << std::endl;
 		std::cout << "Couplets:" << res.CoupletNum << std::endl;

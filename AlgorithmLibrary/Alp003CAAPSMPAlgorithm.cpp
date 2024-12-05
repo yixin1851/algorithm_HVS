@@ -1,4 +1,5 @@
 #include "Alp003CAAPSMPAlgorithm.h"
+#include <map>
 
 CAlp003CAAPSMPAlgorithm::CAlp003CAAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 	: CAlpAPSMPAlgorithm(Sensortype, Rawtype, strLogDir, nSiteNum, Pixelformat, code)
@@ -12,6 +13,15 @@ CAlp003CAAPSMPAlgorithm::CAlp003CAAPSMPAlgorithm(SensorType Sensortype, APSRawTy
 	m_AlgorithmThre.nDSNUColBlockNum = 40;
 	m_AlgorithmThre.nDSNURowBlockSize = 40;
 	m_AlgorithmThre.nDSNUColBlockSize = 40;
+
+	if ((code & APS_Code_HVS) == APS_Code_HVS)
+	{
+		m_bHVS_DPC = true;
+	}
+	else
+	{
+		m_bHVS_DPC = false;
+	}
 }
 
 CAlp003CAAPSMPAlgorithm::~CAlp003CAAPSMPAlgorithm()
@@ -381,6 +391,18 @@ bool CAlp003CAAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, R
 
 bool CAlp003CAAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
 {
+	if (m_bHVS_DPC)
+	{
+		return DPC_HVS(nIndexStart, nNumber, ROI, BadPixelLocal);
+	}
+	else
+	{
+		return DPC_APS_Only(nIndexStart, nNumber, ROI, BadPixelLocal);
+	}
+}
+
+bool CAlp003CAAPSMPAlgorithm::DPC_APS_Only(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
+{
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer[0].size() || (nIndexStart + nNumber) > m_RawDataContainer[0].size())
 	{
 		std::string strErr = "DPC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -520,5 +542,703 @@ bool CAlp003CAAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 		}
 	}
 	return true;
+}
+
+bool CAlp003CAAPSMPAlgorithm::DPC_HVS(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
+{
+	if (0 == nNumber || nIndexStart >= m_RawDataContainer[0].size() || (nIndexStart + nNumber) > m_RawDataContainer[0].size())
+	{
+		std::string strErr = "DPC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	int x0[] = { -3, 0, 1, -3, 1, 3, 0, 1, -2, -1, -2, -1, -2, -1, -3, -3, 0, 0, 1, 1, -3, -4, 1,  4, -4, -3, 4, 1 };
+	int y0[] = { -3, -3, -3, 0, 0, 1, 1, 1, -3, -3, 0, 0, 1, 1, -2, -1, -2,-1, -2,-1, -4, -3, -4, -3, 1, 4, 1, 4 };
+	int x1[] = { -1, 0, 3, -1, 3, -1, 0, 3, 1, 2, 1, 2, 1, 2, -1, -1, 0, 0, 3, 3, -1, 3 };
+	int y1[] = { -3, -3, -3,  0,  0,  1,  1,  1, -3, -3,  0,  0,  1,  1, -2, -1, -2, -1, -2, -1, -4,  4 };
+	int x2[] = { -3, 0, 1, -3, 1, -3, 0, 1, -2, -1, -2, -1, -2, -1, -3, -3, 0, 0, 1, 1, -4, 4 };
+	int y2[] = { -1, -1, -1, 0, 0, 3, 3, 3, -1, -1, 0, 0, 3, 3, 1, 2, 1, 2, 1, 2, -1, 3 };
+	int x3[] = { -1, 0, 3, -1, 3, -1, 0, 3, 1, 2, 1, 2, 1, 2, -1, -1, 0, 0, 3, 3 };
+	int y3[] = { -1, -1, -1, 0, 0, 3, 3, 3, -1, -1, 0, 0, 3, 3, 1, 2, 1, 2, 1, 2 };
+
+	for (uint32_t nIndex = nIndexStart; nIndex < nIndexStart + nNumber; nIndex++)
+	{
+		for (uint32_t n = 0; n < BadPixelLocal.size(); n++)
+		{
+			auto totalLocal = BadPixelLocal[n];
+			int nRow = totalLocal.x;
+			int nCol = totalLocal.y;
+
+			Local PixelLocal[28];
+			int tempRow = 0;
+			int tempCol = 0;
+			int nLenPoints = 0;
+			if (nRow % 2 == 0 && nCol % 2 == 0)
+			{
+				nLenPoints = sizeof(x0) / sizeof(x0[0]);
+			}
+			else if (nRow % 2 == 0 && nCol % 2 == 1)
+			{
+				nLenPoints = sizeof(x1) / sizeof(x1[0]);
+			}
+			else if (nRow % 2 == 1 && nCol % 2 == 0)
+			{
+				nLenPoints = sizeof(x2) / sizeof(x2[0]);
+			}
+			else
+			{
+				nLenPoints = sizeof(x3) / sizeof(x3[0]);
+			}
+			for (int i = 0; i < nLenPoints; i++)
+			{
+				if (nRow % 2 == 0 && nCol % 2 == 0)
+				{
+					tempRow = nRow + y0[i];
+					tempCol = nCol + x0[i];
+				}
+				else if (nRow % 2 == 0 && nCol % 2 == 1)
+				{
+					tempRow = nRow + y1[i];
+					tempCol = nCol + x1[i];
+				}
+				else if (nRow % 2 == 1 && nCol % 2 == 0)
+				{
+					tempRow = nRow + y2[i];
+					tempCol = nCol + x2[i];
+				}
+				else
+				{
+					tempRow = nRow + y3[i];
+					tempCol = nCol + x3[i];
+				}
+				if (tempRow < 0)
+				{
+					tempRow += 4;
+				}
+				else if (tempRow >= m_nTotalRow)
+				{
+					tempRow -= 4;
+				}
+				if (tempCol < 0)
+				{
+					tempCol += 4;
+				}
+				else if (tempCol >= m_nTotalCol)
+				{
+					tempCol -= 4;
+				}
+				PixelLocal[i].x = tempRow;
+				PixelLocal[i].y = tempCol;
+			}
+			double p0, p1, p2, p3, p5, p6, p7, p8, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, A, B, C, D, E, F, G, H;
+			GetDataFromSubFrame(nIndex, PixelLocal[0].x, PixelLocal[0].y, p0);
+			GetDataFromSubFrame(nIndex, PixelLocal[1].x, PixelLocal[1].y, p1);
+			GetDataFromSubFrame(nIndex, PixelLocal[2].x, PixelLocal[2].y, p2);
+			GetDataFromSubFrame(nIndex, PixelLocal[3].x, PixelLocal[3].y, p3);
+			GetDataFromSubFrame(nIndex, PixelLocal[4].x, PixelLocal[4].y, p5);
+			GetDataFromSubFrame(nIndex, PixelLocal[5].x, PixelLocal[5].y, p6);
+			GetDataFromSubFrame(nIndex, PixelLocal[6].x, PixelLocal[6].y, p7);
+			GetDataFromSubFrame(nIndex, PixelLocal[7].x, PixelLocal[7].y, p8);
+			GetDataFromSubFrame(nIndex, PixelLocal[8].x, PixelLocal[8].y, g0);
+			GetDataFromSubFrame(nIndex, PixelLocal[9].x, PixelLocal[9].y, g1);
+			GetDataFromSubFrame(nIndex, PixelLocal[10].x, PixelLocal[10].y, g2);
+			GetDataFromSubFrame(nIndex, PixelLocal[11].x, PixelLocal[11].y, g3);
+			GetDataFromSubFrame(nIndex, PixelLocal[12].x, PixelLocal[12].y, g4);
+			GetDataFromSubFrame(nIndex, PixelLocal[13].x, PixelLocal[13].y, g5);
+			GetDataFromSubFrame(nIndex, PixelLocal[14].x, PixelLocal[14].y, g6);
+			GetDataFromSubFrame(nIndex, PixelLocal[15].x, PixelLocal[15].y, g7);
+			GetDataFromSubFrame(nIndex, PixelLocal[16].x, PixelLocal[16].y, g8);
+			GetDataFromSubFrame(nIndex, PixelLocal[17].x, PixelLocal[17].y, g9);
+			GetDataFromSubFrame(nIndex, PixelLocal[18].x, PixelLocal[18].y, g10);
+			GetDataFromSubFrame(nIndex, PixelLocal[19].x, PixelLocal[19].y, g11);
+			if (nRow % 2 == 0 && nCol % 2 == 0)
+			{
+				GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
+				GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
+				GetDataFromSubFrame(nIndex, PixelLocal[22].x, PixelLocal[22].y, C);
+				GetDataFromSubFrame(nIndex, PixelLocal[23].x, PixelLocal[23].y, D);
+				GetDataFromSubFrame(nIndex, PixelLocal[24].x, PixelLocal[24].y, E);
+				GetDataFromSubFrame(nIndex, PixelLocal[25].x, PixelLocal[25].y, F);
+				GetDataFromSubFrame(nIndex, PixelLocal[26].x, PixelLocal[26].y, G);
+				GetDataFromSubFrame(nIndex, PixelLocal[27].x, PixelLocal[27].y, H);
+
+				p0 = abs(A - p3) > abs(B - p1) ? (3 * B + p1) / 4 : (3 * A + p3) / 4;
+
+				p2 = abs(C - p5) > abs(p1 - D) ? (3 * p1 + D) / 4 : (3 * C + p5) / 4;
+
+				p6 = abs(p3 - F) > abs(E - p7) ? (3 * E + p7) / 4 : (3 * p3 + F) / 4;
+
+				p8 = abs(p5 - H) > abs(p7 - G) ? (3 * p7 + G) / 4 : (3 * p5 + H) / 4;
+
+
+			}
+			else if (nRow % 2 == 0 && nCol % 2 == 1)
+			{
+				GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
+				GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
+
+				p1 = abs(p0 - p2) > abs(A - p5) ? (3 * A + p5) / 4 : (3 * p0 + p2) / 4;
+
+				p7 = abs(p6 - p8) > abs(p3 - B) ? (3 * p3 + B) / 4 : (3 * p6 + p8) / 4;
+
+			}
+			else if (nRow % 2 == 1 && nCol % 2 == 0)
+			{
+				GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
+				GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
+
+				p3 = abs(p0 - p6) > abs(A - p7) ? (3 * A + p7) / 4 : (3 * p0 + p6) / 4;
+
+				p5 = abs(p2 - p8) > abs(p1 - B) ? (3 * p1 + B) / 4 : (3 * p2 + p8) / 4;
+
+			}
+			else
+			{
+			}
+
+			double dhori = (abs(2 * p1 - p0 - p2) + abs(p3 - p5) * 2 + abs(2 * p7 - p6 - p8)) / 3;
+
+			double dvert = (abs(2 * p3 - p0 - p6) + abs(p1 - p7) * 2 + abs(2 * p5 - p2 - p8)) / 3;
+
+			double hori_value = 0, vert_value = 0;
+
+			if (nRow % 2 == 0 && nCol % 2 == 0)
+			{
+				hori_value = 0.75 * p5 + 0.25 * p3;
+
+				vert_value = 0.75 * p7 + 0.25 * p1;
+			}
+			else if (nRow % 2 == 0 && nCol % 2 == 1)
+			{
+				hori_value = 0.75 * p3 + 0.25 * p5;
+
+				vert_value = 0.75 * p7 + 0.25 * p1;
+
+			}
+			else if (nRow % 2 == 1 && nCol % 2 == 0)
+			{
+				hori_value = 0.75 * p5 + 0.25 * p3;
+
+				vert_value = 0.75 * p1 + 0.25 * p7;
+			}
+			else
+			{
+				hori_value = 0.75 * p3 + 0.25 * p5;
+
+				vert_value = 0.75 * p1 + 0.25 * p7;
+			}
+
+			if ((dvert + dhori) == 0)
+			{
+				std::string strErr = "DPC: dvert + dhori == 0 ";
+				WriteLog(strErr, SubFrameIndex::All);
+				return false;
+			}
+
+			double p4 = (hori_value * dvert + vert_value * dhori) / (dvert + dhori);
+
+			SetDataToSubFrame(nIndex, nRow, nCol, int(p4));
+		}
+	}
+	return true;
+}
+
+void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes)
+{
+	bRes = true;
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	{
+		std::string strErr = "SubFrameBadPixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+		WriteLog(strErr, nChannelIndex);
+		bRes = false;
+		return;
+	}
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "SubFrameBadPixel: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, nChannelIndex);
+		bRes = false;
+		return;
+	}
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+	CAPSDataContainer PixelMeanArray;
+	PixelMeanArray.Init(nRow, nCol, true);
+	std::vector<std::vector<uint32_t>> BadPixelMask(nRow);
+	for (uint32_t i = 0; i < nRow; i++)
+	{
+		BadPixelMask[i].resize(nCol, 0);
+	}
+	BadpixelRes.BadPixelNum = 0;
+	BadpixelRes.DefectColNum = 0;
+	BadpixelRes.DefectRowNum = 0;
+	BadpixelRes.SingletNum = 0;
+	BadpixelRes.CoupletNum = 0;
+	BadpixelRes.ClusterNum = 0;
+	BadpixelRes.BadPixelMask.LocalData.clear();
+	BadpixelRes.BadPixelMask.Flag.clear();
+	BadpixelRes.BadPixelMask.DiffData.clear();
+	BadpixelRes.BadPixelMask.BadPixelNum = 0;
+	std::map<Local, float> DiffMap;
+
+	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol + m_AlgorithmThre.nBadPixelRadius; nCols++)
+		{
+			if (nRows < nRow && nCols < nCol)
+			{
+				if (m_bHVS_DPC && nRows % 2 == 1 && nCols % 2 == 1)
+				{
+					PixelMeanArray.m_RawData[nRows][nCols] = 10000;
+				}
+				else
+				{
+					double dValue = 0;
+					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+					{
+						dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+					}
+					PixelMeanArray.m_RawData[nRows][nCols] = round(dValue / nNumber);
+				}
+			}
+			if ((nRows - m_AlgorithmThre.nBadPixelRadius < nRow) && (nCols - m_AlgorithmThre.nBadPixelRadius < nCol) && PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] != 10000)
+			{
+				uint32_t uSize = 0;
+				double dSurroundPixle = 0;
+				double dMax = -1;
+				double dMin = 10000;
+				for (uint32_t i = 0; i < 2 * m_AlgorithmThre.nBadPixelRadius + 1; i++)
+				{
+					for (uint32_t j = 0; j < 2 * m_AlgorithmThre.nBadPixelRadius + 1; j++)
+					{
+						if ((nRows - i < nRow) && (nCols - j < nCol) && (i != m_AlgorithmThre.nBadPixelRadius || j != m_AlgorithmThre.nBadPixelRadius) && PixelMeanArray.m_RawData[nRows - i][nCols - j] != 10000)
+						{
+							dSurroundPixle += PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							//SortData[uSize] = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							if (dMax < PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMax = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
+							if (dMin > PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMin = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
+							uSize++;
+						}
+					}
+				}
+				if (uSize > 2)
+				{
+					dSurroundPixle = (dSurroundPixle - dMax - dMin) / (uSize - 2);
+				}
+				else
+				{
+					dSurroundPixle = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
+				}
+				//std::sort(SortData.begin(), SortData.begin() + uSize);
+				//double dSurroundPixle = SortData[uSize / 2];
+				double dCurrentPixel = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
+
+				if (abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle > m_AlgorithmThre.dBadPixelThre)
+				{
+					//BadpixelRes.BadPixelMask.BadPixelNum++;
+					//BadpixelRes.BadPixelMask.LocalData.push_back({ nRows - m_AlgorithmThre.nBadPixelRadius + RealRoi.Up, nCols - m_AlgorithmThre.nBadPixelRadius + RealRoi.Left });
+					//BadpixelRes.BadPixelMask.Flag.push_back(APS_BAD_PIXEL_FLAG);
+
+					BadpixelRes.BadPixelNum++;
+					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 1;
+					Local temp = { nRows - m_AlgorithmThre.nBadPixelRadius , nCols - m_AlgorithmThre.nBadPixelRadius };
+					DiffMap[temp] = abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle;
+				}
+			}
+		}
+	}
+	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		{
+			if (BadPixelMask[nRows][nCols] != 0 && BadPixelMask[nRows][nCols] < ConnectedAreaFlag)
+			{
+				uint32_t AreaSize = 0;
+				uint32_t nCur = 0;
+				std::vector<Local> Search;
+				BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
+				Search.push_back({ nRows, nCols });
+				while (nCur != Search.size())
+				{
+					Local temp = Search[nCur];
+					nCur++;
+					AreaSize++;
+					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					{
+						if (nTempRows < nRow)
+						{
+							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							{
+								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								{
+									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
+									Search.push_back({ nTempRows , nTempCols });
+								}
+							}
+						}
+					}
+				}
+				uint8_t uFlag = 0;
+				if (AreaSize == 1)
+				{
+					BadpixelRes.SingletNum++;
+					uFlag = APS_BAD_PIXEL_SINGLET_FLAG;
+				}
+				else if (AreaSize == 2)
+				{
+					BadpixelRes.CoupletNum++;
+					uFlag = APS_BAD_PIXEL_COUPLET_FLAG;
+				}
+				else
+				{
+					BadpixelRes.ClusterNum++;
+					uFlag = APS_BAD_PIXEL_CLUSTER_FLAG;
+				}
+				for (uint32_t n = 0; n < Search.size(); n++)
+				{
+					BadpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
+					BadpixelRes.BadPixelMask.Flag.push_back(uFlag);
+					BadpixelRes.BadPixelMask.DiffData.push_back(DiffMap[Search[n]]);
+					BadpixelRes.BadPixelMask.BadPixelNum++;
+				}
+				ConnectedAreaFlag--;
+			}
+		}
+	}
+
+	std::vector<double> RowMean(nRow, 0);
+	std::vector<double> ColMean(nCol, 0);
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		{
+			double value = 0;
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+			{
+				value += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+			}
+			RowMean[nRows] += round(value / nNumber);
+			ColMean[nCols] += round(value / nNumber);
+		}
+	}
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		RowMean[nRows] /= nCol;
+	}
+	for (uint32_t nCols = 0; nCols < nCol; nCols++)
+	{
+		ColMean[nCols] /= nRow;
+	}
+	for (uint32_t nRows = m_AlgorithmThre.nBadLineRadius; nRows < nRow - m_AlgorithmThre.nBadLineRadius; nRows++)
+	{
+		double dBaseMean = 0;
+		for (uint32_t n = nRows - m_AlgorithmThre.nBadLineRadius; n <= nRows + m_AlgorithmThre.nBadLineRadius; n++)
+		{
+			if (n != nRows)
+			{
+				dBaseMean += RowMean[n];
+			}
+		}
+		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		if (abs(RowMean[nRows] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
+		{
+			BadpixelRes.DefectRowNum++;
+		}
+	}
+	for (uint32_t nCols = m_AlgorithmThre.nBadLineRadius; nCols < nCol - m_AlgorithmThre.nBadLineRadius; nCols++)
+	{
+		double dBaseMean = 0;
+		for (uint32_t n = nCols - m_AlgorithmThre.nBadLineRadius; n <= nCols + m_AlgorithmThre.nBadLineRadius; n++)
+		{
+			if (n != nCols)
+			{
+				dBaseMean += ColMean[n];
+			}
+		}
+		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		if (abs(ColMean[nCols] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
+		{
+			BadpixelRes.DefectColNum++;
+		}
+	}
+	return;
+}
+
+void CAlp003CAAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& HotpixelRes, bool& bRes)
+{
+	bRes = true;
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	{
+		std::string strErr = "SubFrameHotpixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+		WriteLog(strErr, nChannelIndex);
+		bRes = false;
+		return;
+	}
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "SubFrameHotPixel: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, nChannelIndex);
+		bRes = false;
+		return;
+	}
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+	CAPSDataContainer PixelMeanArray;
+	PixelMeanArray.Init(nRow, nCol, true);
+	std::vector<std::vector<uint32_t>> BadPixelMask(nRow);
+	for (uint32_t i = 0; i < nRow; i++)
+	{
+		BadPixelMask[i].resize(nCol, 0);
+	}
+
+	HotpixelRes.BadPixelNum = 0;
+	HotpixelRes.DefectColNum = 0;
+	HotpixelRes.DefectRowNum = 0;
+	HotpixelRes.SingletNum = 0;
+	HotpixelRes.CoupletNum = 0;
+	HotpixelRes.ClusterNum = 0;
+	HotpixelRes.BadPixelMask.LocalData.clear();
+	HotpixelRes.BadPixelMask.Flag.clear();
+	HotpixelRes.BadPixelMask.DiffData.clear();
+	HotpixelRes.BadPixelMask.BadPixelNum = 0;
+	std::map<Local, float> DiffMap;
+
+	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol + m_AlgorithmThre.nBadPixelRadius; nCols++)
+		{
+			if (nRows < nRow && nCols < nCol)
+			{
+				if (m_bHVS_DPC && nRows % 2 == 1 && nCols % 2 == 1)
+				{
+					PixelMeanArray.m_RawData[nRows][nCols] = 10000;
+				}
+				else
+				{
+					double dValue = 0;
+					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+					{
+						dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+					}
+					PixelMeanArray.m_RawData[nRows][nCols] = round(dValue / nNumber);
+				}
+			}
+			if ((nRows - m_AlgorithmThre.nBadPixelRadius < nRow) && (nCols - m_AlgorithmThre.nBadPixelRadius < nCol) && PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] != 10000)
+			{
+				uint32_t uSize = 0;
+				double dSurroundPixle = 0;
+				double dMax = -1;
+				double dMin = 10000;
+				for (uint32_t i = 0; i < 2 * m_AlgorithmThre.nBadPixelRadius + 1; i++)
+				{
+					for (uint32_t j = 0; j < 2 * m_AlgorithmThre.nBadPixelRadius + 1; j++)
+					{
+						if ((nRows - i < nRow) && (nCols - j < nCol) && (i != m_AlgorithmThre.nBadPixelRadius || j != m_AlgorithmThre.nBadPixelRadius) && PixelMeanArray.m_RawData[nRows - i][nCols - j] != 10000)
+						{
+							dSurroundPixle += PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							//SortData[uSize] = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							if (dMax < PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMax = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
+							if (dMin > PixelMeanArray.m_RawData[nRows - i][nCols - j])
+							{
+								dMin = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							}
+							uSize++;
+						}
+					}
+				}
+				if (uSize > 2)
+				{
+					dSurroundPixle = (dSurroundPixle - dMax - dMin) / (uSize - 2);
+				}
+				else
+				{
+					dSurroundPixle = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
+				}
+				//std::sort(SortData.begin(), SortData.begin() + uSize);
+				//dSurroundPixle = SortData[uSize / 2];
+				double dCurrentPixel = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
+
+				if (abs(dCurrentPixel - dSurroundPixle) > m_AlgorithmThre.dHotPixelThre)
+				{
+					HotpixelRes.BadPixelNum++;
+					//HotpixelRes.BadPixelMask.LocalData.push_back({ nRows - m_AlgorithmThre.nBadPixelRadius + RealRoi.Up, nCols - m_AlgorithmThre.nBadPixelRadius + RealRoi.Left });
+					//HotpixelRes.BadPixelMask.Flag.push_back(APS_HOT_PIXEL_FLAG);
+					//HotpixelRes.BadPixelMask.BadPixelNum++;
+					BadPixelMask[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] = 1;
+					Local temp = { nRows - m_AlgorithmThre.nBadPixelRadius , nCols - m_AlgorithmThre.nBadPixelRadius };
+					DiffMap[temp] = abs(dCurrentPixel - dSurroundPixle);
+				}
+			}
+		}
+	}
+
+	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		{
+			if (BadPixelMask[nRows][nCols] != 0 && BadPixelMask[nRows][nCols] < ConnectedAreaFlag)
+			{
+				uint32_t AreaSize = 0;
+				std::vector<Local> Search;
+				uint32_t nCur = 0;
+				BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
+				Search.push_back({ nRows, nCols });
+				while (nCur != Search.size())
+				{
+					Local temp = Search[nCur];
+					nCur++;
+					AreaSize++;
+					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					{
+						if (nTempRows < nRow)
+						{
+							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							{
+								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								{
+									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
+									Search.push_back({ nTempRows , nTempCols });
+								}
+							}
+						}
+					}
+				}
+				uint8_t uFlag = 0;
+				if (AreaSize == 1)
+				{
+					HotpixelRes.SingletNum++;
+					uFlag = APS_HOT_PIXEL_SINGLET_FLAG;
+				}
+				else if (AreaSize == 2)
+				{
+					HotpixelRes.CoupletNum++;
+					uFlag = APS_HOT_PIXEL_COUPLET_FLAG;
+				}
+				else
+				{
+					HotpixelRes.ClusterNum++;
+					uFlag = APS_HOT_PIXEL_CLUSTER_FLAG;
+				}
+				for (uint32_t n = 0; n < Search.size(); n++)
+				{
+					HotpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
+					HotpixelRes.BadPixelMask.Flag.push_back(uFlag);
+
+					HotpixelRes.BadPixelMask.DiffData.push_back(DiffMap[Search[n]]);
+					HotpixelRes.BadPixelMask.BadPixelNum++;
+				}
+				ConnectedAreaFlag--;
+			}
+		}
+	}
+	std::vector<double> RowMean(nRow, 0);
+	std::vector<double> ColMean(nCol, 0);
+
+	double dBaseMean = 0;
+	SubFrameDataMean(nIndexStart, nNumber, &RealRoi, nChannelIndex, dBaseMean, bRes, m_RawDataContainer);
+
+	if (!bRes)
+	{
+		return;
+	}
+
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		{
+			double value = 0;
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+			{
+				value += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
+			}
+			RowMean[nRows] += round(value / nNumber);
+			ColMean[nCols] += round(value / nNumber);
+		}
+	}
+	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	{
+		RowMean[nRows] /= nCol;
+		if (abs(RowMean[nRows] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
+		{
+			HotpixelRes.DefectRowNum++;
+		}
+	}
+	for (uint32_t nCols = 0; nCols < nCol; nCols++)
+	{
+		ColMean[nCols] /= nRow;
+		if (abs(ColMean[nCols] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
+		{
+			HotpixelRes.DefectColNum++;
+		}
+
+	}
+	//for (uint32_t nRows = m_AlgorithmThre.nBadLineRadius; nRows < nRow - m_AlgorithmThre.nBadLineRadius; nRows++)
+	//{
+	//	double dBaseMean = 0;
+	//	for (uint32_t n = nRows - m_AlgorithmThre.nBadLineRadius; n <= nRows + m_AlgorithmThre.nBadLineRadius; n++)
+	//	{
+	//		if (n != nRows)
+	//		{
+	//			dBaseMean += RowMean[n];
+	//		}
+	//	}
+	//	dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+	//	if (abs(RowMean[nRows] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
+	//	{
+	//		HotpixelRes.DefectRowNum++;
+	//	}
+	//}
+	//for (uint32_t nCols = m_AlgorithmThre.nBadLineRadius; nCols < nCol - m_AlgorithmThre.nBadLineRadius; nCols++)
+	//{
+	//	double dBaseMean = 0;
+	//	for (uint32_t n = nCols - m_AlgorithmThre.nBadLineRadius; n <= nCols + m_AlgorithmThre.nBadLineRadius; n++)
+	//	{
+	//		if (n != nCols)
+	//		{
+	//			dBaseMean += ColMean[n];
+	//		}
+	//	}
+	//	dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+	//	if (abs(ColMean[nCols] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
+	//	{
+	//		HotpixelRes.DefectColNum++;
+	//	}
+	//}
+	return;
 }
 

@@ -68,11 +68,13 @@ typedef enum
 typedef enum
 {
 	APS_Code_16_Subframe = 1,
+	APS_Code_HVS = 2,
 }APSCodeType;
 
 typedef enum
 {
 	DVS_Code_1_4_Bining = 1,
+	DVS_Code_HVS = 2,
 }DVSCodeType;
 
 typedef std::vector<std::vector<uint8_t>> ImgType;
