@@ -32,12 +32,12 @@
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="QtSettings">
     <QtInstall>Qt_Qt-6.4.1</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;widgets;printsupport</QtModules>
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
     <QtInstall>Qt_Qt-6.4.1</QtInstall>
-    <QtModules>core;gui;widgets</QtModules>
+    <QtModules>core;gui;widgets;printsupport</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
@@ -135,12 +135,12 @@
     <ClCompile Include="DialogDVSStationaryUniformity.cpp" />
     <ClCompile Include="DialogDVSFindPeak.cpp" />
     <ClCompile Include="DoubleSlider.cpp" />
+    <ClCompile Include="qcustomplot.cpp" />
     <ClCompile Include="WidgetChartView.cpp" />
     <ClCompile Include="DialogDVSCountEvents.cpp" />
     <ClCompile Include="DialogDVSFunction.cpp" />
     <ClCompile Include="DialogDVSImportData.cpp" />
     <ClCompile Include="DialogDVSStationaryNoise.cpp" />
-    <ClCompile Include="qcustomplot.cpp" />
     <ClCompile Include="WidgetDVSInit.cpp" />
     <ClCompile Include="WidgetImageView.cpp" />
     <ClCompile Include="WidgetTableView.cpp" />
@@ -208,9 +208,6 @@
     <QtMoc Include="DialogDVSStationaryNoise.h" />
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="qcustomplot.h" />
-  </ItemGroup>
-  <ItemGroup>
     <QtMoc Include="DialogAPSFunction.h" />
     <QtMoc Include="DialogAPSInit.h" />
     <QtMoc Include="DialogDVSShow.h" />
@@ -244,6 +241,7 @@
     <QtMoc Include="DialogAPSOETC.h" />
     <QtMoc Include="DoubleSlider.h" />
     <QtMoc Include="DialogAPSPTCTest.h" />
+    <QtMoc Include="qcustomplot.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
