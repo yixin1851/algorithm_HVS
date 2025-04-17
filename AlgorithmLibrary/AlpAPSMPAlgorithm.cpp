@@ -304,6 +304,7 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	BadpixelRes.CoupletNum = 0;
 	BadpixelRes.LadderNum = 0;
 	BadpixelRes.SingletNum = 0;
+	BadpixelRes.MaxClusterSize = 0;
 	BadpixelRes.BadPixelMask.BadPixelNum = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
@@ -344,6 +345,10 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 			BadpixelRes.ClusterNum += BadpixelRes.SubFrameBadpixelData[i].ClusterNum;
 			BadpixelRes.CoupletNum += BadpixelRes.SubFrameBadpixelData[i].CoupletNum;
 			BadpixelRes.SingletNum += BadpixelRes.SubFrameBadpixelData[i].SingletNum;
+			if (BadpixelRes.SubFrameBadpixelData[i].MaxClusterSize > BadpixelRes.MaxClusterSize)
+			{
+				BadpixelRes.MaxClusterSize = BadpixelRes.SubFrameBadpixelData[i].MaxClusterSize;
+			}
 			Local Total;
 			for (uint32_t n = 0; n < BadpixelRes.SubFrameBadpixelData[i].BadPixelMask.BadPixelNum; n++)
 			{
@@ -429,6 +434,7 @@ bool CAlpAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	HotpixelRes.CoupletNum = 0;
 	HotpixelRes.LadderNum = 0;
 	HotpixelRes.SingletNum = 0;
+	HotpixelRes.MaxClusterSize = 0;
 	HotpixelRes.BadPixelMask.BadPixelNum = 0;
 	HotpixelRes.BadPixelMask.LocalData.clear();
 	HotpixelRes.BadPixelMask.Flag.clear();
@@ -469,6 +475,10 @@ bool CAlpAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 			HotpixelRes.ClusterNum += HotpixelRes.SubFrameBadpixelData[i].ClusterNum;
 			HotpixelRes.CoupletNum += HotpixelRes.SubFrameBadpixelData[i].CoupletNum;
 			HotpixelRes.SingletNum += HotpixelRes.SubFrameBadpixelData[i].SingletNum;
+			if (HotpixelRes.SubFrameBadpixelData[i].MaxClusterSize > HotpixelRes.MaxClusterSize)
+			{
+				HotpixelRes.MaxClusterSize = HotpixelRes.SubFrameBadpixelData[i].MaxClusterSize;
+			}
 			Local Total;
 			for (uint32_t n = 0; n < HotpixelRes.SubFrameBadpixelData[i].BadPixelMask.BadPixelNum; n++)
 			{
@@ -2609,6 +2619,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 	BadpixelRes.SingletNum = 0;
 	BadpixelRes.CoupletNum = 0;
 	BadpixelRes.ClusterNum = 0;
+	BadpixelRes.MaxClusterSize = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
 	BadpixelRes.BadPixelMask.DiffData.clear();
@@ -2729,6 +2740,10 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 					BadpixelRes.ClusterNum++;
 					uFlag = APS_BAD_PIXEL_CLUSTER_FLAG;
 				}
+				if (AreaSize > BadpixelRes.MaxClusterSize )
+				{
+					BadpixelRes.MaxClusterSize = AreaSize;
+				}
 				for (uint32_t n = 0; n < Search.size(); n++)
 				{
 					BadpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
@@ -2843,6 +2858,7 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 	HotpixelRes.SingletNum = 0;
 	HotpixelRes.CoupletNum = 0;
 	HotpixelRes.ClusterNum = 0;
+	HotpixelRes.MaxClusterSize = 0;
 	HotpixelRes.BadPixelMask.LocalData.clear();
 	HotpixelRes.BadPixelMask.Flag.clear();
 	HotpixelRes.BadPixelMask.DiffData.clear();
@@ -2962,6 +2978,10 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 				{
 					HotpixelRes.ClusterNum++;
 					uFlag = APS_HOT_PIXEL_CLUSTER_FLAG;
+				}
+				if (AreaSize > HotpixelRes.MaxClusterSize)
+				{
+					HotpixelRes.MaxClusterSize = AreaSize;
 				}
 				for (uint32_t n = 0; n < Search.size(); n++)
 				{
