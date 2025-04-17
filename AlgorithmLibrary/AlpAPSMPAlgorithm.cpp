@@ -929,12 +929,12 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 	ShadingRes.ColorShadingRGLT = ShadingRes.ColorShadingRGData[0][0];
 	ShadingRes.ColorShadingRGLB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][0];
 	ShadingRes.ColorShadingRGRT = ShadingRes.ColorShadingRGData[0][m_AlgorithmThre.nColorShadingColBlockNum - 1];
-	ShadingRes.ColorShadingRGLB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+	ShadingRes.ColorShadingRGRB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
 
 	ShadingRes.ColorShadingBGLT = ShadingRes.ColorShadingBGData[0][0];
 	ShadingRes.ColorShadingBGLB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][0];
 	ShadingRes.ColorShadingBGRT = ShadingRes.ColorShadingBGData[0][m_AlgorithmThre.nColorShadingColBlockNum - 1];
-	ShadingRes.ColorShadingBGLB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+	ShadingRes.ColorShadingBGRB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
 
 	return true;
 }
