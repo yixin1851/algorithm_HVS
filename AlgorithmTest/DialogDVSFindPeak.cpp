@@ -12,6 +12,7 @@ CDialogDVSFindPeak::CDialogDVSFindPeak(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditIndexStart->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditPeakCycle->setValidator(new QIntValidator(0, 100000, this));
+	ui.lineEditPeakNum->setValidator(new QIntValidator(0, 100000, this));
 
 	ui.lineEditPeakCycle->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nPeakCycle));
 
@@ -26,6 +27,7 @@ void CDialogDVSFindPeak::FindPeak()
 	bool bRet = true;
 	uint32_t nIndexStart = ui.lineEditIndexStart->text().toUInt();
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
+	uint32_t nPeakNumber = ui.lineEditPeakNum->text().toUInt();
 
 	uint32_t nLightType = ui.comboBoxLightType->currentIndex();
 
@@ -37,7 +39,7 @@ void CDialogDVSFindPeak::FindPeak()
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pDVSAlgoInterface->FindPeak(nIndexStart, nNumber, m_Data, DVSLightTrigerType(nLightType+1));
+	bRet = m_pDVSAlgoInterface->FindPeak(nIndexStart, nNumber, nPeakNumber, m_Data, DVSLightTrigerType(nLightType+1));
 	auto end = clock();
 	time = end - start;
 	if (bRet)

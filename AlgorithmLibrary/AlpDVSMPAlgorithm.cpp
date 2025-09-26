@@ -8,6 +8,16 @@
 
 constexpr uint32_t DVS_MaxThreadNum = 8;
 
+struct PeakAndHeight {
+	uint32_t peak;
+	uint32_t peekheight;
+};
+
+// 比较函数，用于std::sort
+bool comparePeakAndHeight(const PeakAndHeight& a, const PeakAndHeight& b) {
+	return a.peekheight < b.peekheight;
+}
+
 CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 {
 	m_nSiteNum = nSiteNum;
@@ -16,6 +26,7 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	m_bMultiThreadEnable = false;
 	m_AlgorithmThre.dDeadPixelThre = 0.8;
 	m_AlgorithmThre.dHotLineThre = 0.5;
+	m_AlgorithmThre.dDeadLineThre = 0.5;
 	m_AlgorithmThre.dHotPixelThre = 0.8;
 	m_AlgorithmThre.nStationaryUniformityRowBlockNum = 5;
 	m_AlgorithmThre.nStationaryUniformityColBlockNum = 5;
@@ -25,6 +36,9 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	//m_AlgorithmThre.dFindPeakThre = 0.75;
 	m_nCode = code;
 	m_AlgorithmThre.nPeakCycle = 20;
+	m_AlgorithmThre.dFlashRatioThre = 0.15;
+	m_AlgorithmThre.nHotPixelClusterSizeThre = 16;
+	m_AlgorithmThre.nDeadPixelClusterSizeThre = 16;
 	m_PixelFormat = Pixelformat;
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
@@ -135,42 +149,58 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 	uint32_t nRowSize = m_ActiveArea.Down - m_ActiveArea.Up + 1;
 	uint32_t nColSize = m_ActiveArea.Right - m_ActiveArea.Left + 1;
 	uint32_t nAllSize = nRowSize * nColSize;
+
+	StationaryNoiseRes.nFlashFrameNumber = 0;
+
 	StationaryNoiseRes.dStationaryNoiseMeanAll = Mean(EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseMeanOn = Mean(EventsNumber.OnEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseMeanOff = Mean(EventsNumber.OffEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
+
+	double dMaxValue;
+	uint32_t nLocal;
+	Max(dMaxValue, nLocal, EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber);
+	StationaryNoiseRes.dMaxStationaryNoise = dMaxValue / nAllSize * 100;
 
 	StationaryNoiseRes.dStationaryNoiseStdAll = Std(EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseStdOn = Std(EventsNumber.OnEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseStdOff = Std(EventsNumber.OffEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 
-	std::vector<double> RowMeanAllEvents(nRowSize, 0);
-	std::vector<double> ColMeanAllEvents(nColSize, 0);
+	for (int i = 0; i < nNumber; i++)
+	{
+		if (1.0 * EventsNumber.AllEventsNum[SubFrameIndex::All][i] / nAllSize > m_AlgorithmThre.dFlashRatioThre)
+		{
+			StationaryNoiseRes.nFlashFrameNumber++;
+		}
+	}
 
-	for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
+	std::vector<uint32_t> MaxRowEvents(nNumber, 0);
+	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 	{
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 		{
-			RowMeanAllEvents[nRows - m_ActiveArea.Up] += m_RawDataContainer[nIndexStart + nIndex].m_RowAllEventsNum[nRows];
+			if (m_RawDataContainer[nIndexStart + nIndex].m_RowAllEventsNum[nRows] > MaxRowEvents[nIndex])
+			{
+				MaxRowEvents[nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_RowAllEventsNum[nRows];
+			}
 		}
-		RowMeanAllEvents[nRows - m_ActiveArea.Up] /= nNumber;
 	}
-	for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
+	StationaryNoiseRes.dStationaryRowTNoise = Mean(MaxRowEvents, nNumber) / nColSize * 100;
+
+	std::vector<uint32_t> MaxColEvents(nNumber, 0);
+	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 	{
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+		for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
 		{
-			ColMeanAllEvents[nCols - m_ActiveArea.Left] += m_RawDataContainer[nIndexStart + nIndex].m_ColAllEventsNum[nCols];
+			if (m_RawDataContainer[nIndexStart + nIndex].m_ColAllEventsNum[nCols] > MaxColEvents[nIndex])
+			{
+				MaxColEvents[nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_ColAllEventsNum[nCols];
+			}
 		}
-		ColMeanAllEvents[nCols - m_ActiveArea.Left] /= nNumber;
 	}
+	StationaryNoiseRes.dStationaryColTNoise = Mean(MaxColEvents, nNumber) / nRowSize * 100;
 
 	double MaxValue = 0;
 	uint32_t MaxLocal = 0;
-
-	Max(MaxValue, MaxLocal, RowMeanAllEvents, nRowSize);
-	StationaryNoiseRes.dStationaryRowSNoise = 100.0 * (MaxValue - Mean(RowMeanAllEvents, nRowSize)) / nColSize;
-
-	Max(MaxValue, MaxLocal, ColMeanAllEvents, nColSize);
-	StationaryNoiseRes.dStationaryColSNoise = 100.0 * (MaxValue - Mean(ColMeanAllEvents, nColSize)) / nRowSize;
 
 	return true;
 }
@@ -316,16 +346,16 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 					Local temp = Search.top();
 					Search.pop();
 					AreaSize++;
-					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 					{
-						if (nTempRows < m_nTotalRow)
+						if (nTempRows >=0 && nTempRows < m_nTotalRow)
 						{
-							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 							{
-								if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								if (nTempCols >= 0 && nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
 									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-									Search.push({ nTempRows , nTempCols });
+									Search.push({ (uint32_t)nTempRows ,(uint32_t)nTempCols });
 								}
 							}
 						}
@@ -347,7 +377,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 				{
 					HotpixelRes.FourConnectedNum++;
 				}
-				else if (AreaSize > 4)
+				else if (AreaSize >= m_AlgorithmThre.nHotPixelClusterSizeThre)
 				{
 					HotpixelRes.ClusterNum++;
 				}
@@ -358,95 +388,8 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 
 	return true;
 }
-#if 0
-bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, PeakInfo& Peak, LightTrigerType Light)
-{
-	if (0 == m_AlgorithmThre.nFindPeakNum)
-	{
-		std::string strErr = "FindPeak: FindPeakNum error";
-		WriteLog(strErr);
-		m_nErrCode = FIND_PEAK_NUM_SET_ERROR;
-		return false;
-	}
 
-	if (nNumber < m_AlgorithmThre.nFindPeakNum || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
-	{
-		std::string strErr = "FindPeak: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr);
-		m_nErrCode = DATA_INDEX_ERROR;
-		return false;
-	}
-
-	EventsNumberCountData EventsNumberCountRes;
-	EventsNumberCount(nIndexStart, nNumber, EventsNumberCountRes);
-
-	Peak.nOffEventsPeakNumber = 0;
-	Peak.OffEventsPeakPos.clear();
-	Peak.nOnEventsPeakNumber = 0;
-	Peak.OnEventsPeakPos.clear();
-
-	if (Light & LightTrigerType::OffEventsOnly)
-	{
-		std::vector<int32_t> Gradient(nNumber - 1);
-		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		{
-			Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
-		}
-		std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
-
-		double GradientThre = 0;
-		for (uint32_t nIndex = 1; nIndex <= m_AlgorithmThre.nFindPeakNum; nIndex++)
-		{
-			GradientThre += Gradient[nIndex];
-		}
-		GradientThre /= m_AlgorithmThre.nFindPeakNum;
-		GradientThre *= m_AlgorithmThre.dFindPeakThre;
-
-		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		{
-			double Gradient = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
-
-			if (Gradient >= GradientThre)
-			{
-				++Peak.nOffEventsPeakNumber;
-				Peak.OffEventsPeakPos.push_back(nIndexStart + nIndex + 1);
-			}
-		}
-	}
-
-	if (Light & LightTrigerType::OnEventsOnly)
-	{
-		std::vector<int32_t> Gradient(nNumber - 1);
-		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		{
-			Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
-		}
-		std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
-
-		double GradientThre = 0;
-		for (uint32_t nIndex = 1; nIndex <= m_AlgorithmThre.nFindPeakNum; nIndex++)
-		{
-			GradientThre += Gradient[nIndex];
-		}
-		GradientThre /= m_AlgorithmThre.nFindPeakNum;
-		GradientThre *= m_AlgorithmThre.dFindPeakThre;
-
-		for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		{
-			double Gradient = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
-
-			if (Gradient >= GradientThre)
-			{
-				++Peak.nOnEventsPeakNumber;
-				Peak.OnEventsPeakPos.push_back(nIndexStart + nIndex + 1);
-			}
-		}
-	}
-
-	return true;
-}
-#endif
-bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo& Peak, DVSLightTrigerType Light)
+bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum, DVSPeakInfo& Peak, DVSLightTrigerType Light)
 {
 	if (0 == m_AlgorithmThre.nPeakCycle)
 	{
@@ -476,117 +419,84 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 
 	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
-		//std::vector<int32_t> Gradient(nNumber - 1);
-		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		//{
-		//	Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
-		//}
-		//std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
-
-		//double GradientThre = 0;
-		//for (uint32_t nIndex = 1; nIndex <= m_AlgorithmThre.nFindPeakNum; nIndex++)
-		//{
-		//	GradientThre += Gradient[nIndex];
-		//}
-		//GradientThre /= m_AlgorithmThre.nFindPeakNum;
-		//GradientThre *= m_AlgorithmThre.dFindPeakThre;
-
-		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		//{
-		//	double Gradient = ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex]));
-
-		//	if (Gradient >= GradientThre)
-		//	{
-		//		++Peak.nOffEventsPeakNumber;
-		//		Peak.OffEventsPeakPos.push_back(nIndexStart + nIndex + 1);
-		//	}
-		//}
-		std::vector<double> EventsData(nCycle, 0);
-		std::vector<uint32_t> NumberData(nCycle, 0);
-
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+		std::vector<uint32_t> peaks, left_edge, right_edge, peak_height, keep;
+		local_maxima_1d(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All], nNumber, peaks, left_edge, right_edge);
+		for (int i = 0; i < peaks.size(); i++)
 		{
-			EventsData[(nIndexStart + nIndex) % nCycle] += EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][nIndex];
-			NumberData[(nIndexStart + nIndex) % nCycle]++;
+			peak_height.push_back(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][peaks[i]]);
 		}
+		select_by_peak_distance(peaks, peak_height, nCycle / 2, keep);
 
-		for (uint32_t nIndex = 0; nIndex < nCycle; nIndex++)
+		std::vector<PeakAndHeight> peak_and_height;
+		for (int i = 0; i < peaks.size(); i++)
 		{
-			if (NumberData[nIndex] > 0)
-				EventsData[nIndex] /= NumberData[nIndex];
-		}
-
-		double dMaxValue = 0;
-		uint32_t nMaxLocal = 0;
-		Max(dMaxValue, nMaxLocal, EventsData, EventsData.size());
-
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			if (((nIndexStart + nIndex) % nCycle) == nMaxLocal)
+			if (keep[i] == 1)
 			{
-				++Peak.nOffEventsPeakNumber;
-				Peak.OffEventsPeakPos.push_back(nIndexStart + nIndex);
+				peak_and_height.push_back({ peaks[i], peak_height[i] });
+			}
+		}
+
+		if (peak_and_height.size() < nPeakNum)
+		{
+			std::string strErr = "FindPeak: Peak Number error: Find Peak Num: " + std::to_string(peak_and_height.size()) + ", Need Peak Num: " + std::to_string(nPeakNum);
+			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
+			return false;
+		}
+
+		std::sort(peak_and_height.begin(), peak_and_height.end(), comparePeakAndHeight);
+
+		for (int i = peak_and_height.size() - 1; i >= 0; i--)
+		{
+			++Peak.nOffEventsPeakNumber;
+			Peak.OffEventsPeakPos.push_back(nIndexStart + peak_and_height[i].peak);
+			if (Peak.nOffEventsPeakNumber == nPeakNum)
+			{
+				break;
 			}
 		}
 	}
 
 	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
-		//std::vector<int32_t> Gradient(nNumber - 1);
-		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		//{
-		//	Gradient[nIndex] = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
-		//}
-		//std::sort(Gradient.begin(), Gradient.end(), std::greater<int32_t>());
-
-		//double GradientThre = 0;
-		//for (uint32_t nIndex = 1; nIndex <= m_AlgorithmThre.nFindPeakNum; nIndex++)
-		//{
-		//	GradientThre += Gradient[nIndex];
-		//}
-		//GradientThre /= m_AlgorithmThre.nFindPeakNum;
-		//GradientThre *= m_AlgorithmThre.dFindPeakThre;
-
-		//for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex++)
-		//{
-		//	double Gradient = ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex + 1])) - ((int32_t)(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex]));
-
-		//	if (Gradient >= GradientThre)
-		//	{
-		//		++Peak.nOnEventsPeakNumber;
-		//		Peak.OnEventsPeakPos.push_back(nIndexStart + nIndex + 1);
-		//	}
-		//}
-
-		std::vector<double> EventsData(nCycle, 0);
-		std::vector<uint32_t> NumberData(nCycle, 0);
-
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+		std::vector<uint32_t> peaks, left_edge, right_edge, peak_height, keep;
+		local_maxima_1d(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All], nNumber, peaks, left_edge, right_edge);
+		for (int i = 0; i < peaks.size(); i++)
 		{
-			EventsData[(nIndexStart + nIndex) % nCycle] += EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][nIndex];
-			NumberData[(nIndexStart + nIndex) % nCycle]++;
+			peak_height.push_back(EventsNumberCountRes.OnEventsNum[SubFrameIndex::All][peaks[i]]);
 		}
+		select_by_peak_distance(peaks, peak_height, nCycle / 2, keep);
 
-		for (uint32_t nIndex = 0; nIndex < nCycle; nIndex++)
+		std::vector<PeakAndHeight> peak_and_height;
+		for (int i = 0; i < peaks.size(); i++)
 		{
-			if (NumberData[nIndex] > 0)
-				EventsData[nIndex] /= NumberData[nIndex];
-		}
-
-		double dMaxValue = 0;
-		uint32_t nMaxLocal = 0;
-		Max(dMaxValue, nMaxLocal, EventsData, EventsData.size());
-
-		for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
-		{
-			if (((nIndexStart + nIndex) % nCycle) == nMaxLocal)
+			if (keep[i] == 1)
 			{
-				++Peak.nOnEventsPeakNumber;
-				Peak.OnEventsPeakPos.push_back(nIndexStart + nIndex);
+				peak_and_height.push_back({ peaks[i], peak_height[i] });
 			}
 		}
-	}
 
+		if (peak_and_height.size() < nPeakNum)
+		{
+			std::string strErr = "FindPeak: Peak Number error: Find Peak Num: " + std::to_string(peak_and_height.size()) + ", Need Peak Num: " + std::to_string(nPeakNum);
+			WriteLog(strErr);
+			m_nErrCode = PEAK_NUM_ERROR;
+			return false;
+		}
+
+		std::sort(peak_and_height.begin(), peak_and_height.end(), comparePeakAndHeight);
+
+		for (int i = peak_and_height.size() - 1; i >= 0; i--)
+		{
+			++Peak.nOnEventsPeakNumber;
+			Peak.OnEventsPeakPos.push_back(nIndexStart + peak_and_height[i].peak);
+			if (Peak.nOnEventsPeakNumber == nPeakNum)
+			{
+				break;
+			}
+		}
+
+	}
 	return true;
 }
 
@@ -602,7 +512,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
-		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
+		if (FindPeak(nIndexStart, nNumber, nPeakNum, tempPeak, Light))
 		{
 			Peak = &tempPeak;
 		}
@@ -728,7 +638,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
-		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
+		if (FindPeak(nIndexStart, nNumber, nPeakNum, tempPeak, Light))
 		{
 			Peak = &tempPeak;
 		}
@@ -849,7 +759,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
-		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
+		if (FindPeak(nIndexStart, nNumber, nPeakNum, tempPeak, Light))
 		{
 			Peak = &tempPeak;
 		}
@@ -1031,7 +941,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
-		if (FindPeak(nIndexStart, nNumber, tempPeak, Light))
+		if (FindPeak(nIndexStart, nNumber, nPeakNum, tempPeak, Light))
 		{
 			Peak = &tempPeak;
 		}
@@ -1057,12 +967,15 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
+		std::vector<uint32_t> RowBadPixelNum(m_nTotalRow, 0);
+		std::vector<uint32_t> ColBadPixelNum(m_nTotalCol, 0);
 
 		BadpixelRes.OffEventsBadPixelMask.BadPixelNum = 0;
 		BadpixelRes.OffEventsBadPixelMask.Flag.clear();
 		BadpixelRes.OffEventsBadPixelMask.LocalData.clear();
 		BadpixelRes.nOffEventsClusterNum = 0;
 		BadpixelRes.nOffEventsDeadPixelNum = 0;
+		BadpixelRes.nOffEventsDeadLineNum = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1092,8 +1005,25 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					BadpixelRes.OffEventsBadPixelMask.LocalData.push_back({ nRows, nCols });
 					BadpixelRes.OffEventsBadPixelMask.Flag.push_back(DVS_DEAD_PIXEL_FLAG);
 					BadpixelRes.nOffEventsDeadPixelNum++;
+					++RowBadPixelNum[nRows];
+					++ColBadPixelNum[nCols];
 					BadPixelMask[nRows][nCols] = DVS_DEAD_PIXEL_FLAG;
 				}
+			}
+		}
+
+		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
+		{
+			if (RowBadPixelNum[nRows] > nColSize * m_AlgorithmThre.dDeadLineThre)
+			{
+				++BadpixelRes.nOffEventsDeadLineNum;
+			}
+		}
+		for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
+		{
+			if (ColBadPixelNum[nCols] > nRowSize * m_AlgorithmThre.dDeadLineThre)
+			{
+				++BadpixelRes.nOffEventsDeadLineNum;
 			}
 		}
 
@@ -1114,22 +1044,22 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 						Local temp = Search.top();
 						Search.pop();
 						AreaSize++;
-						for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+						for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 						{
-							if (nTempRows < m_nTotalRow)
+							if (nTempRows >= 0 && nTempRows < m_nTotalRow)
 							{
-								for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+								for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 								{
 									if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 									{
 										BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-										Search.push({ nTempRows , nTempCols });
+										Search.push({ (uint32_t)nTempRows , (uint32_t)nTempCols });
 									}
 								}
 							}
 						}
 					}
-					if (AreaSize > 1)
+					if (AreaSize >= m_AlgorithmThre.nDeadPixelClusterSizeThre)
 					{
 						BadpixelRes.nOffEventsClusterNum++;
 					}
@@ -1148,12 +1078,15 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
+		std::vector<uint32_t> RowBadPixelNum(m_nTotalRow, 0);
+		std::vector<uint32_t> ColBadPixelNum(m_nTotalCol, 0);
 
 		BadpixelRes.OnEventsBadPixelMask.BadPixelNum = 0;
 		BadpixelRes.OnEventsBadPixelMask.Flag.clear();
 		BadpixelRes.OnEventsBadPixelMask.LocalData.clear();
 		BadpixelRes.nOnEventsClusterNum = 0;
 		BadpixelRes.nOnEventsDeadPixelNum = 0;
+		BadpixelRes.nOnEventsDeadLineNum = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1183,8 +1116,25 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					BadpixelRes.OnEventsBadPixelMask.LocalData.push_back({ nRows, nCols });
 					BadpixelRes.OnEventsBadPixelMask.Flag.push_back(DVS_DEAD_PIXEL_FLAG);
 					BadpixelRes.nOnEventsDeadPixelNum++;
+					++RowBadPixelNum[nRows];
+					++ColBadPixelNum[nCols];
 					BadPixelMask[nRows][nCols] = DVS_DEAD_PIXEL_FLAG;
 				}
+			}
+		}
+
+		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
+		{
+			if (RowBadPixelNum[nRows] > nColSize * m_AlgorithmThre.dDeadLineThre)
+			{
+				++BadpixelRes.nOnEventsDeadLineNum;
+			}
+		}
+		for (uint32_t nCols = m_ActiveArea.Left; nCols <= m_ActiveArea.Right; nCols++)
+		{
+			if (ColBadPixelNum[nCols] > nRowSize * m_AlgorithmThre.dDeadLineThre)
+			{
+				++BadpixelRes.nOnEventsDeadLineNum;
 			}
 		}
 
@@ -1219,7 +1169,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 							}
 						}
 					}
-					if (AreaSize > 1)
+					if (AreaSize >= m_AlgorithmThre.nDeadPixelClusterSizeThre)
 					{
 						BadpixelRes.nOnEventsClusterNum++;
 					}
@@ -1414,6 +1364,71 @@ void CAlpDVSMPAlgorithm::GetChannel(uint32_t nRows, uint32_t nCols, SubFrameInde
 			nChannel = SubFrameIndex::Gb;
 		}
 		break;
+	}
+}
+
+void CAlpDVSMPAlgorithm::local_maxima_1d(std::vector<uint32_t>& RawData, uint32_t nLens, std::vector<uint32_t>& midpoints, std::vector<uint32_t>& left_edges, std::vector<uint32_t>& right_edges)
+{
+	int i = 1;
+	int i_max = nLens - 1;
+	int m = 0;
+	left_edges.resize(nLens / 2, 0);
+	right_edges.resize(nLens / 2, 0);
+	midpoints.resize(nLens / 2, 0);
+	while (i < i_max)
+	{
+		if (RawData[i - 1] < RawData[i])
+		{
+			int i_ahead = i + 1;
+			while (i_ahead < i_max && RawData[i_ahead] == RawData[i])
+			{
+				i_ahead += 1;
+			}
+			if (RawData[i_ahead] < RawData[i])
+			{
+				left_edges[m] = i;
+				right_edges[m] = i_ahead - 1;
+				midpoints[m] = (left_edges[m] + right_edges[m]) / 2;
+				m += 1;
+				i = i_ahead;
+			}
+		}
+		i += 1;
+	}
+	left_edges.resize(m);
+	right_edges.resize(m);
+	midpoints.resize(m);
+}
+
+void CAlpDVSMPAlgorithm::select_by_peak_distance(std::vector<uint32_t>& peak, std::vector<uint32_t>& peak_height, uint32_t nDistance, std::vector<uint32_t>& keep)
+{
+	keep.resize(peak_height.size(), 1);
+	std::vector<PeakAndHeight> priority_to_position;
+	for (uint32_t i = 0; i < peak_height.size(); i++)
+	{
+		priority_to_position.push_back({i, peak_height[i]});
+	}
+	std::sort(priority_to_position.begin(), priority_to_position.end(), comparePeakAndHeight);
+
+	for (int i = priority_to_position.size() - 1; i >= 0; i--)
+	{
+		int j = priority_to_position[i].peak;
+		if (keep[j] == 0)
+		{
+			continue;
+		}
+		int k = j - 1;
+		while (0 <= k && ((peak[j] - peak[k]) < nDistance))
+		{
+			keep[k] = 0;
+			k -= 1;
+		}
+		k = j + 1;
+		while (k < peak.size() && ((peak[k] - peak[j]) < nDistance))
+		{
+			keep[k] = 0;
+			k += 1;
+		}
 	}
 }
 
@@ -1733,7 +1748,7 @@ void CAlpDVSMPAlgorithm::SetRawDataSize(uint32_t nRow, uint32_t nCol)
 
 std::string CAlpDVSMPAlgorithm::GetVersion()
 {
-	return DVS_MP_ALGORITHM_VERSION;
+	return MP_ALGORITHM_VERSION;
 }
 
 int CAlpDVSMPAlgorithm::GetCode()

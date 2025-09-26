@@ -76,20 +76,52 @@ void CDialogAPSInit::RawDataInfoInit(int nIndex)
 		ui.lineEditLeft->setText(QString::number(0));
 		ui.lineEditRight->setText(QString::number(1343));
 	}
+	else if (nIndex == SensorType::ALP_014AA)
+	{
+		ui.lineEditTotalRowNumber->setText(QString::number(960));
+		ui.lineEditTotalColNumber->setText(QString::number(1280));
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(959));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1279));
+	}
+	else if (nIndex == SensorType::ALP_014BA)
+	{
+		ui.lineEditTotalRowNumber->setText(QString::number(1024));
+		ui.lineEditTotalColNumber->setText(QString::number(1280));
+		ui.lineEditUp->setText(QString::number(0));
+		ui.lineEditDown->setText(QString::number(1023));
+		ui.lineEditLeft->setText(QString::number(0));
+		ui.lineEditRight->setText(QString::number(1279));
+	}
 }
 
 void CDialogAPSInit::ChangeUpDown()
 {
 	uint32_t nRow = ui.lineEditTotalRowNumber->text().toUInt();
 	ui.lineEditUp->setText(QString::number(0));
-	ui.lineEditDown->setText(QString::number(nRow / 2 - 1));
+	if (ui.comboBoxSensorType->currentIndex() == SensorType::ALP_014BA || ui.comboBoxSensorType->currentIndex() == SensorType::ALP_014AA)
+	{
+		ui.lineEditDown->setText(QString::number(nRow - 1));
+	}
+	else
+	{
+		ui.lineEditDown->setText(QString::number(nRow / 2 - 1));
+	}
 }
 
 void CDialogAPSInit::ChangeLeftRight()
 {
 	uint32_t nCol = ui.lineEditTotalColNumber->text().toUInt();
 	ui.lineEditLeft->setText(QString::number(0));
-	ui.lineEditRight->setText(QString::number(nCol / 2 - 1));
+	if (ui.comboBoxSensorType->currentIndex() == SensorType::ALP_014BA || ui.comboBoxSensorType->currentIndex() == SensorType::ALP_014AA)
+	{
+		ui.lineEditRight->setText(QString::number(nCol - 1));
+	}
+	else
+	{
+		ui.lineEditRight->setText(QString::number(nCol / 2 - 1));
+	}
 }
 
 void CDialogAPSInit::Init()

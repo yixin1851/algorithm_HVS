@@ -59,13 +59,13 @@ bool CAlp014AAAPSMPAlgorithm::ImportRawData(uint8_t* pRawData, uint64_t nLens, u
 	uint8_t Header[8] = { 0 };
 	uint8_t Footer[8] = { 0 };
 
-	uint8_t Header_003CA[] = { 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xf0, 0xe5 };
-	uint8_t Footer_003CA[] = { 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xf1, 0xe5 };
+	uint8_t Header_V4[] = { 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xf2, 0xee };
+	uint8_t Footer_V4[] = { 0xf3, 0xf3, 0xf3, 0xf3, 0xf3, 0xf3, 0xf3, 0xee };
 
-	memcpy_s(Header, sizeof(Header), Header_003CA, sizeof(Header_003CA));
-	memcpy_s(Footer, sizeof(Footer), Footer_003CA, sizeof(Footer_003CA));
-	nHeaderSize = 64;
-	nFooterSize = 8;
+	memcpy_s(Header, sizeof(Header), Header_V4, sizeof(Header_V4));
+	memcpy_s(Footer, sizeof(Footer), Footer_V4, sizeof(Footer_V4));
+	nHeaderSize = 0x50;
+	nFooterSize = 0x20;
 
 	if (m_RawType == RAW8)
 	{
@@ -1785,4 +1785,16 @@ bool CAlp014AAAPSMPAlgorithm::GetBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 		bRet = bRet && bSubRes[i];
 	}
 	return bRet;
+}
+
+void CAlp014AAAPSMPAlgorithm::SetDataToFrame(uint32_t nIndex, uint32_t nRowStart, uint32_t nRows, uint16_t* RawData)
+{
+	for (uint32_t nRowIndex = nRowStart; nRowIndex < nRowStart + nRows; nRowIndex++)
+	{
+		uint32_t nBase = nRowIndex * m_nTotalCol;
+		for (uint32_t nColIndex = 0; nColIndex < m_nTotalCol; nColIndex++)
+		{
+			RawData[nBase + nColIndex] = uint16_t(m_RawDataContainer[0][nIndex].m_RawData[nRowIndex][nColIndex]);
+		}
+	}
 }

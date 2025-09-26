@@ -53,6 +53,7 @@ int main()
 	path = "D:\\Data\\003CA-MONO-1#1\\Pedestal_variation\\x1_33ms_30fps";
 	//GetPedestalVariation(path);
 
+	path = "D:\\014aa\\014AA__2024_11_08\\APS_Optical_Automation_Test_Result_2024_12_09_15_50_40\\Dark";
 	path = "D:\\Data\\014AA\\60_16_66";
 	GetDSNU(path);
 	GetPedestalVariation(path);

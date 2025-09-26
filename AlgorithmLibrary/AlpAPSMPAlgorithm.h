@@ -40,6 +40,7 @@ public:
 	virtual bool Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSSNRType& SSNRRes);
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData);
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData);
+	virtual bool Show(uint32_t nIndex, uint16_t* RawData);
 	virtual void SetMultiThreadEnable(bool bEnable = true);
 	virtual void SetLogEnable(bool bEnable = true);
 	virtual void SetAlgorithmThre(APSAlgorithmThre&AlgoThre);
@@ -85,6 +86,7 @@ protected:
 	void SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex nChannelIndex, Local& TotalLocal);
 	void GetDataFromSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double &dValue);
 	void TotalLocalToSubFrameLocal(Local TotalLocal, SubFrameIndex &nChannelIndex, Local &SubLocal);
+	void SetDataToFrame(uint32_t nIndex, uint32_t nRowStart, uint32_t nRows, uint16_t * RawData);
 
 	void SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, SubFrameIndex nChannelIndex, APSReadNoiseType& ReadNoiseRes, bool& bRes, RawDataContainer& DataContainer);
 

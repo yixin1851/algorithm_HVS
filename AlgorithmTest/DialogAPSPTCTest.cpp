@@ -223,7 +223,7 @@ void CDialogAPSPTC::PTC()
 
 		std::vector<double> DataMean[17], TempNoise[17], RowTemp[16], ColTemp[16], PixelTemp[16], TempRNRatio[16], TempCNRatio[16];
 
-		uint32_t nSubFrame = (m_pAPSAlgoInterface->GetCode() & 1) == 1 ? 16 : 4;
+		uint32_t nSubFrame = m_PTCData[0].datamean.SubFrameDataMean.size();
 
 		for (uint32_t n = 0; n < m_PTCData.size(); n++)
 		{

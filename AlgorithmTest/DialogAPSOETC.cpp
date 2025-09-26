@@ -74,7 +74,7 @@ void CDialogAPSOETC::OETC()
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->OETC(nIndex, nNumber, roi, Gr, m_OETCData);
+	bRet = m_pAPSAlgoInterface->OETC(nIndex, nNumber, roi, Gb, m_OETCData);
 	auto end = clock();
 	time = end - start;
 	if (bRet)

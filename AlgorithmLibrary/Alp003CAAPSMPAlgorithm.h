@@ -13,8 +13,8 @@ public:
 protected:
 	virtual void SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes);
 	virtual void SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& HotpixelRes, bool& bRes);
-	virtual bool DPC_APS_Only(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal);
-	virtual bool DPC_HVS(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal);
+	virtual void DPC_APS_Only(uint32_t nIndex, ROIArea* ROI, std::vector<Local>& BadPixelLocal, bool& bRes);
+	virtual void DPC_HVS(uint32_t nIndex, ROIArea* ROI, std::vector<Local>& BadPixelLocal, bool& bRes);
 private:
 	bool m_bHVS_DPC;
 };

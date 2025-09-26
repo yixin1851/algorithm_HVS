@@ -119,47 +119,86 @@ void CDialogAPSBadPixel::BadPixel()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		RowName << "BadPixelNum" << "SingletNum" << "CoupletNum" << "ClusterNum" << "LadderNum" << "DefectRowNum" << "DefectColNum";
-		ColName << "Gb" << "B" << "R" << "Gr" << "Total";
 
-		std::vector<std::vector<double>> Data(7);
-
-		for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+		if (m_BadPixel.SubFrameBadpixelData.size() == 1)
 		{
-			Data[0].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelNum);
-			Data[1].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].SingletNum);
-			Data[2].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].CoupletNum);
-			Data[3].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].ClusterNum);
-			Data[4].push_back(0);
-			Data[5].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].DefectRowNum);
-			Data[6].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].DefectColNum);
-		}
-		Data[0].push_back(m_BadPixel.BadPixelNum);
-		Data[1].push_back(m_BadPixel.SingletNum);
-		Data[2].push_back(m_BadPixel.CoupletNum);
-		Data[3].push_back(m_BadPixel.ClusterNum);
-		Data[4].push_back(m_BadPixel.LadderNum);
-		Data[5].push_back(0);
-		Data[6].push_back(0);
-		m_widgetTableView.SetData(RowName, ColName, Data);
+			RowName << "BadPixelNum" << "SingletNum" << "CoupletNum" << "ClusterNum" << "LadderNum" << "DefectRowNum" << "DefectColNum" << "MaxClusterNum";
+			ColName << "Total";
 
-		uint32_t nRow = 0, nCol = 0;
-		m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
-		nRow /= 2;
-		nCol /= 2;
+			std::vector<std::vector<double>> Data(8);
 
-		uint8_t* pImage = new uint8_t[nRow * nCol];
-		for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
-		{
-			memset(pImage, 0, nRow * nCol);
+			Data[0].push_back(m_BadPixel.BadPixelNum);
+			Data[1].push_back(m_BadPixel.SingletNum);
+			Data[2].push_back(m_BadPixel.CoupletNum);
+			Data[3].push_back(m_BadPixel.ClusterNum);
+			Data[4].push_back(m_BadPixel.LadderNum);
+			Data[5].push_back(m_BadPixel.SubFrameBadpixelData[0].DefectRowNum);
+			Data[6].push_back(m_BadPixel.SubFrameBadpixelData[0].DefectColNum);
+			Data[7].push_back(m_BadPixel.MaxClusterSize);
+			m_widgetTableView.SetData(RowName, ColName, Data);
 
-			for (uint32_t nIndex = 0; nIndex < m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.BadPixelNum; nIndex++)
+			uint32_t nRow = 0, nCol = 0;
+			m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
+
+			uint8_t* pImage = new uint8_t[nRow * nCol];
+			for (uint32_t nChannel = 0; nChannel < 1; nChannel++)
 			{
-				pImage[m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
+				memset(pImage, 0, nRow * nCol);
+
+				for (uint32_t nIndex = 0; nIndex < m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.BadPixelNum; nIndex++)
+				{
+					pImage[m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
+				}
+				m_widgetImageView[nChannel].SetGrayData(pImage, nCol, nRow);
 			}
-			m_widgetImageView[nChannel].SetGrayData(pImage, nCol, nRow);
+			delete[] pImage;
 		}
-		delete[] pImage;
+		else
+		{
+			RowName << "BadPixelNum" << "SingletNum" << "CoupletNum" << "ClusterNum" << "LadderNum" << "DefectRowNum" << "DefectColNum" << "MaxClusterNum";
+			ColName << "Gb" << "B" << "R" << "Gr" << "Total";
+
+			std::vector<std::vector<double>> Data(8);
+
+			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			{
+				Data[0].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelNum);
+				Data[1].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].SingletNum);
+				Data[2].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].CoupletNum);
+				Data[3].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].ClusterNum);
+				Data[4].push_back(0);
+				Data[5].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].DefectRowNum);
+				Data[6].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].DefectColNum);
+				Data[7].push_back(m_BadPixel.SubFrameBadpixelData[nIndex].MaxClusterSize);
+			}
+			Data[0].push_back(m_BadPixel.BadPixelNum);
+			Data[1].push_back(m_BadPixel.SingletNum);
+			Data[2].push_back(m_BadPixel.CoupletNum);
+			Data[3].push_back(m_BadPixel.ClusterNum);
+			Data[4].push_back(m_BadPixel.LadderNum);
+			Data[5].push_back(0);
+			Data[6].push_back(0);
+			Data[7].push_back(m_BadPixel.MaxClusterSize);
+			m_widgetTableView.SetData(RowName, ColName, Data);
+
+			uint32_t nRow = 0, nCol = 0;
+			m_pAPSAlgoInterface->GetRawDataSize(nRow, nCol);
+			nRow /= 2;
+			nCol /= 2;
+
+			uint8_t* pImage = new uint8_t[nRow * nCol];
+			for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All; nChannel++)
+			{
+				memset(pImage, 0, nRow * nCol);
+
+				for (uint32_t nIndex = 0; nIndex < m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.BadPixelNum; nIndex++)
+				{
+					pImage[m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
+				}
+				m_widgetImageView[nChannel].SetGrayData(pImage, nCol, nRow);
+			}
+			delete[] pImage;
+		}
 	}
 	else
 	{
@@ -180,81 +219,118 @@ void CDialogAPSBadPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "Gb,B,R,Gr,Total" << std::endl;
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+			if (m_BadPixel.SubFrameBadpixelData.size() == 1)
 			{
-				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelNum) << ",";
-			}
-			outfile << std::to_string(m_BadPixel.BadPixelNum) << ",";
-			outfile << std::endl;
+				outfile << "Total" << std::endl;
+				outfile << std::to_string(m_BadPixel.BadPixelNum) << ",";
+				outfile << std::endl;
+				outfile << std::to_string(m_BadPixel.SingletNum) << ",";
+				outfile << std::endl;
+				outfile << std::to_string(m_BadPixel.CoupletNum) << ",";
+				outfile << std::endl;
+				outfile << std::to_string(m_BadPixel.ClusterNum) << ",";
+				outfile << std::endl;
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[0].DefectRowNum) << ",";
+				outfile << std::endl;
+				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[0].DefectColNum) << ",";
+				outfile << std::endl;
+				outfile << std::to_string(m_BadPixel.MaxClusterSize) << ",";
+				outfile << std::endl;
 
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].SingletNum) << ",";
-			}
-			outfile << std::to_string(m_BadPixel.SingletNum) << ",";
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].CoupletNum) << ",";
-			}
-			outfile << std::to_string(m_BadPixel.CoupletNum) << ",";
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].ClusterNum) << ",";
-			}
-			outfile << std::to_string(m_BadPixel.ClusterNum) << ",";
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].DefectRowNum) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
-			{
-				outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].DefectColNum) << ",";
-			}
-			outfile << std::endl;
-
-			for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
-			{
-				for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].x) << ",";
+					outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].x) << ",";
 				}
 				outfile << std::endl;
-				for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].y) << ",";
+					outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].y) << ",";
 				}
 				outfile << std::endl;
-				for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
+				for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
 				{
-					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.Flag[i]) << ",";
+					outfile << std::to_string(m_BadPixel.BadPixelMask.Flag[i]) << ",";
 				}
 				outfile << std::endl;
 			}
+			else
+			{
+				outfile << "Gb,B,R,Gr,Total" << std::endl;
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelNum) << ",";
+				}
+				outfile << std::to_string(m_BadPixel.BadPixelNum) << ",";
+				outfile << std::endl;
 
-			for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
-			{
-				outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].x) << ",";
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].SingletNum) << ",";
+				}
+				outfile << std::to_string(m_BadPixel.SingletNum) << ",";
+				outfile << std::endl;
+
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].CoupletNum) << ",";
+				}
+				outfile << std::to_string(m_BadPixel.CoupletNum) << ",";
+				outfile << std::endl;
+
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].ClusterNum) << ",";
+				}
+				outfile << std::to_string(m_BadPixel.ClusterNum) << ",";
+				outfile << std::endl;
+
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].DefectRowNum) << ",";
+				}
+				outfile << std::endl;
+
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].DefectColNum) << ",";
+				}
+				outfile << std::endl;
+
+				for (uint32_t nIndex = 0; nIndex < SubFrameIndex::All; nIndex++)
+				{
+					for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
+					{
+						outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].x) << ",";
+					}
+					outfile << std::endl;
+					for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
+					{
+						outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.LocalData[i].y) << ",";
+					}
+					outfile << std::endl;
+					for (uint32_t i = 0; i < m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.BadPixelNum; i++)
+					{
+						outfile << std::to_string(m_BadPixel.SubFrameBadpixelData[nIndex].BadPixelMask.Flag[i]) << ",";
+					}
+					outfile << std::endl;
+				}
+
+				for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+				{
+					outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].x) << ",";
+				}
+				outfile << std::endl;
+				for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+				{
+					outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].y) << ",";
+				}
+				outfile << std::endl;
+				for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
+				{
+					outfile << std::to_string(m_BadPixel.BadPixelMask.Flag[i]) << ",";
+				}
+				outfile << std::endl;
 			}
-			outfile << std::endl;
-			for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
-			{
-				outfile << std::to_string(m_BadPixel.BadPixelMask.LocalData[i].y) << ",";
-			}
-			outfile << std::endl;
-			for (uint32_t i = 0; i < m_BadPixel.BadPixelMask.BadPixelNum; i++)
-			{
-				outfile << std::to_string(m_BadPixel.BadPixelMask.Flag[i]) << ",";
-			}
-			outfile << std::endl;
 
 			outfile.close();
 		}

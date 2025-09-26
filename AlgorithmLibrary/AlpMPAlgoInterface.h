@@ -33,6 +33,7 @@ typedef enum
 	ALP_003CA,
 	ALP_004AB,
 	ALP_014AA,
+	ALP_014BA,
 }SensorType;
 
 typedef enum
@@ -301,11 +302,15 @@ typedef struct
 	double dHotPixelThre;
 	double dHotLineThre;
 	double dDeadPixelThre;
+	double dDeadLineThre;
+	uint32_t nHotPixelClusterSizeThre;
+	uint32_t nDeadPixelClusterSizeThre;
 	uint32_t nPeakCycle;
 	uint32_t nStationaryUniformityRowBlockNum;
 	uint32_t nStationaryUniformityColBlockNum;
 	uint32_t nSpatialResponseUniformityRowBlockNum;
 	uint32_t nSpatialResponseUniformityColBlockNum;
+	double dFlashRatioThre;
 }DVSAlgorithmThre;
 
 typedef struct
@@ -316,8 +321,10 @@ typedef struct
 	double dStationaryNoiseStdOn;
 	double dStationaryNoiseStdOff;
 	double dStationaryNoiseStdAll;
-	double dStationaryRowSNoise;
-	double dStationaryColSNoise;
+	double dStationaryRowTNoise;
+	double dStationaryColTNoise;
+	uint32_t nFlashFrameNumber;
+	double dMaxStationaryNoise;
 }DVSStationaryNoiseType;
 
 typedef struct
@@ -385,10 +392,12 @@ typedef struct
 typedef struct
 {
 	uint32_t nOffEventsDeadPixelNum;
+	uint32_t nOffEventsDeadLineNum;
 	uint32_t nOffEventsClusterNum;
 	BadPixelMaskType OffEventsBadPixelMask;
 
 	uint32_t nOnEventsDeadPixelNum;
+	uint32_t nOnEventsDeadLineNum;
 	uint32_t nOnEventsClusterNum;
 	BadPixelMaskType OnEventsBadPixelMask;
 }DVSBadpixelType;
@@ -452,6 +461,7 @@ public:
 	virtual bool Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSSNRType& SSNRRes) = 0;
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData) = 0;
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData) = 0;
+	virtual bool Show(uint32_t nIndex, uint16_t * RawData) = 0;
 	virtual void SetMultiThreadEnable(bool bEnable = true) = 0;
 	virtual void SetLogEnable(bool bEnable = true) = 0;
 	virtual void SetAlgorithmThre(APSAlgorithmThre& AlgoThre) = 0;
@@ -479,7 +489,7 @@ public:
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes) = 0;
 	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes) = 0;
 	virtual bool HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelType& HotpixelRes) = 0;
-	virtual bool FindPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo& Peak, DVSLightTrigerType Light) = 0;
+	virtual bool FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum, DVSPeakInfo& Peak, DVSLightTrigerType Light) = 0;
 	virtual bool ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSImageContrastSensitivityType& ImageContrastSensitivityRes) = 0;
 	virtual bool AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSAccompaniedPeakAndDelayedPeakType& AccompaniedPeakAndDelayedPeakRes) = 0;
 	virtual bool SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes) = 0;

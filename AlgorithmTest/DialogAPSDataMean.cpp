@@ -71,7 +71,11 @@ void CDialogAPSDataMean::DataMean()
 
 		QStringList RowName, ColName;
 		RowName << "";
-		if (m_DataMean.SubFrameDataMean.size() == 4)
+		if (m_DataMean.SubFrameDataMean.size() == 1)
+		{
+			ColName << "Total";
+		}
+		else if (m_DataMean.SubFrameDataMean.size() == 4)
 		{
 			ColName << "Gb" << "B" << "R" << "Gr";
 		}
@@ -103,7 +107,11 @@ void CDialogAPSDataMean::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			if (m_DataMean.SubFrameDataMean.size() == 4)
+			if (m_DataMean.SubFrameDataMean.size() == 1)
+			{
+				outfile << "Total" << std::endl;
+			}
+			else if (m_DataMean.SubFrameDataMean.size() == 4)
 			{
 				outfile << "Gb,B,R,Gr" << std::endl;
 			}

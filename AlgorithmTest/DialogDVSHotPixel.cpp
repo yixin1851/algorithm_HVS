@@ -11,10 +11,12 @@ CDialogDVSHotPixel::CDialogDVSHotPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 
 	ui.lineEditIndexStart->setValidator(new QIntValidator(0, 100000, this));
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditClusterSizeThre->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditHotPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 	ui.lineEditHotLineThre->setValidator(new QDoubleValidator(0, 1, 3, this));
 	ui.lineEditHotPixelThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dHotPixelThre));
 	ui.lineEditHotLineThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dHotLineThre));
+	ui.lineEditClusterSizeThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nHotPixelClusterSizeThre));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(HotPixel()), Qt::QueuedConnection);
@@ -28,10 +30,12 @@ void CDialogDVSHotPixel::HotPixel()
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 	double dHotPixelThre = ui.lineEditHotPixelThre->text().toDouble();
 	double dHotLineThre = ui.lineEditHotLineThre->text().toDouble();
+	uint32_t nClusterSizeThre = ui.lineEditClusterSizeThre->text().toUInt();
 
 	auto temp = m_pDVSAlgoInterface->GetAlgorithmThre();
 	temp.dHotPixelThre = dHotPixelThre;
 	temp.dHotLineThre = dHotLineThre;
+	temp.nHotPixelClusterSizeThre = nClusterSizeThre;
 
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
 	ui.tabHotPixelResult->Clear();

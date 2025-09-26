@@ -106,7 +106,11 @@ void CDialogAPSLinearity::Linearity()
 			QStringList RowName, ColName;
 			RowName << "K" << "B" << "LeMin" << "LeMax";
 
-			if (m_LinearityData.SubFrameLinearityData.size() == 4)
+			if (m_LinearityData.SubFrameLinearityData.size() == 1)
+			{
+				ColName << "Total";
+			}
+			else if (m_LinearityData.SubFrameLinearityData.size() == 4)
 			{
 				ColName << "Gb" << "B" << "R" << "Gr";
 			}
@@ -139,7 +143,11 @@ void CDialogAPSLinearity::Linearity()
 				}
 			}
 
-			if (m_LinearityData.SubFrameLinearityData.size() == 4)
+			if (m_LinearityData.SubFrameLinearityData.size() == 1)
+			{
+				m_widgetChartView.SetLine("Total", XData, YData[0]);
+			}
+			else if (m_LinearityData.SubFrameLinearityData.size() == 4)
 			{
 				m_widgetChartView.SetLine("Gb", XData, YData[Gb]);
 				m_widgetChartView.SetLine("B", XData, YData[B]);
@@ -164,7 +172,6 @@ void CDialogAPSLinearity::Linearity()
 				m_widgetChartView.SetLine("Gr2", XData, YData[13]);
 				m_widgetChartView.SetLine("Gr3", XData, YData[14]);
 				m_widgetChartView.SetLine("Gr4", XData, YData[15]);
-
 			}
 		}
 		else
@@ -187,6 +194,10 @@ void CDialogAPSLinearity::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
+			if (m_LinearityData.SubFrameLinearityData.size() == 1)
+			{
+				outfile << "Total" << std::endl;
+			}
 			if (m_LinearityData.SubFrameLinearityData.size() == 4)
 			{
 				outfile << "Gb,B,R,Gr" << std::endl;

@@ -52,7 +52,7 @@ CDialogAPSShading::CDialogAPSShading(QDialog* parent, CAlpAPSMPAlgoInterface* pA
 
 void CDialogAPSShading::Shading()
 {
-	bool bRet = true;
+	bool bRet1 = true, bRet2 = true, bRet3 = true;
 	uint32_t nIndexStart = ui.lineEditIndexStart->text().toUInt();
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 	ui.label_Res->setText(tr(" "));
@@ -85,16 +85,14 @@ void CDialogAPSShading::Shading()
 
 	clock_t time = 0;
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->YShading(nIndexStart, nNumber, roi, m_YShadingData)
-		&& m_pAPSAlgoInterface->ColorShading(nIndexStart, nNumber, roi, m_ColorShadingData)
-		&& m_pAPSAlgoInterface->OpticalCenter(nIndexStart, nNumber, roi, m_OpticalCenterData);
+	bRet1 = m_pAPSAlgoInterface->YShading(nIndexStart, nNumber, roi, m_YShadingData);
+	bRet2 = m_pAPSAlgoInterface->ColorShading(nIndexStart, nNumber, roi, m_ColorShadingData);
+	bRet3 = m_pAPSAlgoInterface->OpticalCenter(nIndexStart, nNumber, roi, m_OpticalCenterData);
 	auto end = clock();
 	time = end - start;
-	if (bRet)
+
+	if (bRet1)
 	{
-		ui.label_Res->setStyleSheet("color:green;");
-		QString res = QString::number(time);
-		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
 
@@ -107,10 +105,10 @@ void CDialogAPSShading::Shading()
 			ColName << QString::number(nCols + 1);
 		}
 		m_widgetTableView[0].SetData(RowName, ColName, m_YShadingData.YShadingData);
-
-		RowName.clear();
-		ColName.clear();
-
+	}
+	if (bRet2)
+	{
+		QStringList RowName, ColName;
 		for (uint32_t nRows = 0; nRows < m_ColorShadingData.ColorShadingRGData.size(); nRows++)
 		{
 			RowName << QString::number(nRows + 1);
@@ -122,9 +120,10 @@ void CDialogAPSShading::Shading()
 
 		m_widgetTableView[1].SetData(RowName, ColName, m_ColorShadingData.ColorShadingRGData);
 		m_widgetTableView[2].SetData(RowName, ColName, m_ColorShadingData.ColorShadingBGData);
-
-		RowName.clear();
-		ColName.clear();
+	}
+	if (bRet3)
+	{
+		QStringList RowName, ColName;
 		RowName << "";
 		ColName << "CenterRow" << "CenterCol";
 
@@ -133,6 +132,13 @@ void CDialogAPSShading::Shading()
 		Data[0].push_back(m_OpticalCenterData.CenterCol);
 
 		m_widgetTableView[3].SetData(RowName, ColName, Data);
+	}
+
+	if (bRet1 && bRet2 && bRet3)
+	{
+		ui.label_Res->setStyleSheet("color:green;");
+		QString res = QString::number(time);
+		ui.label_Res->setText(res);
 	}
 	else
 	{

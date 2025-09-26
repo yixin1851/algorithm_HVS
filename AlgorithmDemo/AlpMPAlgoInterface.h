@@ -112,6 +112,7 @@ typedef struct
 	uint32_t ClusterNum;
 	uint32_t DefectRowNum;
 	uint32_t DefectColNum;
+	uint32_t MaxClusterSize;
 	BadPixelMaskType BadPixelMask;
 }APSSubFrameBadpixelType;
 
@@ -122,6 +123,7 @@ typedef struct
 	uint32_t CoupletNum;
 	uint32_t LadderNum;
 	uint32_t ClusterNum;
+	uint32_t MaxClusterSize;
 	BadPixelMaskType BadPixelMask;
 	std::vector<APSSubFrameBadpixelType> SubFrameBadpixelData;
 }APSBadpixelType;

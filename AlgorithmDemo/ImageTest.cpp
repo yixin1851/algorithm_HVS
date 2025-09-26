@@ -531,7 +531,7 @@ void GetDefectPixelsDark(std::string datapath)
 		std::cout << "Couplets:" << res.CoupletNum << std::endl;
 		std::cout << "Ladders:" << res.LadderNum << std::endl;
 		std::cout << "Clusters:" << res.ClusterNum << std::endl;
-
+		std::cout << "MaxClusterSize:" << res.MaxClusterSize << std::endl;
 	}
 	else
 	{

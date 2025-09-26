@@ -72,7 +72,7 @@ void CDialogAPSLinearityO::Linearity()
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 
 	auto start = clock();
-	bRet = m_pAPSAlgoInterface->Linearity(nIndex, nNumber, roi, Gr, m_LinearityData);
+	bRet = m_pAPSAlgoInterface->Linearity(nIndex, nNumber, roi, Gb, m_LinearityData);
 	auto end = clock();
 	time = end - start;
 

@@ -2017,6 +2017,61 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	return true;
 }
 
+void CAlpAPSMPAlgorithm::SetDataToFrame(uint32_t nIndex, uint32_t nRowStart, uint32_t nRows, uint16_t* RawData)
+{
+	for (uint32_t nRowIndex = nRowStart; nRowIndex < nRowStart + nRows; nRowIndex++)
+	{
+		uint32_t nBase = nRowIndex * m_nTotalCol;
+		for (uint32_t nColIndex = 0; nColIndex < m_nTotalCol; nColIndex++)
+		{
+			double dValue = 0;
+			GetDataFromSubFrame(nIndex, nRowIndex, nColIndex, dValue);
+			RawData[nBase + nColIndex] = uint16_t(dValue);
+		}
+	}
+}
+
+bool CAlpAPSMPAlgorithm::Show(uint32_t nIndex, uint16_t* RawData)
+{
+	if (nIndex >= m_RawDataContainer[0].size())
+	{
+		std::string strErr = "Show: Index error: nIndex: " + std::to_string(nIndex);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	if (m_bMultiThreadEnable)
+	{
+		int RowDiv = 8;
+		int ThreadNum = m_nTotalRow % RowDiv == 0 ? RowDiv : RowDiv + 1;
+		std::vector<std::thread*> t(ThreadNum);
+
+		uint32_t nRowStart = 0;
+		uint32_t nRows = m_nTotalRow / RowDiv;
+
+		for (int i = 0; i < ThreadNum; i++)
+		{
+			if ((nRowStart + nRows) > m_nTotalRow)
+			{
+				nRows = m_nTotalRow - nRowStart;
+			}
+			t[i] = new std::thread(&CAlpAPSMPAlgorithm::SetDataToFrame, this, nIndex, nRowStart, nRows, RawData);
+			nRowStart += nRows;
+		}
+
+		for (uint32_t i = 0; i < ThreadNum; i++)
+		{
+			t[i]->join();
+			delete t[i];
+		}
+	}
+	else
+	{
+		SetDataToFrame(nIndex, 0, m_nTotalRow, RawData);
+	}
+	return true;
+}
+
 void CAlpAPSMPAlgorithm::SetMultiThreadEnable(bool bEnable)
 {
 	m_bMultiThreadEnable = bEnable;
@@ -2093,7 +2148,7 @@ bool CAlpAPSMPAlgorithm::SaveBin(uint8_t* pRawData, uint64_t nLens, std::string 
 
 std::string CAlpAPSMPAlgorithm::GetVersion()
 {
-	return APS_MP_ALGORITHM_VERSION;
+	return MP_ALGORITHM_VERSION;
 }
 
 int CAlpAPSMPAlgorithm::GetCode()
@@ -2709,16 +2764,16 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 					Local temp = Search[nCur];
 					nCur++;
 					AreaSize++;
-					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 					{
-						if (nTempRows < nRow)
+						if (nTempRows >= 0 && nTempRows < nRow)
 						{
-							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 							{
-								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								if (nTempCols >= 0 && nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
 									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-									Search.push_back({ nTempRows , nTempCols });
+									Search.push_back({ (uint32_t)nTempRows , (uint32_t)nTempCols });
 								}
 							}
 						}
@@ -2948,16 +3003,16 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 					Local temp = Search[nCur];
 					nCur++;
 					AreaSize++;
-					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 					{
-						if (nTempRows < nRow)
+						if (nTempRows >= 0 && nTempRows < nRow)
 						{
-							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 							{
-								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								if (nTempCols >= 0 && nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
 									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-									Search.push_back({ nTempRows , nTempCols });
+									Search.push_back({ (uint32_t)nTempRows , (uint32_t)nTempCols });
 								}
 							}
 						}

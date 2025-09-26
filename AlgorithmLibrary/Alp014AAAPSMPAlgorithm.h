@@ -35,6 +35,7 @@ public:
 	virtual void SetRawDataSize(uint32_t nRow, uint32_t nCol);
 protected:
 	virtual bool GetBlockMean(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t nRowBlockNum, uint32_t nColBlockNum, std::vector<CAPSDataContainer>& BlockData, uint32_t nSubRowBlockSize = 0, uint32_t nSubColBlockSize = 0);
+	void SetDataToFrame(uint32_t nIndex, uint32_t nRowStart, uint32_t nRows, uint16_t* RawData);
 private:
 	uint32_t m_nMaxSubFramesNum;
 };

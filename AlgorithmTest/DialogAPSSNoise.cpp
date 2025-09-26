@@ -71,7 +71,11 @@ void CDialogAPSSNoise::SNoise()
 
 		QStringList RowName, ColName;
 		RowName << "SNoise" << "RowSNoise" << "ColSNoise";
-		if (m_SNoiseData.SubFrameSNoiseData.size() == 4)
+		if (m_SNoiseData.SubFrameSNoiseData.size() == 1)
+		{
+			ColName << "Total";
+		}
+		else if (m_SNoiseData.SubFrameSNoiseData.size() == 4)
 		{
 			ColName << "Gb" << "B" << "R" << "Gr" << "Total";
 		}
@@ -89,9 +93,13 @@ void CDialogAPSSNoise::SNoise()
 			Data[1].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].RowSNoise);
 			Data[2].push_back(m_SNoiseData.SubFrameSNoiseData[nIndex].ColSNoise);
 		}
-		Data[0].push_back(m_SNoiseData.SNoiseFrame);
-		Data[1].push_back(0);
-		Data[2].push_back(0);
+		if (1 != m_SNoiseData.SubFrameSNoiseData.size())
+		{
+			Data[0].push_back(m_SNoiseData.SNoiseFrame);
+			Data[1].push_back(0);
+			Data[2].push_back(0);
+		}
+
 		ui.widgetTableView->SetData(RowName, ColName, Data);
 	}
 	else

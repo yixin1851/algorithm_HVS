@@ -391,24 +391,63 @@ bool CAlp003CAAPSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, R
 
 bool CAlp003CAAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
 {
-	if (m_bHVS_DPC)
+	if (0 == nNumber || nIndexStart >= m_RawDataContainer[0].size() || (nIndexStart + nNumber) > m_RawDataContainer[0].size())
 	{
-		return DPC_HVS(nIndexStart, nNumber, ROI, BadPixelLocal);
+		std::string strErr = "DPC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+	bool bRet = true;
+	bool* bSubRes = new bool[nNumber];
+
+	if (m_bMultiThreadEnable)
+	{
+		std::vector<std::thread*> t(nNumber);
+
+		for (uint32_t i = 0; i < nNumber; i++)
+		{
+			if (m_bHVS_DPC)
+			{
+				t[i] = new std::thread(&CAlp003CAAPSMPAlgorithm::DPC_HVS, this, nIndexStart + i, ROI, std::ref(BadPixelLocal), std::ref(bSubRes[i]));
+			}
+			else
+			{
+				t[i] = new std::thread(&CAlp003CAAPSMPAlgorithm::DPC_APS_Only, this, nIndexStart + i, ROI, std::ref(BadPixelLocal), std::ref(bSubRes[i]));
+			}
+		}
+		for (uint32_t i = 0; i < nNumber; i++)
+		{
+			t[i]->join();
+			delete t[i];
+		}
 	}
 	else
 	{
-		return DPC_APS_Only(nIndexStart, nNumber, ROI, BadPixelLocal);
+		for (uint32_t i = 0; i < nNumber; i++)
+		{
+			if (m_bHVS_DPC)
+			{
+				DPC_HVS(nIndexStart + i, ROI, BadPixelLocal, bSubRes[i]);
+			}
+			else
+			{
+				DPC_APS_Only(nIndexStart + i, ROI, BadPixelLocal, bSubRes[i]);
+			}
+		}
 	}
+	for (uint32_t i = 0; i < nNumber; i++)
+	{
+		bRet = bRet && bSubRes[i];
+	}
+	delete[] bSubRes;
+
+	return bRet;
 }
 
-bool CAlp003CAAPSMPAlgorithm::DPC_APS_Only(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
+void CAlp003CAAPSMPAlgorithm::DPC_APS_Only(uint32_t nIndex, ROIArea* ROI, std::vector<Local>& BadPixelLocal, bool& bRes)
 {
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[0].size() || (nIndexStart + nNumber) > m_RawDataContainer[0].size())
-	{
-		std::string strErr = "DPC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr, SubFrameIndex::All);
-		return false;
-	}
+	bRes = false;
 
 	int x0[] = { -3, 0, 1, -3, 1, 3, 0, 1, -2, -1, -2, -1, -2, -1, -3, -3, 0, 0, 1, 1, -3, -4, 1,  4, -4, -3, 4, 1 };
 	int y0[] = { -3, -3, -3, 0, 0, 1, 1, 1, -3, -3, 0, 0, 1, 1, -2, -1, -2,-1, -2,-1, -4, -3, -4, -3, 1, 4, 1, 4 };
@@ -419,139 +458,133 @@ bool CAlp003CAAPSMPAlgorithm::DPC_APS_Only(uint32_t nIndexStart, uint32_t nNumbe
 	int x3[] = { -1, 0, 3, -1, 3, -1, 0, 3, 1, 2, 1, 2, 1, 2, -1, -1, 0, 0, 3, 3 };
 	int y3[] = { -1, -1, -1, 0, 0, 3, 3, 3, -1, -1, 0, 0, 3, 3, 1, 2, 1, 2, 1, 2 };
 
-	for (uint32_t nIndex = nIndexStart; nIndex < nIndexStart + nNumber; nIndex++)
+	for (uint32_t n = 0; n < BadPixelLocal.size(); n++)
 	{
-		for (uint32_t n = 0; n < BadPixelLocal.size(); n++)
+		auto totalLocal = BadPixelLocal[n];
+		int nRow = totalLocal.x;
+		int nCol = totalLocal.y;
+
+		Local PixelLocal[20];
+		int tempRow = 0;
+		int tempCol = 0;
+		for (int i = 0; i < 20; i++)
 		{
-			auto totalLocal = BadPixelLocal[n];
-			int nRow = totalLocal.x;
-			int nCol = totalLocal.y;
-
-			Local PixelLocal[20];
-			int tempRow = 0;
-			int tempCol = 0;
-			for (int i = 0; i < 20; i++)
-			{
-				if (nRow % 2 == 0 && nCol % 2 == 0)
-				{
-					tempRow = nRow + y0[i];
-					tempCol = nCol + x0[i];
-				}
-				else if (nRow % 2 == 0 && nCol % 2 == 1)
-				{
-					tempRow = nRow + y1[i];
-					tempCol = nCol + x1[i];
-				}
-				else if (nRow % 2 == 1 && nCol % 2 == 0)
-				{
-					tempRow = nRow + y2[i];
-					tempCol = nCol + x2[i];
-				}
-				else
-				{
-					tempRow = nRow + y3[i];
-					tempCol = nCol + x3[i];
-				}
-				if (tempRow < 0)
-				{
-					tempRow += 4;
-				}
-				else if (tempRow >= m_nTotalRow)
-				{
-					tempRow -= 4;
-				}
-				if (tempCol < 0)
-				{
-					tempCol += 4;
-				}
-				else if (tempCol >= m_nTotalCol)
-				{
-					tempCol -= 4;
-				}
-				PixelLocal[i].x = tempRow;
-				PixelLocal[i].y = tempCol;
-			}
-			double p0, p1, p2, p3, p5, p6, p7, p8, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11;
-			GetDataFromSubFrame(nIndex, PixelLocal[0].x, PixelLocal[0].y, p0);
-			GetDataFromSubFrame(nIndex, PixelLocal[1].x, PixelLocal[1].y, p1);
-			GetDataFromSubFrame(nIndex, PixelLocal[2].x, PixelLocal[2].y, p2);
-			GetDataFromSubFrame(nIndex, PixelLocal[3].x, PixelLocal[3].y, p3);
-			GetDataFromSubFrame(nIndex, PixelLocal[4].x, PixelLocal[4].y, p5);
-			GetDataFromSubFrame(nIndex, PixelLocal[5].x, PixelLocal[5].y, p6);
-			GetDataFromSubFrame(nIndex, PixelLocal[6].x, PixelLocal[6].y, p7);
-			GetDataFromSubFrame(nIndex, PixelLocal[7].x, PixelLocal[7].y, p8);
-			GetDataFromSubFrame(nIndex, PixelLocal[8].x, PixelLocal[8].y, g0);
-			GetDataFromSubFrame(nIndex, PixelLocal[9].x, PixelLocal[9].y, g1);
-			GetDataFromSubFrame(nIndex, PixelLocal[10].x, PixelLocal[10].y, g2);
-			GetDataFromSubFrame(nIndex, PixelLocal[11].x, PixelLocal[11].y, g3);
-			GetDataFromSubFrame(nIndex, PixelLocal[12].x, PixelLocal[12].y, g4);
-			GetDataFromSubFrame(nIndex, PixelLocal[13].x, PixelLocal[13].y, g5);
-			GetDataFromSubFrame(nIndex, PixelLocal[14].x, PixelLocal[14].y, g6);
-			GetDataFromSubFrame(nIndex, PixelLocal[15].x, PixelLocal[15].y, g7);
-			GetDataFromSubFrame(nIndex, PixelLocal[16].x, PixelLocal[16].y, g8);
-			GetDataFromSubFrame(nIndex, PixelLocal[17].x, PixelLocal[17].y, g9);
-			GetDataFromSubFrame(nIndex, PixelLocal[18].x, PixelLocal[18].y, g10);
-			GetDataFromSubFrame(nIndex, PixelLocal[19].x, PixelLocal[19].y, g11);
-
-			double dh4 = abs(g2 + g3 - (g0 + g1) / 2 - (g4 + g5) / 2);
-
-			double dv4 = abs(g8 + g9 - (g6 + g7) / 2 - (g10 + g11) / 2);
-
-			double dhori = (abs(2 * p1 - p0 - p2) + abs(p3 - p5) * 2 + abs(2 * p7 - p6 - p8) + dh4) / 4;
-
-			double dvert = (abs(2 * p3 - p0 - p6) + abs(p1 - p7) * 2 + abs(2 * p5 - p2 - p8) + dv4) / 4;
-
-			double hori_value = 0, vert_value = 0;
-
 			if (nRow % 2 == 0 && nCol % 2 == 0)
 			{
-				hori_value = 0.75 * p5 + 0.25 * p3;
-
-				vert_value = 0.75 * p7 + 0.25 * p1;
+				tempRow = nRow + y0[i];
+				tempCol = nCol + x0[i];
 			}
 			else if (nRow % 2 == 0 && nCol % 2 == 1)
 			{
-				hori_value = 0.75 * p3 + 0.25 * p5;
-
-				vert_value = 0.75 * p7 + 0.25 * p1;
-
+				tempRow = nRow + y1[i];
+				tempCol = nCol + x1[i];
 			}
 			else if (nRow % 2 == 1 && nCol % 2 == 0)
 			{
-				hori_value = 0.75 * p5 + 0.25 * p3;
-
-				vert_value = 0.75 * p1 + 0.25 * p7;
+				tempRow = nRow + y2[i];
+				tempCol = nCol + x2[i];
 			}
 			else
 			{
-				hori_value = 0.75 * p3 + 0.25 * p5;
-
-				vert_value = 0.75 * p1 + 0.25 * p7;
+				tempRow = nRow + y3[i];
+				tempCol = nCol + x3[i];
 			}
-
-			if ((dvert + dhori) == 0)
+			if (tempRow < 0)
 			{
-				std::string strErr = "DPC: dvert + dhori == 0 ";
-				WriteLog(strErr, SubFrameIndex::All);
-				return false;
+				tempRow += 4;
 			}
-
-			double p4 = (hori_value * dvert + vert_value * dhori) / (dvert + dhori);
-
-			SetDataToSubFrame(nIndex, nRow, nCol, int(p4));
+			else if (tempRow >= m_nTotalRow)
+			{
+				tempRow -= 4;
+			}
+			if (tempCol < 0)
+			{
+				tempCol += 4;
+			}
+			else if (tempCol >= m_nTotalCol)
+			{
+				tempCol -= 4;
+			}
+			PixelLocal[i].x = tempRow;
+			PixelLocal[i].y = tempCol;
 		}
+		double p0, p1, p2, p3, p5, p6, p7, p8, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11;
+		GetDataFromSubFrame(nIndex, PixelLocal[0].x, PixelLocal[0].y, p0);
+		GetDataFromSubFrame(nIndex, PixelLocal[1].x, PixelLocal[1].y, p1);
+		GetDataFromSubFrame(nIndex, PixelLocal[2].x, PixelLocal[2].y, p2);
+		GetDataFromSubFrame(nIndex, PixelLocal[3].x, PixelLocal[3].y, p3);
+		GetDataFromSubFrame(nIndex, PixelLocal[4].x, PixelLocal[4].y, p5);
+		GetDataFromSubFrame(nIndex, PixelLocal[5].x, PixelLocal[5].y, p6);
+		GetDataFromSubFrame(nIndex, PixelLocal[6].x, PixelLocal[6].y, p7);
+		GetDataFromSubFrame(nIndex, PixelLocal[7].x, PixelLocal[7].y, p8);
+		GetDataFromSubFrame(nIndex, PixelLocal[8].x, PixelLocal[8].y, g0);
+		GetDataFromSubFrame(nIndex, PixelLocal[9].x, PixelLocal[9].y, g1);
+		GetDataFromSubFrame(nIndex, PixelLocal[10].x, PixelLocal[10].y, g2);
+		GetDataFromSubFrame(nIndex, PixelLocal[11].x, PixelLocal[11].y, g3);
+		GetDataFromSubFrame(nIndex, PixelLocal[12].x, PixelLocal[12].y, g4);
+		GetDataFromSubFrame(nIndex, PixelLocal[13].x, PixelLocal[13].y, g5);
+		GetDataFromSubFrame(nIndex, PixelLocal[14].x, PixelLocal[14].y, g6);
+		GetDataFromSubFrame(nIndex, PixelLocal[15].x, PixelLocal[15].y, g7);
+		GetDataFromSubFrame(nIndex, PixelLocal[16].x, PixelLocal[16].y, g8);
+		GetDataFromSubFrame(nIndex, PixelLocal[17].x, PixelLocal[17].y, g9);
+		GetDataFromSubFrame(nIndex, PixelLocal[18].x, PixelLocal[18].y, g10);
+		GetDataFromSubFrame(nIndex, PixelLocal[19].x, PixelLocal[19].y, g11);
+
+		double dh4 = abs(g2 + g3 - (g0 + g1) / 2 - (g4 + g5) / 2);
+
+		double dv4 = abs(g8 + g9 - (g6 + g7) / 2 - (g10 + g11) / 2);
+
+		double dhori = (abs(2 * p1 - p0 - p2) + abs(p3 - p5) * 2 + abs(2 * p7 - p6 - p8) + dh4) / 4;
+
+		double dvert = (abs(2 * p3 - p0 - p6) + abs(p1 - p7) * 2 + abs(2 * p5 - p2 - p8) + dv4) / 4;
+
+		double hori_value = 0, vert_value = 0;
+
+		if (nRow % 2 == 0 && nCol % 2 == 0)
+		{
+			hori_value = 0.75 * p5 + 0.25 * p3;
+
+			vert_value = 0.75 * p7 + 0.25 * p1;
+		}
+		else if (nRow % 2 == 0 && nCol % 2 == 1)
+		{
+			hori_value = 0.75 * p3 + 0.25 * p5;
+
+			vert_value = 0.75 * p7 + 0.25 * p1;
+
+		}
+		else if (nRow % 2 == 1 && nCol % 2 == 0)
+		{
+			hori_value = 0.75 * p5 + 0.25 * p3;
+
+			vert_value = 0.75 * p1 + 0.25 * p7;
+		}
+		else
+		{
+			hori_value = 0.75 * p3 + 0.25 * p5;
+
+			vert_value = 0.75 * p1 + 0.25 * p7;
+		}
+
+		if ((dvert + dhori) == 0)
+		{
+			std::string strErr = "DPC: dvert + dhori == 0 ";
+			WriteLog(strErr, SubFrameIndex::All);
+			bRes = false;
+			return;
+		}
+
+		double p4 = (hori_value * dvert + vert_value * dhori) / (dvert + dhori);
+
+		SetDataToSubFrame(nIndex, nRow, nCol, int(p4));
 	}
-	return true;
+
+	bRes = true;
 }
 
-bool CAlp003CAAPSMPAlgorithm::DPC_HVS(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
+void CAlp003CAAPSMPAlgorithm::DPC_HVS(uint32_t nIndex, ROIArea* ROI, std::vector<Local>& BadPixelLocal, bool& bRes)
 {
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[0].size() || (nIndexStart + nNumber) > m_RawDataContainer[0].size())
-	{
-		std::string strErr = "DPC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
-		WriteLog(strErr, SubFrameIndex::All);
-		return false;
-	}
+	bRes = false;
 
 	int x0[] = { -3, 0, 1, -3, 1, 3, 0, 1, -2, -1, -2, -1, -2, -1, -3, -3, 0, 0, 1, 1, -3, -4, 1,  4, -4, -3, 4, 1 };
 	int y0[] = { -3, -3, -3, 0, 0, 1, 1, 1, -3, -3, 0, 0, 1, 1, -2, -1, -2,-1, -2,-1, -4, -3, -4, -3, 1, 4, 1, 4 };
@@ -562,186 +595,184 @@ bool CAlp003CAAPSMPAlgorithm::DPC_HVS(uint32_t nIndexStart, uint32_t nNumber, RO
 	int x3[] = { -1, 0, 3, -1, 3, -1, 0, 3, 1, 2, 1, 2, 1, 2, -1, -1, 0, 0, 3, 3 };
 	int y3[] = { -1, -1, -1, 0, 0, 3, 3, 3, -1, -1, 0, 0, 3, 3, 1, 2, 1, 2, 1, 2 };
 
-	for (uint32_t nIndex = nIndexStart; nIndex < nIndexStart + nNumber; nIndex++)
+	for (uint32_t n = 0; n < BadPixelLocal.size(); n++)
 	{
-		for (uint32_t n = 0; n < BadPixelLocal.size(); n++)
+		auto totalLocal = BadPixelLocal[n];
+		int nRow = totalLocal.x;
+		int nCol = totalLocal.y;
+
+		Local PixelLocal[28];
+		int tempRow = 0;
+		int tempCol = 0;
+		int nLenPoints = 0;
+		if (nRow % 2 == 0 && nCol % 2 == 0)
 		{
-			auto totalLocal = BadPixelLocal[n];
-			int nRow = totalLocal.x;
-			int nCol = totalLocal.y;
-
-			Local PixelLocal[28];
-			int tempRow = 0;
-			int tempCol = 0;
-			int nLenPoints = 0;
-			if (nRow % 2 == 0 && nCol % 2 == 0)
-			{
-				nLenPoints = sizeof(x0) / sizeof(x0[0]);
-			}
-			else if (nRow % 2 == 0 && nCol % 2 == 1)
-			{
-				nLenPoints = sizeof(x1) / sizeof(x1[0]);
-			}
-			else if (nRow % 2 == 1 && nCol % 2 == 0)
-			{
-				nLenPoints = sizeof(x2) / sizeof(x2[0]);
-			}
-			else
-			{
-				nLenPoints = sizeof(x3) / sizeof(x3[0]);
-			}
-			for (int i = 0; i < nLenPoints; i++)
-			{
-				if (nRow % 2 == 0 && nCol % 2 == 0)
-				{
-					tempRow = nRow + y0[i];
-					tempCol = nCol + x0[i];
-				}
-				else if (nRow % 2 == 0 && nCol % 2 == 1)
-				{
-					tempRow = nRow + y1[i];
-					tempCol = nCol + x1[i];
-				}
-				else if (nRow % 2 == 1 && nCol % 2 == 0)
-				{
-					tempRow = nRow + y2[i];
-					tempCol = nCol + x2[i];
-				}
-				else
-				{
-					tempRow = nRow + y3[i];
-					tempCol = nCol + x3[i];
-				}
-				if (tempRow < 0)
-				{
-					tempRow += 4;
-				}
-				else if (tempRow >= m_nTotalRow)
-				{
-					tempRow -= 4;
-				}
-				if (tempCol < 0)
-				{
-					tempCol += 4;
-				}
-				else if (tempCol >= m_nTotalCol)
-				{
-					tempCol -= 4;
-				}
-				PixelLocal[i].x = tempRow;
-				PixelLocal[i].y = tempCol;
-			}
-			double p0, p1, p2, p3, p5, p6, p7, p8, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, A, B, C, D, E, F, G, H;
-			GetDataFromSubFrame(nIndex, PixelLocal[0].x, PixelLocal[0].y, p0);
-			GetDataFromSubFrame(nIndex, PixelLocal[1].x, PixelLocal[1].y, p1);
-			GetDataFromSubFrame(nIndex, PixelLocal[2].x, PixelLocal[2].y, p2);
-			GetDataFromSubFrame(nIndex, PixelLocal[3].x, PixelLocal[3].y, p3);
-			GetDataFromSubFrame(nIndex, PixelLocal[4].x, PixelLocal[4].y, p5);
-			GetDataFromSubFrame(nIndex, PixelLocal[5].x, PixelLocal[5].y, p6);
-			GetDataFromSubFrame(nIndex, PixelLocal[6].x, PixelLocal[6].y, p7);
-			GetDataFromSubFrame(nIndex, PixelLocal[7].x, PixelLocal[7].y, p8);
-			GetDataFromSubFrame(nIndex, PixelLocal[8].x, PixelLocal[8].y, g0);
-			GetDataFromSubFrame(nIndex, PixelLocal[9].x, PixelLocal[9].y, g1);
-			GetDataFromSubFrame(nIndex, PixelLocal[10].x, PixelLocal[10].y, g2);
-			GetDataFromSubFrame(nIndex, PixelLocal[11].x, PixelLocal[11].y, g3);
-			GetDataFromSubFrame(nIndex, PixelLocal[12].x, PixelLocal[12].y, g4);
-			GetDataFromSubFrame(nIndex, PixelLocal[13].x, PixelLocal[13].y, g5);
-			GetDataFromSubFrame(nIndex, PixelLocal[14].x, PixelLocal[14].y, g6);
-			GetDataFromSubFrame(nIndex, PixelLocal[15].x, PixelLocal[15].y, g7);
-			GetDataFromSubFrame(nIndex, PixelLocal[16].x, PixelLocal[16].y, g8);
-			GetDataFromSubFrame(nIndex, PixelLocal[17].x, PixelLocal[17].y, g9);
-			GetDataFromSubFrame(nIndex, PixelLocal[18].x, PixelLocal[18].y, g10);
-			GetDataFromSubFrame(nIndex, PixelLocal[19].x, PixelLocal[19].y, g11);
-			if (nRow % 2 == 0 && nCol % 2 == 0)
-			{
-				GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
-				GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
-				GetDataFromSubFrame(nIndex, PixelLocal[22].x, PixelLocal[22].y, C);
-				GetDataFromSubFrame(nIndex, PixelLocal[23].x, PixelLocal[23].y, D);
-				GetDataFromSubFrame(nIndex, PixelLocal[24].x, PixelLocal[24].y, E);
-				GetDataFromSubFrame(nIndex, PixelLocal[25].x, PixelLocal[25].y, F);
-				GetDataFromSubFrame(nIndex, PixelLocal[26].x, PixelLocal[26].y, G);
-				GetDataFromSubFrame(nIndex, PixelLocal[27].x, PixelLocal[27].y, H);
-
-				p0 = abs(A - p3) > abs(B - p1) ? (3 * B + p1) / 4 : (3 * A + p3) / 4;
-
-				p2 = abs(C - p5) > abs(p1 - D) ? (3 * p1 + D) / 4 : (3 * C + p5) / 4;
-
-				p6 = abs(p3 - F) > abs(E - p7) ? (3 * E + p7) / 4 : (3 * p3 + F) / 4;
-
-				p8 = abs(p5 - H) > abs(p7 - G) ? (3 * p7 + G) / 4 : (3 * p5 + H) / 4;
-
-
-			}
-			else if (nRow % 2 == 0 && nCol % 2 == 1)
-			{
-				GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
-				GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
-
-				p1 = abs(p0 - p2) > abs(A - p5) ? (3 * A + p5) / 4 : (3 * p0 + p2) / 4;
-
-				p7 = abs(p6 - p8) > abs(p3 - B) ? (3 * p3 + B) / 4 : (3 * p6 + p8) / 4;
-
-			}
-			else if (nRow % 2 == 1 && nCol % 2 == 0)
-			{
-				GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
-				GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
-
-				p3 = abs(p0 - p6) > abs(A - p7) ? (3 * A + p7) / 4 : (3 * p0 + p6) / 4;
-
-				p5 = abs(p2 - p8) > abs(p1 - B) ? (3 * p1 + B) / 4 : (3 * p2 + p8) / 4;
-
-			}
-			else
-			{
-			}
-
-			double dhori = (abs(2 * p1 - p0 - p2) + abs(p3 - p5) * 2 + abs(2 * p7 - p6 - p8)) / 3;
-
-			double dvert = (abs(2 * p3 - p0 - p6) + abs(p1 - p7) * 2 + abs(2 * p5 - p2 - p8)) / 3;
-
-			double hori_value = 0, vert_value = 0;
-
-			if (nRow % 2 == 0 && nCol % 2 == 0)
-			{
-				hori_value = 0.75 * p5 + 0.25 * p3;
-
-				vert_value = 0.75 * p7 + 0.25 * p1;
-			}
-			else if (nRow % 2 == 0 && nCol % 2 == 1)
-			{
-				hori_value = 0.75 * p3 + 0.25 * p5;
-
-				vert_value = 0.75 * p7 + 0.25 * p1;
-
-			}
-			else if (nRow % 2 == 1 && nCol % 2 == 0)
-			{
-				hori_value = 0.75 * p5 + 0.25 * p3;
-
-				vert_value = 0.75 * p1 + 0.25 * p7;
-			}
-			else
-			{
-				hori_value = 0.75 * p3 + 0.25 * p5;
-
-				vert_value = 0.75 * p1 + 0.25 * p7;
-			}
-
-			if ((dvert + dhori) == 0)
-			{
-				std::string strErr = "DPC: dvert + dhori == 0 ";
-				WriteLog(strErr, SubFrameIndex::All);
-				return false;
-			}
-
-			double p4 = (hori_value * dvert + vert_value * dhori) / (dvert + dhori);
-
-			SetDataToSubFrame(nIndex, nRow, nCol, int(p4));
+			nLenPoints = sizeof(x0) / sizeof(x0[0]);
 		}
+		else if (nRow % 2 == 0 && nCol % 2 == 1)
+		{
+			nLenPoints = sizeof(x1) / sizeof(x1[0]);
+		}
+		else if (nRow % 2 == 1 && nCol % 2 == 0)
+		{
+			nLenPoints = sizeof(x2) / sizeof(x2[0]);
+		}
+		else
+		{
+			nLenPoints = sizeof(x3) / sizeof(x3[0]);
+		}
+		for (int i = 0; i < nLenPoints; i++)
+		{
+			if (nRow % 2 == 0 && nCol % 2 == 0)
+			{
+				tempRow = nRow + y0[i];
+				tempCol = nCol + x0[i];
+			}
+			else if (nRow % 2 == 0 && nCol % 2 == 1)
+			{
+				tempRow = nRow + y1[i];
+				tempCol = nCol + x1[i];
+			}
+			else if (nRow % 2 == 1 && nCol % 2 == 0)
+			{
+				tempRow = nRow + y2[i];
+				tempCol = nCol + x2[i];
+			}
+			else
+			{
+				tempRow = nRow + y3[i];
+				tempCol = nCol + x3[i];
+			}
+			if (tempRow < 0)
+			{
+				tempRow += 4;
+			}
+			else if (tempRow >= m_nTotalRow)
+			{
+				tempRow -= 4;
+			}
+			if (tempCol < 0)
+			{
+				tempCol += 4;
+			}
+			else if (tempCol >= m_nTotalCol)
+			{
+				tempCol -= 4;
+			}
+			PixelLocal[i].x = tempRow;
+			PixelLocal[i].y = tempCol;
+		}
+		double p0, p1, p2, p3, p5, p6, p7, p8, g0, g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, A, B, C, D, E, F, G, H;
+		GetDataFromSubFrame(nIndex, PixelLocal[0].x, PixelLocal[0].y, p0);
+		GetDataFromSubFrame(nIndex, PixelLocal[1].x, PixelLocal[1].y, p1);
+		GetDataFromSubFrame(nIndex, PixelLocal[2].x, PixelLocal[2].y, p2);
+		GetDataFromSubFrame(nIndex, PixelLocal[3].x, PixelLocal[3].y, p3);
+		GetDataFromSubFrame(nIndex, PixelLocal[4].x, PixelLocal[4].y, p5);
+		GetDataFromSubFrame(nIndex, PixelLocal[5].x, PixelLocal[5].y, p6);
+		GetDataFromSubFrame(nIndex, PixelLocal[6].x, PixelLocal[6].y, p7);
+		GetDataFromSubFrame(nIndex, PixelLocal[7].x, PixelLocal[7].y, p8);
+		GetDataFromSubFrame(nIndex, PixelLocal[8].x, PixelLocal[8].y, g0);
+		GetDataFromSubFrame(nIndex, PixelLocal[9].x, PixelLocal[9].y, g1);
+		GetDataFromSubFrame(nIndex, PixelLocal[10].x, PixelLocal[10].y, g2);
+		GetDataFromSubFrame(nIndex, PixelLocal[11].x, PixelLocal[11].y, g3);
+		GetDataFromSubFrame(nIndex, PixelLocal[12].x, PixelLocal[12].y, g4);
+		GetDataFromSubFrame(nIndex, PixelLocal[13].x, PixelLocal[13].y, g5);
+		GetDataFromSubFrame(nIndex, PixelLocal[14].x, PixelLocal[14].y, g6);
+		GetDataFromSubFrame(nIndex, PixelLocal[15].x, PixelLocal[15].y, g7);
+		GetDataFromSubFrame(nIndex, PixelLocal[16].x, PixelLocal[16].y, g8);
+		GetDataFromSubFrame(nIndex, PixelLocal[17].x, PixelLocal[17].y, g9);
+		GetDataFromSubFrame(nIndex, PixelLocal[18].x, PixelLocal[18].y, g10);
+		GetDataFromSubFrame(nIndex, PixelLocal[19].x, PixelLocal[19].y, g11);
+		if (nRow % 2 == 0 && nCol % 2 == 0)
+		{
+			GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
+			GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
+			GetDataFromSubFrame(nIndex, PixelLocal[22].x, PixelLocal[22].y, C);
+			GetDataFromSubFrame(nIndex, PixelLocal[23].x, PixelLocal[23].y, D);
+			GetDataFromSubFrame(nIndex, PixelLocal[24].x, PixelLocal[24].y, E);
+			GetDataFromSubFrame(nIndex, PixelLocal[25].x, PixelLocal[25].y, F);
+			GetDataFromSubFrame(nIndex, PixelLocal[26].x, PixelLocal[26].y, G);
+			GetDataFromSubFrame(nIndex, PixelLocal[27].x, PixelLocal[27].y, H);
+
+			p0 = abs(A - p3) > abs(B - p1) ? (3 * B + p1) / 4 : (3 * A + p3) / 4;
+
+			p2 = abs(C - p5) > abs(p1 - D) ? (3 * p1 + D) / 4 : (3 * C + p5) / 4;
+
+			p6 = abs(p3 - F) > abs(E - p7) ? (3 * E + p7) / 4 : (3 * p3 + F) / 4;
+
+			p8 = abs(p5 - H) > abs(p7 - G) ? (3 * p7 + G) / 4 : (3 * p5 + H) / 4;
+
+
+		}
+		else if (nRow % 2 == 0 && nCol % 2 == 1)
+		{
+			GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
+			GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
+
+			p1 = abs(p0 - p2) > abs(A - p5) ? (3 * A + p5) / 4 : (3 * p0 + p2) / 4;
+
+			p7 = abs(p6 - p8) > abs(p3 - B) ? (3 * p3 + B) / 4 : (3 * p6 + p8) / 4;
+
+		}
+		else if (nRow % 2 == 1 && nCol % 2 == 0)
+		{
+			GetDataFromSubFrame(nIndex, PixelLocal[20].x, PixelLocal[20].y, A);
+			GetDataFromSubFrame(nIndex, PixelLocal[21].x, PixelLocal[21].y, B);
+
+			p3 = abs(p0 - p6) > abs(A - p7) ? (3 * A + p7) / 4 : (3 * p0 + p6) / 4;
+
+			p5 = abs(p2 - p8) > abs(p1 - B) ? (3 * p1 + B) / 4 : (3 * p2 + p8) / 4;
+
+		}
+		else
+		{
+		}
+
+		double dhori = (abs(2 * p1 - p0 - p2) + abs(p3 - p5) * 2 + abs(2 * p7 - p6 - p8)) / 3;
+
+		double dvert = (abs(2 * p3 - p0 - p6) + abs(p1 - p7) * 2 + abs(2 * p5 - p2 - p8)) / 3;
+
+		double hori_value = 0, vert_value = 0;
+
+		if (nRow % 2 == 0 && nCol % 2 == 0)
+		{
+			hori_value = 0.75 * p5 + 0.25 * p3;
+
+			vert_value = 0.75 * p7 + 0.25 * p1;
+		}
+		else if (nRow % 2 == 0 && nCol % 2 == 1)
+		{
+			hori_value = 0.75 * p3 + 0.25 * p5;
+
+			vert_value = 0.75 * p7 + 0.25 * p1;
+
+		}
+		else if (nRow % 2 == 1 && nCol % 2 == 0)
+		{
+			hori_value = 0.75 * p5 + 0.25 * p3;
+
+			vert_value = 0.75 * p1 + 0.25 * p7;
+		}
+		else
+		{
+			hori_value = 0.75 * p3 + 0.25 * p5;
+
+			vert_value = 0.75 * p1 + 0.25 * p7;
+		}
+
+		if ((dvert + dhori) == 0)
+		{
+			std::string strErr = "DPC: dvert + dhori == 0 ";
+			WriteLog(strErr, SubFrameIndex::All);
+			bRes = false;
+			return;
+		}
+
+		double p4 = (hori_value * dvert + vert_value * dhori) / (dvert + dhori);
+
+		SetDataToSubFrame(nIndex, nRow, nCol, int(p4));
 	}
-	return true;
+	bRes = true;
 }
 
 void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes)
@@ -883,16 +914,16 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 					Local temp = Search[nCur];
 					nCur++;
 					AreaSize++;
-					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 					{
-						if (nTempRows < nRow)
+						if (nTempRows >= 0 && nTempRows < nRow)
 						{
-							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 							{
-								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								if (nTempCols >= 0 && nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
 									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-									Search.push_back({ nTempRows , nTempCols });
+									Search.push_back({ (uint32_t)nTempRows , (uint32_t)nTempCols });
 								}
 							}
 						}
@@ -1129,16 +1160,16 @@ void CAlp003CAAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nN
 					Local temp = Search[nCur];
 					nCur++;
 					AreaSize++;
-					for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+					for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 					{
-						if (nTempRows < nRow)
+						if (nTempRows >= 0 && nTempRows < nRow)
 						{
-							for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+							for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 							{
-								if (nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+								if (nTempCols >= 0 && nTempCols < nCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 								{
 									BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-									Search.push_back({ nTempRows , nTempCols });
+									Search.push_back({ (uint32_t)nTempRows , (uint32_t)nTempCols });
 								}
 							}
 						}

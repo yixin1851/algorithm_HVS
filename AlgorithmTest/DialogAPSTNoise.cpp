@@ -71,7 +71,11 @@ void CDialogAPSTNoise::TNoise()
 
 		QStringList RowName, ColName;
 		RowName << "TempNoise" << "RowTemp" << "ColTemp" << "PixelTemp" << "TempRNRatio" << "TempCNRatio";
-		if (m_TNoiseData.SubFrameTNoiseData.size() == 4)
+		if (m_TNoiseData.SubFrameTNoiseData.size() == 1)
+		{
+			ColName << "Total";
+		}
+		else if (m_TNoiseData.SubFrameTNoiseData.size() == 4)
 		{
 			ColName << "Gb" << "B" << "R" << "Gr";
 		}

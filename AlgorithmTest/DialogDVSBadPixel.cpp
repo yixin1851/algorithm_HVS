@@ -13,7 +13,12 @@ CDialogDVSBadPixel::CDialogDVSBadPixel(QDialog* parent, CAlpAPSMPAlgoInterface* 
 	ui.lineEditNumber->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditPeakNum->setValidator(new QIntValidator(1, 100000, this));
 	ui.lineEditDeadPixelThre->setValidator(new QDoubleValidator(0, 1, 3, this));
+	ui.lineEditClusterSizeThre->setValidator(new QIntValidator(1, 100000, this));
+	ui.lineEditDeadLineThre->setValidator(new QDoubleValidator(0, 1, 3, this));
+
 	ui.lineEditDeadPixelThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dDeadPixelThre));
+	ui.lineEditDeadLineThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().dDeadLineThre));
+	ui.lineEditClusterSizeThre->setText(QString::number(m_pDVSAlgoInterface->GetAlgorithmThre().nDeadPixelClusterSizeThre));
 
 	connect(ui.pushButtonExport, SIGNAL(clicked()), this, SLOT(Export()));
 	connect(ui.pushButtonStart, SIGNAL(clicked()), this, SLOT(BadPixel()), Qt::QueuedConnection);
@@ -27,9 +32,13 @@ void CDialogDVSBadPixel::BadPixel()
 	uint32_t nNumber = ui.lineEditNumber->text().toUInt();
 	uint32_t nPeakNum = ui.lineEditPeakNum->text().toUInt();
 	double dDeadPixelThre = ui.lineEditDeadPixelThre->text().toDouble();
+	double dDeadLineThre = ui.lineEditDeadLineThre->text().toDouble();
+	uint32_t nClusterSizeThre = ui.lineEditClusterSizeThre->text().toUInt();
 	uint32_t nLightType = ui.comboBoxLightType->currentIndex();
 	auto temp = m_pDVSAlgoInterface->GetAlgorithmThre();
 	temp.dDeadPixelThre = dDeadPixelThre;
+	temp.dDeadLineThre = dDeadLineThre;
+	temp.nDeadPixelClusterSizeThre = nClusterSizeThre;
 
 	m_pDVSAlgoInterface->SetAlgorithmThre(temp);
 	ui.tabBadPixelResult->Clear();
@@ -50,7 +59,7 @@ void CDialogDVSBadPixel::BadPixel()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		ColName << "DeadPixelNum" << "ClusterNum";
+		ColName << "DeadPixelNum" << "ClusterNum" << "DeadLine";
 
 		std::vector<std::vector<double>> Data;
 
@@ -66,6 +75,7 @@ void CDialogDVSBadPixel::BadPixel()
 			std::vector<double> OffData;
 			OffData.push_back(m_Data.nOffEventsDeadPixelNum);
 			OffData.push_back(m_Data.nOffEventsClusterNum);
+			OffData.push_back(m_Data.nOffEventsDeadLineNum);
 			Data.push_back(OffData);
 
 			uint8_t* pImage = new uint8_t[nRow * nCol];
@@ -87,6 +97,7 @@ void CDialogDVSBadPixel::BadPixel()
 			std::vector<double> OnData;
 			OnData.push_back(m_Data.nOnEventsDeadPixelNum);
 			OnData.push_back(m_Data.nOnEventsClusterNum);
+			OnData.push_back(m_Data.nOnEventsDeadLineNum);
 			Data.push_back(OnData);
 
 			uint8_t* pImage = new uint8_t[nRow * nCol];
@@ -120,9 +131,9 @@ void CDialogDVSBadPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "DeadPixelNum," << "ClusterNum" << std::endl;
-			outfile << std::to_string(m_Data.nOffEventsDeadPixelNum) << "," << std::to_string(m_Data.nOffEventsClusterNum) << std::endl;
-			outfile << std::to_string(m_Data.nOnEventsDeadPixelNum) << "," << std::to_string(m_Data.nOnEventsClusterNum) << std::endl;
+			outfile << "DeadPixelNum," << "ClusterNum," << "DeadLine" << std::endl;
+			outfile << std::to_string(m_Data.nOffEventsDeadPixelNum) << "," << std::to_string(m_Data.nOffEventsClusterNum) << "," << std::to_string(m_Data.nOffEventsDeadLineNum) << std::endl;
+			outfile << std::to_string(m_Data.nOnEventsDeadPixelNum) << "," << std::to_string(m_Data.nOnEventsClusterNum) << "," << std::to_string(m_Data.nOnEventsDeadLineNum) << std::endl;
 
 			outfile << "BadPixelMask" << std::endl;
 

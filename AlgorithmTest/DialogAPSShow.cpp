@@ -240,6 +240,35 @@ void CDialogAPSShow::on_pushButtonExport_clicked()
 					outfile.close();
 				}
 			}
+			uint32_t nTotalRow = 0, nTotalCol = 0;
+			m_pAPSAlgoInterface->GetRawDataSize(nTotalRow, nTotalCol);
+			uint16_t* RawData = new uint16_t[nTotalRow * nTotalCol];
+			auto start = clock();
+			if (m_pAPSAlgoInterface->Show(nCurIndex, RawData))
+			{
+				auto end = clock();
+				auto time = end - start;
+				ui.label_Res->setStyleSheet("color:green;");
+				QString res = QString::number(time);
+				ui.label_Res->setText(res);
+
+				std::string strFile = dir.toLocal8Bit().toStdString() + "//aps_16bit_W" + std::to_string(nTotalCol) + "_H" + std::to_string(nTotalRow) + ".raw";
+				std::ofstream outfile;
+				outfile.open(strFile, std::ios::binary | std::ios::trunc);
+				if (!outfile.fail())
+				{
+					for (uint32_t i = 0; i < nTotalRow * nTotalCol; i++)
+					{
+						uint8_t a = RawData[i] & 0xFF;
+						uint8_t b = (RawData[i] >> 8) & 0xFF;
+
+						outfile << a;
+						outfile << b;
+					}
+					outfile.close();
+				}
+			}
+			delete[] RawData;
 		}
 	}
 
