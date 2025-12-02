@@ -36,7 +36,7 @@
     <QtBuildConfig>debug</QtBuildConfig>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'" Label="QtSettings">
-    <QtInstall>Qt_Qt-6.4.1</QtInstall>
+    <QtInstall>6.10.1_msvc2022_64</QtInstall>
     <QtModules>core;gui;widgets;printsupport</QtModules>
     <QtBuildConfig>release</QtBuildConfig>
   </PropertyGroup>
@@ -73,6 +73,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Link>
       <AdditionalDependencies>AlgorithmLibrary.lib;Qt6PrintSupport.lib;%(AdditionalDependencies);$(Qt_LIBS_)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>D:\Work\Algorithm\algorithmlibrary\AlgorithmTest\x64\Release;D:\SoftWare\IDE\Qt\6.10.1\msvc2022_64\lib</AdditionalLibraryDirectories>
     </Link>
     <ClCompile>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -242,6 +243,7 @@
     <QtMoc Include="DoubleSlider.h" />
     <QtMoc Include="DialogAPSPTCTest.h" />
     <QtMoc Include="qcustomplot.h" />
+    <ClInclude Include="AlpMPAlgoInterface.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
