@@ -1,4 +1,4 @@
-#include "AlpAPSMPAlgorithm.h"
+﻿#include "AlpAPSMPAlgorithm.h"
 #include <thread>
 #include <algorithm>
 #include <stack>
@@ -36,6 +36,7 @@ bool operator< (const BadPixelInfo& lh, const BadPixelInfo& rh)
 
 CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
 {
+	// 参数初始化
 	m_nSiteNum = nSiteNum;
 	m_bMultiThreadEnable = false;
 	m_bLogEnable = false;
@@ -114,6 +115,7 @@ CAlpAPSMPAlgorithm::~CAlpAPSMPAlgorithm()
 
 bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSTNoiseType& TNoiseRes)
 {
+	// 计算时域噪声
 	bool bRet = true;
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
@@ -205,6 +207,7 @@ bool CAlpAPSMPAlgorithm::TNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 
 bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSSNoiseType& SNoiseData)
 {
+	// 计算空域噪声
 	bool bRet = true;
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 	RawDataContainer& DataContainer = m_bUse16SubFrame ? m_16SubRawDataContainer : m_RawDataContainer;
@@ -290,6 +293,7 @@ bool CAlpAPSMPAlgorithm::SNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea*
 				}
 			}
 		}
+		// 计算所有像素的标准差作为全帧噪声
 		SNoiseData.SNoiseFrame = Std(AllPixel, nCur);
 	}
 	return bRet;
@@ -688,6 +692,34 @@ bool CAlpAPSMPAlgorithm::BLC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nB
 
 bool CAlpAPSMPAlgorithm::DPC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, std::vector<Local>& BadPixelLocal)
 {
+	/*
+DPC (主函数)
+  │
+  ├─> 坐标转换: 全局 → 各子帧局部坐标
+  │
+  ├─> 多线程模式?
+  │    ├─ 是: 创建N个线程并行执行SubFrameDPC
+  │    └─ 否: 顺序执行SubFrameDPC
+  │
+  └─> SubFrameDPC (每个子帧独立执行)
+       │
+       ├─> 参数验证 (索引、ROI边界)
+       │
+       ├─> 遍历所有坏点
+       │    │
+       │    └─> 遍历所有帧
+       │         │
+       │         ├─> 计算3×3邻域均值 (排除其他坏点)
+       │         ├─> 替换坏点值
+       │         └─> 如果启用16子帧: 同步更新对应子通道
+       │
+       └─> 返回处理状态
+	
+	*/
+	// 核心功能：
+	// 1. 坐标转换与任务分配：将全局坐标的坏点位置转换为各子帧的局部坐标；
+	// 2. 并行调度：根据配置选择多线程或单线程执行模式；
+	// 3. 结果汇总：收集所有子帧的处理状态；
 	bool bRet = true;
 	bool bSubRes[SubFrameIndex::All];
 
@@ -747,12 +779,19 @@ bool CAlpAPSMPAlgorithm::BadPixelLocalToOtpType(std::vector<Local> BadPixelLocal
 	{
 		uint16_t nRow = static_cast<uint16_t>(BadPixelLocal[nIndex].x + m_AlgorithmThre.nBadPixelLocalRowOffset);
 		uint16_t nCol = static_cast<uint16_t>(BadPixelLocal[nIndex].y + m_AlgorithmThre.nBadPixelLocalColOffset);
+		// uData1存储列号的低8位
 		uint8_t uData1 = nCol & 0xFF;
+		// uData2高4位存储行号的低4位
+		// uData2低4位存储列号的高4位
 		uint8_t uData2 = ((nRow << 4) & 0xF0) + ((nCol >> 8) & 0x0F);
+		// uData3存储列号的高8位
 		uint8_t uData3 = (nRow >> 4) & 0xFF;
 		OtpData[nCur++] = uData1;
 		OtpData[nCur++] = uData2;
 		OtpData[nCur++] = uData3;
+		// 字节1: [Col[7:0]]
+		// 字节2: [row[3:0]] [col[11:8]]
+		// 字节3: [row[11:4]]
 	}
 
 	return true;
@@ -797,6 +836,7 @@ bool CAlpAPSMPAlgorithm::YShading(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 		return false;
 	}
 
+	// 计算中心亮度基准，YCenter = (Gb中心块 + Gr中心块)/2
 	double YCenter = (BlockData[Gr].m_RawData[m_AlgorithmThre.nYShadingRowBlockNum / 2][m_AlgorithmThre.nYShadingColBlockNum / 2] +
 		BlockData[Gb].m_RawData[m_AlgorithmThre.nYShadingRowBlockNum / 2][m_AlgorithmThre.nYShadingColBlockNum / 2]) / 2;
 
@@ -814,16 +854,26 @@ bool CAlpAPSMPAlgorithm::YShading(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 
 		for (uint32_t nCols = 0; nCols < m_AlgorithmThre.nYShadingColBlockNum; nCols++)
 		{
+			// 对于每个block，Y = (Gb值 + Gr值) / 2;
 			double Y = (BlockData[Gr].m_RawData[nRows][nCols] + BlockData[Gb].m_RawData[nRows][nCols]) / 2;
 
+			// Shading>1表示比中心亮, Shading<1表示比中心暗
 			ShadingRes.YShadingData[nRows][nCols] = Y / YCenter;
 		}
 	}
 
+	// 定义4角和中心亮度比区域
+	// 每个角落区域占ROI的10%*10%
+	// 中心区域占ROI的10%*10%
+	// Left-Top
 	ROIArea LT = { RealRoi.Up, RealRoi.Up + nRow * 0.1 - 1, RealRoi.Left, RealRoi.Left + nCol * 0.1 - 1 };
+	// Left-Bottom
 	ROIArea LB = { RealRoi.Down - nRow * 0.1 + 1, RealRoi.Down , RealRoi.Left, RealRoi.Left + nCol * 0.1 - 1 };
+	// Right-Top
 	ROIArea RT = { RealRoi.Up, RealRoi.Up + nRow * 0.1 - 1, RealRoi.Right - nCol * 0.1 + 1 , RealRoi.Right };
+	// Right-Bottom
 	ROIArea RB = { RealRoi.Down - nRow * 0.1 + 1, RealRoi.Down , RealRoi.Right - nCol * 0.1 + 1 , RealRoi.Right };
+	// Center
 	ROIArea CT = { RealRoi.Up + nRow * 0.45, RealRoi.Up + nRow * 0.55 - 1, RealRoi.Left + nCol * 0.45, RealRoi.Left + nCol * 0.55 - 1 };
 
 	double YGbLT = 0, YGbLB = 0, YGbRT = 0, YGbRB = 0, YGbCT = 0;
@@ -847,6 +897,12 @@ bool CAlpAPSMPAlgorithm::YShading(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 		return false;
 	}
 
+	// 计算4个角的相对亮度：
+	// 值接近1.0表示均匀性好，偏离1.0越远表示Shading越严重
+	// YShadingLT = (Gb左上 + Gr左上) / (Gb中心 + Gr中心)
+	// YShadingLB = (Gb左下 + Gr左下) / (Gb中心 + Gr中心)
+	// YShadingRT = (Gb右上 + Gr右上) / (Gb中心 + Gr中心)
+	// YShadingRB = (Gb右下 + Gr右下) / (Gb中心 + Gr中心)
 	ShadingRes.YShadingLT = (YGbLT + YGrLT) / (YGbCT + YGrCT);
 	ShadingRes.YShadingLB = (YGbLB + YGrLB) / (YGbCT + YGrCT);
 	ShadingRes.YShadingRT = (YGbRT + YGrRT) / (YGbCT + YGrCT);
@@ -857,6 +913,7 @@ bool CAlpAPSMPAlgorithm::YShading(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 
 bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSColorShadingType& ShadingRes)
 {
+	// 该函数分析图像中不同区域的R/G和B/G比值分布，通过与中心区域对比来量化色彩偏移程度
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
 	{
@@ -887,6 +944,7 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
 	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
 
+	// 分块均值计算
 	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nColorShadingRowBlockNum, m_AlgorithmThre.nColorShadingColBlockNum, BlockData))
 	{
 		std::string strErr = "ColorShading: GetBlockMean error";
@@ -894,8 +952,10 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 		return false;
 	}
 
+	// 中心基准计算
 	double RCenter = BlockData[R].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2];
 	double BCenter = BlockData[B].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2];
+	// G通道去Gb、Gr的平均值
 	double GCenter = (BlockData[Gr].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2] +
 		BlockData[Gb].m_RawData[m_AlgorithmThre.nColorShadingRowBlockNum / 2][m_AlgorithmThre.nColorShadingColBlockNum / 2]) / 2;
 
@@ -905,7 +965,9 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 		WriteLog(strErr, SubFrameIndex::All);
 		return false;
 	}
+	// 中心R/G比值
 	double RGCenter = RCenter / GCenter;
+	// 中心B/G比值
 	double BGCenter = BCenter / GCenter;
 
 	ShadingRes.ColorShadingRGData.resize(m_AlgorithmThre.nColorShadingRowBlockNum);
@@ -928,6 +990,8 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 				return false;
 			}
 
+			// 归一化到中心值
+			// 理想情况下，所有块的归一值都应接近1.0。偏离1.0越远，说明该区域色彩偏移越严重。
 			double RG = RMean / GMean;
 			double BG = BMean / GMean;
 
@@ -936,14 +1000,23 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 		}
 	}
 
+	// 四个角落数据提取, 四角数据是关键指标，通常用于判断镜头或sensor的色彩均匀性是否合格
+	// Left-Top R/G值
 	ShadingRes.ColorShadingRGLT = ShadingRes.ColorShadingRGData[0][0];
+	// Left-Bottom R/G值
 	ShadingRes.ColorShadingRGLB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][0];
+	// Right-Top R/G值
 	ShadingRes.ColorShadingRGRT = ShadingRes.ColorShadingRGData[0][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+	// Right-Bottom R/G值
 	ShadingRes.ColorShadingRGRB = ShadingRes.ColorShadingRGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
 
+	// Left-Top B/G值
 	ShadingRes.ColorShadingBGLT = ShadingRes.ColorShadingBGData[0][0];
+	// Left-Bottom B/G值
 	ShadingRes.ColorShadingBGLB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][0];
+	// Right-Top B/G值
 	ShadingRes.ColorShadingBGRT = ShadingRes.ColorShadingBGData[0][m_AlgorithmThre.nColorShadingColBlockNum - 1];
+	// Right-Bottom B/G值
 	ShadingRes.ColorShadingBGRB = ShadingRes.ColorShadingBGData[m_AlgorithmThre.nColorShadingRowBlockNum - 1][m_AlgorithmThre.nColorShadingColBlockNum - 1];
 
 	return true;
@@ -951,6 +1024,11 @@ bool CAlpAPSMPAlgorithm::ColorShading(uint32_t nIndexStart, uint32_t nNumber, RO
 
 bool CAlpAPSMPAlgorithm::OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSOpticalCenterType& OpticalCenterType)
 {
+	// 在指定的ROI区域内，通过多帧图像数据计算出光强最大的位置作为光学中心
+	// 基于投影法：
+	// 1. 将2D图像投影到行和列两个方向；
+	// 2. 最亮的行和列的交点即为光学中心；
+	// 3. 通过多帧平均降低噪声影响；
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
 	{
@@ -987,6 +1065,7 @@ bool CAlpAPSMPAlgorithm::OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, R
 	{
 		for (uint32_t nCols = 0; nCols < nCol; nCols++)
 		{
+			// 计算该像素点在所有帧、所有通道的均值
 			double dMeanData = 0;
 			for (uint32_t nFrameIndex = 0; nFrameIndex < nNumber; nFrameIndex++)
 			{
@@ -1002,8 +1081,10 @@ bool CAlpAPSMPAlgorithm::OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, R
 	}
 
 	double dMaxValue = 0;
+	// 找到行均值最大的行号
 	Max(dMaxValue, OpticalCenterType.CenterRow, RowMean, RowMean.size());
 	OpticalCenterType.CenterRow += RealRoi.Up;
+	// 找到列均值最大的列号
 	Max(dMaxValue, OpticalCenterType.CenterCol, ColMean, ColMean.size());
 	OpticalCenterType.CenterCol += RealRoi.Left;
 	return true;
@@ -1011,6 +1092,7 @@ bool CAlpAPSMPAlgorithm::OpticalCenter(uint32_t nIndexStart, uint32_t nNumber, R
 
 bool CAlpAPSMPAlgorithm::PedestalVariation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, APSPedestalVariationType& PedestalVariationRes)
 {
+	// 计算指定帧范围内、指定ROI区域的基底信号变化范围(最大值和最小值)，通常用于评估sensor的噪声特性
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
 	{
@@ -1037,12 +1119,20 @@ bool CAlpAPSMPAlgorithm::PedestalVariation(uint32_t nIndexStart, uint32_t nNumbe
 		return false;
 	}
 
+	// 计算ROI尺寸
 	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
 
+	// 分块计算均值
 	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
 
-	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nPedestalVariationRowBlockNum, m_AlgorithmThre.nPedestalVariationColBlockNum, BlockData, m_AlgorithmThre.nPedestalVariationRowBlockSize, m_AlgorithmThre.nPedestalVariationColBlockSize))
+	// 将ROI区域分成多个小块，并计算每个块在多帧图像上的时域均值
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi,
+		m_AlgorithmThre.nPedestalVariationRowBlockNum, // 行方向分块数
+		m_AlgorithmThre.nPedestalVariationColBlockNum, // 列方向分块数
+		BlockData, 
+		m_AlgorithmThre.nPedestalVariationRowBlockSize, // 行方向块大小
+		m_AlgorithmThre.nPedestalVariationColBlockSize)) // 列方向块大小
 	{
 		std::string strErr = "PedestalVariation: GetBlockMean error";
 		WriteLog(strErr, SubFrameIndex::All);
@@ -1061,6 +1151,7 @@ bool CAlpAPSMPAlgorithm::PedestalVariation(uint32_t nIndexStart, uint32_t nNumbe
 
 bool CAlpAPSMPAlgorithm::ReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, APSReadNoiseType& ReadNoiseRes)
 {
+	// 通过分析同一区域两帧图像的差异来评估噪声水平
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
 	{
@@ -1105,6 +1196,12 @@ bool CAlpAPSMPAlgorithm::ReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* 
 			}
 		}
 	}
+	// 数学公式推导：
+	// 1. 两个独立随机变量差值的方差 = 两者方差之和；
+	// 2. 若两帧噪声方差相同为σ²，差值方差为2σ²；
+	// 3. 差值标准差 = √(2σ²) = σ*√2；
+	// 4. 因此单帧噪声σ = 差值标准差 / √2； 
+	// 即：ReadNoise = 差值标准差 / √2
 	ReadNoiseRes = Std(AllPixel, nCur) / sqrt(2);
 
 	return true;
@@ -1112,6 +1209,8 @@ bool CAlpAPSMPAlgorithm::ReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* 
 
 bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSDataMeanType>& DataMean, std::vector<double>& ExpTime, APSDarkCurrentType& DarkCurrentRes)
 {
+	// 通过对多组不同曝光时间的数据进行线性拟合来确定暗电流系数
+	// 均值法： 适用于已知基准参考，需要绝对暗电流值的场景
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 
 	if (DataMean.size() != ExpTime.size())
@@ -1127,17 +1226,21 @@ bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSDataMeanType>& DataMean, std
 		std::vector<double> XData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
+			// X: 曝光时间
 			XData[nIndex] = ExpTime[nIndex];
 		}
 		std::vector<double> YData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
+			// Y: 该通道的均值数据
 			YData[nIndex] = DataMean[nIndex].SubFrameDataMean[nChannelIndex];
 		}
 		double k = 0.0, b = 0.0;
+		// 线性拟合，对(曝光数据, 均值)进行拟合，得到斜率k和截距b
+		// 拟合公式： DataMean = K*t_exp+b
 		if (LinearityFit(XData, YData, k, b))
 		{
-			DarkCurrentRes.SubFrameKValue[nChannelIndex] = k * 1000;
+			DarkCurrentRes.SubFrameKValue[nChannelIndex] = k * 1000;// 为什么*1000再保存，单位转换？
 		}
 		else
 		{
@@ -1152,6 +1255,8 @@ bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSDataMeanType>& DataMean, std
 
 bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSTNoiseType>& TNoise, std::vector<double>& ExpTime, APSDarkCurrentType& DarkCurrentRes)
 {
+	// 使用Temporal Noise数据来计算暗电流
+	// 噪声方差法： 适用于相对测量，更关注暗电流引起的图像质量影响的场景
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 
 	if (TNoise.size() != ExpTime.size())
@@ -1172,10 +1277,12 @@ bool CAlpAPSMPAlgorithm::DarkCurrent(std::vector<APSTNoiseType>& TNoise, std::ve
 		std::vector<double> YData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
-
+			// Y: 使用TNoise² 
 			YData[nIndex] = TNoise[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise * TNoise[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise;
 		}
 		double k = 0.0, b = 0.0;
+		// 线性拟合，对(t_exp, TemproalNoise²)进行拟合
+		// TemproalNoise² = DarkCurrent * t_exp;
 		if (LinearityFit(XData, YData, k, b))
 		{
 			DarkCurrentRes.SubFrameKValue[nChannelIndex] = k * 1000;
@@ -1221,6 +1328,7 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 
 	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+	// 图像分块处理
 	uint32_t nRowBlockNum = m_AlgorithmThre.nDSNURowBlockNum;
 	uint32_t nColBlockNum = m_AlgorithmThre.nDSNUColBlockNum;
 
@@ -1248,6 +1356,7 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		{
 			R.m_RawData[nRowBlocks][nColBlocks] = BlockData[SubFrameIndex::R].m_RawData[nRowBlocks][nColBlocks];
 			//G.m_RawData[nRowBlocks][nColBlocks] = sqrt((BlockData[SubFrameIndex::Gr].m_RawData[nRowBlocks][nColBlocks] * BlockData[SubFrameIndex::Gr].m_RawData[nRowBlocks][nColBlocks] + BlockData[SubFrameIndex::Gb].m_RawData[nRowBlocks][nColBlocks] * BlockData[SubFrameIndex::Gb].m_RawData[nRowBlocks][nColBlocks]) / 2);
+			// G = (Gb + Gr) / 2;
 			G.m_RawData[nRowBlocks][nColBlocks] = (BlockData[SubFrameIndex::Gr].m_RawData[nRowBlocks][nColBlocks] + BlockData[SubFrameIndex::Gb].m_RawData[nRowBlocks][nColBlocks]) / 2;
 			B.m_RawData[nRowBlocks][nColBlocks] = BlockData[SubFrameIndex::B].m_RawData[nRowBlocks][nColBlocks];
 			dPedestal += R.m_RawData[nRowBlocks][nColBlocks];
@@ -1256,6 +1365,7 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		}
 	}
 
+	// 基准值(Pedestal), 计算R、G、B通道的全局平均值作为基准值
 	dPedestal = round(dPedestal / (3 * nRowBlockNum * nColBlockNum));
 
 	double MaxR = R.m_RawData[0][0], MinR = R.m_RawData[0][0], MaxG = G.m_RawData[0][0], MinG = G.m_RawData[0][0], MaxB = B.m_RawData[0][0], MinB = B.m_RawData[0][0];
@@ -1265,8 +1375,11 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	uint32_t nMinSignalEdgeRow = 0, nMinSignalEdgeCol = 0;
 	uint32_t nMinSignalRow = 0, nMinSignalCol = 0;
 
+	// Corner: 四个角落2*2块区域
 	ROIArea ROICorner[4] = { { 0, 1, 0, 1 }, { 0, 1, nColBlockNum - 2, nColBlockNum - 1 }, { nRowBlockNum - 2, nRowBlockNum - 1, 0, 1 }, { nRowBlockNum - 2, nRowBlockNum - 1, nColBlockNum - 2, nColBlockNum - 1 } };
+	// Edge: 除Corner外的边缘区域
 	ROIArea ROIEdge[4] = { { 0, 1, 2, nColBlockNum - 3 }, { nRowBlockNum - 2, nRowBlockNum - 1, 2, nColBlockNum - 3 }, {2, nRowBlockNum - 3, 0, 1 }, {2, nRowBlockNum - 3, nColBlockNum - 2, nColBlockNum - 1 }, };
+	// Center：内部区域(排除最外两圈块)
 	ROIArea ROICenter = { 2, nRowBlockNum - 3, 2, nColBlockNum - 3 };
 
 	for (uint32_t nRowBlockIndex = 0; nRowBlockIndex < nRowBlockNum; nRowBlockIndex++)
@@ -1285,13 +1398,15 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 				MaxB = B.m_RawData[nRowBlockIndex][nColBlockIndex];
 			if (B.m_RawData[nRowBlockIndex][nColBlockIndex] < MinB)
 				MinB = B.m_RawData[nRowBlockIndex][nColBlockIndex];
+			// 使用欧几里得距离计算每个块相对于基准的偏差
 			double dSignal = sqrt(pow(R.m_RawData[nRowBlockIndex][nColBlockIndex] - dPedestal, 2) + pow(G.m_RawData[nRowBlockIndex][nColBlockIndex] - dPedestal, 2) + pow(B.m_RawData[nRowBlockIndex][nColBlockIndex] - dPedestal, 2));
 			if (dSignal > MaxSignal)
-				MaxSignal = dSignal;
+				MaxSignal = dSignal; // 最大信号强度
 			if (dSignal < MinSignal)
 			{
-				MinSignal = dSignal;
-				nMinSignalRow = nRowBlockIndex;
+				// 最小信号强度及其位置
+				MinSignal = dSignal; 				
+				nMinSignalRow = nRowBlockIndex; 
 				nMinSignalCol = nColBlockIndex;
 			}
 			if (PosInRoi(nRowBlockIndex, nColBlockIndex, ROICenter))
@@ -1324,9 +1439,11 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		}
 	}
 
+	// RGB各通道范围(Range), Range值越小代表通道均匀性越好
 	DSNURes.RangeR = MaxR - MinR;
 	DSNURes.RangeG = MaxG - MinG;
 	DSNURes.RangeB = MaxB - MinB;
+
 	DSNURes.SignalMax = MaxSignal;
 	DSNURes.RMax = MaxR;
 	DSNURes.RMin = MinR;
@@ -1335,10 +1452,12 @@ bool CAlpAPSMPAlgorithm::DSNU(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	DSNURes.BMax = MaxB;
 	DSNURes.BMin = MinB;
 
+	// 增量信号, DeltSignal值越小代表暗信号分布越均匀
 	double dDeltaSignal = 0;
 	DSNURes.DeltaSignalCentreMax = 0;
 	DSNURes.DeltaSignalCornerMax = 0;
 	DSNURes.DeltaSignalEdgeMax = 0;
+	// 全局最大增量信号
 	DSNURes.DeltaSignalMax = 0;
 	double dGlobalDeltaSignal = 0;
 
@@ -1449,6 +1568,7 @@ bool CAlpAPSMPAlgorithm::DataMean(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 
 bool CAlpAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean, std::vector<double>& ExpTime, APSLinearityType& LinearityRes)
 {
+	// 通过拟合曝光时间与信号强度的关系，计算线性度误差
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 
 	if (LightMean.size() != ExpTime.size() && LightMean.size() != 0)
@@ -1474,19 +1594,24 @@ bool CAlpAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean, std:
 		std::vector<double> XData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
+			// 曝光时间t_exp
 			XData[nIndex] = ExpTime[nIndex];
 		}
 		std::vector<double> YData(nDataNum);
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
+			// 对应的信号强度
 			YData[nIndex] = LightMean[nIndex].SubFrameDataMean[nChannelIndex];
 		}
+		// 线性拟合
 		if (LinearityFit(XData, YData, LinearityRes.SubFrameLinearityData[nChannelIndex].k, LinearityRes.SubFrameLinearityData[nChannelIndex].b))
 		{
 			LinearityRes.SubFrameLinearityData[nChannelIndex].LeMax = -100000, LinearityRes.SubFrameLinearityData[nChannelIndex].LeMin = 10000;
 			for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 			{
+				// 拟合值FitY
 				double FitY = ExpTime[nIndex] * LinearityRes.SubFrameLinearityData[nChannelIndex].k + LinearityRes.SubFrameLinearityData[nChannelIndex].b;
+				// 线性度误差LE = (实际值 - 拟合值)/拟合值 
 				double LE = 100 * (YData[nIndex] - FitY) / FitY;
 				if (LE > LinearityRes.SubFrameLinearityData[nChannelIndex].LeMax)
 					LinearityRes.SubFrameLinearityData[nChannelIndex].LeMax = LE;
@@ -1507,8 +1632,10 @@ bool CAlpAPSMPAlgorithm::Linearity(std::vector<APSDataMeanType>& LightMean, std:
 
 bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<APSTNoiseType>& LightTNoiseData, std::vector<APSDataMeanType>& LightMean, APSTNoiseType DarkTNoiseBase, APSOverallSystemGainType& GainRes)
 {
+	// 利用PTC计算系统增益K。方差=K*均值+常数.
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 
+	// 确保噪声数据和均值数据的样本数量一致，否则返回错误
 	if (LightTNoiseData.size() != LightMean.size())
 	{
 		std::string strErr = "OverallSystemGain: Size Error: LightTNoiseData Size: " + std::to_string(LightTNoiseData.size()) + ", LightMean Size: " + std::to_string(LightMean.size());
@@ -1516,19 +1643,25 @@ bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<APSTNoiseType>& LightTNoi
 		return false;
 	}
 	GainRes.SubFrameGainK.resize(nChannelNum);
+	// 逐个通道计算增益
 	for (uint32_t nChannelIndex = 0; nChannelIndex < nChannelNum; nChannelIndex++)
 	{
 		uint32_t nDataNum = LightMean.size();
 		std::vector<double> XData(nDataNum);
+		// 准备X轴数据(信号均值)
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
 			XData[nIndex] = LightMean[nIndex].SubFrameDataMean[nChannelIndex];
 		}
 		std::vector<double> YData(nDataNum);
+
+		// 准备Y轴数据(方差差值)
 		for (uint32_t nIndex = 0; nIndex < nDataNum; nIndex++)
 		{
+			// YData[nIndex] = σ²_light - σ²_dark;
 			YData[nIndex] = LightTNoiseData[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise * LightTNoiseData[nIndex].SubFrameTNoiseData[nChannelIndex].TempNoise - DarkTNoiseBase.SubFrameTNoiseData[nChannelIndex].TempNoise * DarkTNoiseBase.SubFrameTNoiseData[nChannelIndex].TempNoise;
 		}
+		// 对(均值,方差差值)数据点进行线性拟合, 斜率K即为该通道的增益系数
 		double k = 0.0, b = 0.0;
 		if (LinearityFit(XData, YData, k, b))
 		{
@@ -1547,6 +1680,7 @@ bool CAlpAPSMPAlgorithm::OverallSystemGain(std::vector<APSTNoiseType>& LightTNoi
 
 bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSaturationType& SaturationRes)
 {
+	// 计算饱和度特性，包括均值、时域噪声、信噪比
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 	if (nChannelIndex >= nChannelNum)
 	{
@@ -1575,12 +1709,14 @@ bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIA
 		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
 	}
 
+	// 计算均值
 	bool bRes = false;
 	SubFrameDataMean(nIndexStart, nNumber, &RealRoi, nChannelIndex, SaturationRes.SaturationMean, bRes, DataContainer);
 	if (!bRes)
 	{
 		return false;
 	}
+	// 计算时域噪声
 	APSSubFrameTNoiseType TNoise;
 	SubFrameTNoise(nIndexStart, nNumber, &RealRoi, nChannelIndex, TNoise, bRes, DataContainer);
 	if (!bRes)
@@ -1596,6 +1732,7 @@ bool CAlpAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIA
 		return false;
 	}
 
+	// 计算信噪比: SNR = Mean / TNoise;
 	SaturationRes.SaturationSNR = SaturationRes.SaturationMean / SaturationRes.SaturationTNoise;
 
 	return true;
@@ -1621,6 +1758,14 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		RealRoi = *ROI;
 	}
 
+	// 添加参数验证
+	if (nNumber % 2 != 0 || nNumber < 4) {
+		std::string strErr = "OETC: nNumber must be even and >= 4";
+		WriteLog(strErr, nChannelIndex);
+		return false;
+	}
+
+	// 计算ROI中心区域(半径为nOETCRaduis的正方形区域)
 	uint32_t nRoiRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nRoiCol = RealRoi.Right - RealRoi.Left + 1;
 	ROIArea temp = { 0 };
@@ -1638,13 +1783,16 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	OETCRes.TNoiseData.resize(nNumber / 2);
 	bool bRes = false;
 
+	// 双采样, 每次处理2帧消除固定模式噪声
 	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex += 2)
 	{
+		// 1. 计算平均信号值
 		SubFrameDataMean(nIndexStart + nIndex, 2, &RealRoi, nChannelIndex, OETCRes.DataMean[nIndex / 2], bRes, DataContainer);
 		if (!bRes)
 		{
 			return false;
 		}
+		// 2. 计算时域噪声(Temporal Noise)
 		APSSubFrameTNoiseType temp;
 		SubFrameTNoise(nIndexStart + nIndex, 2, &RealRoi, nChannelIndex, temp, bRes, DataContainer);
 		if (!bRes)
@@ -1652,6 +1800,7 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 			return false;
 		}
 		OETCRes.TNoiseData[nIndex / 2] = temp.TempNoise;
+		// 3. 计算Read Noise(通过相邻2帧差分)
 		SubFrameReadNoise(nIndexStart + nIndex, nIndexStart + nIndex + 1, &RealRoi, nChannelIndex, OETCRes.ReadNoiseData[nIndex / 2], bRes, DataContainer);
 		if (!bRes)
 		{
@@ -1663,16 +1812,19 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	//Max(dMaxValue, nMaxLocal, TNoiseData, TNoiseData.size());
 	//SubFrameReadNoise(0, 1, &RealRoi, nChannelIndex, ReadNoiseData, bRes, DataContainer);
 
+	// FWC检测
+	// 策略1：检测Read Noise突变, 原理：像素饱和后，噪声会突然下降(因为信号被限幅)
 	for (uint32_t nIndex = 0; nIndex < OETCRes.ReadNoiseData.size() - 1; nIndex += 1)
 	{
 		double U = OETCRes.ReadNoiseData[nIndex] - OETCRes.ReadNoiseData[nIndex + 1];
-		if ((U > 1.5) && (nIndex > 10))
+		if ((U > 1.5) && (nIndex > 10)) // 噪声突降>1.5且帧数>10
 		{
 			nMaxLocal = nIndex;
 			break;
 		}
 	}
 
+	// 策略2：寻找Read Noise峰值, 如果上面没有检测到突变, 将Read Noise峰值+2作为饱和点
 	if (nMaxLocal == 0)
 	{
 		Max(dMaxValue, nMaxLocal, OETCRes.ReadNoiseData, OETCRes.ReadNoiseData.size());
@@ -1687,23 +1839,29 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		WriteLog(strErr, nChannelIndex);
 		return false;
 	}
+	// 计算FWC
 	OETCRes.FWC = OETCRes.DataMean[nMaxLocal] - OETCRes.DataMean[0];
+	// 计算Read Noise
 	OETCRes.ReadNoise = OETCRes.ReadNoiseData[0];
+	// 公式：DR = 20*log10(FWC/Read Noise)
 	OETCRes.DR_dB = 20 * log10(OETCRes.FWC / OETCRes.ReadNoise);
 
 	std::vector<double> XData;
 	std::vector<double> YData;
 
+	// 计算 Conversion Gain, 使用PTC方法
 	for (uint32_t n = 0; n < OETCRes.DataMean.size(); n++)
 	{
+		// 只使用FWC的10%~70%的线性区域数据
 		if ((OETCRes.DataMean[n] - OETCRes.DataMean[0]) >= OETCRes.FWC * 0.1 && (OETCRes.DataMean[n] - OETCRes.DataMean[0]) <= OETCRes.FWC * 0.7)
 		{
-			XData.push_back(OETCRes.DataMean[n] - OETCRes.DataMean[0]);
-			YData.push_back(OETCRes.ReadNoiseData[n] * OETCRes.ReadNoiseData[n] - OETCRes.ReadNoiseData[0] * OETCRes.ReadNoiseData[0]);
+			XData.push_back(OETCRes.DataMean[n] - OETCRes.DataMean[0]); // 信号值
+			YData.push_back(OETCRes.ReadNoiseData[n] * OETCRes.ReadNoiseData[n] - OETCRes.ReadNoiseData[0] * OETCRes.ReadNoiseData[0]); // 方差
 		}
 	}
 
 	double k = 0.0, b = 0.0;
+	// 线性拟合, 最下二乘法线性回归
 	if (LinearityFit(XData, YData, k, b))
 	{
 		OETCRes.ConversionGain = 1 / k;
@@ -1722,6 +1880,7 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 
 bool CAlpAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSSNRType& SSNRRes)
 {
+	// 分析CIS Linearity，通过计算SSNR来评估性能
 	uint32_t nChannelNum = SubFrameIndex::All;
 	if (nChannelIndex >= nChannelNum)
 	{
@@ -1760,12 +1919,14 @@ bool CAlpAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIAr
 
 	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex += 1)
 	{
+		// 计算帧平均值
 		SubFrameDataMean(nIndexStart + nIndex, 1, &RealRoi, nChannelIndex, SSNRRes.DataMean[nIndex], bRes, DataContainer);
 		if (!bRes)
 		{
 			return false;
 		}
 		APSSubFrameSNoiseType temp;
+		// 计算空域噪声
 		SubFrameSNoise(nIndexStart + nIndex, 1, &RealRoi, nChannelIndex, temp, bRes, DataContainer);
 		if (!bRes)
 		{
@@ -1773,6 +1934,8 @@ bool CAlpAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIAr
 		}
 		SSNRRes.SNoiseData[nIndex] = temp.SNoise;
 
+		// 计算空域SNR
+		// SSNR计算公式：20*log10(信号差值 / 空域噪声)
 		if (SSNRRes.SNoiseData[nIndex] != 0)
 		{
 			double dLinerimg = SSNRRes.DataMean[nIndex] - SSNRRes.DataMean[0];
@@ -1788,12 +1951,18 @@ bool CAlpAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIAr
 		}
 	}
 
+	// 寻找最大SSNR位置
 	double dMax = 0;
 	uint32_t nMaxLocal = 0;
 
 	for (uint32_t nIndex = 0; nIndex < nNumber - 1; nIndex += 1)
 	{
 		double U = abs(SSNRRes.SSNR[nIndex + 1] - SSNRRes.SSNR[nIndex]);
+		// 检测SSNR突变点
+		// 检测逻辑：
+		// 1. 相邻帧SSNR差值超过2.5dB;
+		// 2. 排除前10帧和后5帧;
+		// 3. 找到第一个满足条件的位置作为线性度上限
 		if ((U > 2.5) && (nIndex > 10) && (nIndex < nNumber - 5))
 		{
 			nMaxLocal = nIndex;
@@ -1803,6 +1972,7 @@ bool CAlpAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIAr
 
 	if (nMaxLocal == 0)
 	{
+		// 如果整个序列都是线性的，nMaxLocal保持为0，MaxSSNR = -1 是否合理？
 		SSNRRes.MaxSSNR = -1; // SSNRRes.SSNR[nMaxLocal];
 
 		//Max(dMax, nMaxLocal, SSNRRes.SSNR, SSNRRes.SSNR.size());
@@ -1856,6 +2026,7 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	uint32_t nChannelCol = m_nChannelCol;
 	if (m_bUse16SubFrame)
 	{
+		// 降采样
 		RealRoi.Up /= 2;
 		RealRoi.Left /= 2;
 		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
@@ -1871,6 +2042,14 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	}
 	if (!bNormalize)
 	{
+		// 对每个像素点：
+		// 多帧平均：累加指定数量的帧数据并求平均
+		// 数据类型转换:
+		// Raw8：直接取整(floor(temp))
+		// Raw10/UNPACK10：除以4后直接取整(floor(temp/4))
+		// 其他类型：除以16后直接取整(floor(temp/16))
+		// 负值处理：小于0的值设为0
+		// ROI外区域：设为0
 		for (uint32_t nRows = 0; nRows < nChannelRow; nRows++)
 		{
 			for (uint32_t nCols = 0; nCols < nChannelCol; nCols++)
@@ -1912,6 +2091,12 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	}
 	else
 	{
+		// 归一化处理
+		// 1. 多帧平均：使用临时容器累加并平均
+		// 2. 找到最值: 在ROI内找到最大值、最小值
+		// 3. 线性归一化： NewValue = (原始值-最小值) / (最大值-最小值) * 255; 
+		// 4. 四舍五入：round(NewValue)
+		// 5. ROI外区域：设为0
 		double dMaxValue = 0, dMinValue = 0;
 		Local temp;
 		CAPSDataContainer NormalizeDataContainer;
@@ -1930,7 +2115,7 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 			{
 				if (PosInRoi(nRows, nCols, RealRoi))
 				{
-					double NewValue = (NormalizeDataContainer.m_RawData[nRows][nCols] - dMinValue) / (dMaxValue - dMinValue) * 255;
+					double NewValue = (NormalizeDataContainer.m_RawData[nRows][nCols] - dMinValue) / (dMaxValue - dMinValue) * 255; // BUG: (dMaxValue - dMinValue)==0时会有除0错误
 					ImgData[nRows][nCols] = round(NewValue);
 				}
 				else
@@ -1945,6 +2130,7 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 
 bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData)
 {
+	// 从原始数据容器中提取指定帧范围的图像数据，对ROI内的像素进行求平均，生成合成图像
 	uint32_t nChannelNum = m_bUse16SubFrame ? 16 : SubFrameIndex::All;
 	if (nChannelIndex >= nChannelNum)
 	{
@@ -1981,19 +2167,25 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 	uint32_t nChannelCol = m_nChannelCol;
 	if (m_bUse16SubFrame)
 	{
-		RealRoi.Up /= 2;
+		// m_bUse16SubFrame 是什么模式？
+		RealRoi.Up /= 2; // 向下取整
 		RealRoi.Left /= 2;
-		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1;
+		RealRoi.Right = (RealRoi.Right + 1) / 2 - 1; // 向上取整后减1
 		RealRoi.Down = (RealRoi.Down + 1) / 2 - 1;
 		nChannelRow /= 2;
 		nChannelCol /= 2;
 	}
 
+	// 创建二维数组，大小为nChannelRow*nChannelCol
 	ImgData.resize(nChannelRow);
 	for (uint32_t nIndex = 0; nIndex < nChannelRow; nIndex++)
 	{
 		ImgData[nIndex].resize(nChannelCol);
 	}
+
+	// 遍历每个像素位置
+	// ROI内：对指定帧范围(nIndexStart到nIndexStart+nNumber-1)的数据求平均
+	// ROI外：填充0值
 	for (uint32_t nRows = 0; nRows < nChannelRow; nRows++)
 	{
 		for (uint32_t nCols = 0; nCols < nChannelCol; nCols++)
@@ -2033,6 +2225,7 @@ void CAlpAPSMPAlgorithm::SetDataToFrame(uint32_t nIndex, uint32_t nRowStart, uin
 
 bool CAlpAPSMPAlgorithm::Show(uint32_t nIndex, uint16_t* RawData)
 {
+	// 将指定nIndex的帧数据提取到RawData数组中，支持单线程和多线程两种模式
 	if (nIndex >= m_RawDataContainer[0].size())
 	{
 		std::string strErr = "Show: Index error: nIndex: " + std::to_string(nIndex);
@@ -2042,13 +2235,18 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndex, uint16_t* RawData)
 
 	if (m_bMultiThreadEnable)
 	{
+		// 多线程划分策略：将图像按行分成8份
 		int RowDiv = 8;
+		// 计算实际需要的线程数：
+		// 如果总行数能被8整除，使用8个线程，否则使用9个线程，多余的一个线程用于处理余数部分
 		int ThreadNum = m_nTotalRow % RowDiv == 0 ? RowDiv : RowDiv + 1;
 		std::vector<std::thread*> t(ThreadNum);
 
 		uint32_t nRowStart = 0;
+		// 每个线程处理的行数
 		uint32_t nRows = m_nTotalRow / RowDiv;
 
+		// 
 		for (int i = 0; i < ThreadNum; i++)
 		{
 			if ((nRowStart + nRows) > m_nTotalRow)
@@ -2061,12 +2259,13 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndex, uint16_t* RawData)
 
 		for (uint32_t i = 0; i < ThreadNum; i++)
 		{
-			t[i]->join();
-			delete t[i];
+			t[i]->join(); // 等待线程完成
+			delete t[i]; // 释放线程对象
 		}
 	}
 	else
 	{
+		// 单线程
 		SetDataToFrame(nIndex, 0, m_nTotalRow, RawData);
 	}
 	return true;
@@ -2443,6 +2642,7 @@ void CAlpAPSMPAlgorithm::Min(double& dMinValue, Local& MinLocal, CAPSDataContain
 
 inline bool CAlpAPSMPAlgorithm::PosInRoi(uint32_t nRows, uint32_t nCols, ROIArea& ROI)
 {
+	// 判断给定坐标是否在ROI内
 	if (nRows >= ROI.Up && nRows <= ROI.Down && nCols >= ROI.Left && nCols <= ROI.Right)
 	{
 		return true;
@@ -2452,32 +2652,50 @@ inline bool CAlpAPSMPAlgorithm::PosInRoi(uint32_t nRows, uint32_t nCols, ROIArea
 
 bool CAlpAPSMPAlgorithm::LinearityFit(std::vector<double>& XData, std::vector<double>& YData, double& k, double& b)
 {
+	// 这是一个最小二乘法线性回归函数的实现，用于拟合一条直线`y=kx+b`。
+	// 函数功能：计算给定数据点的最佳拟合直线的斜率k和截距b。
+
+	// 参数检查:
+	// 1. 检查数据是否为空；
+	// 2. 检查X和Y数据点数量是否一致；
+	// 没有检查数据点数量是否至少为2，至少需要2个点才能拟合直线
 	if (0 == XData.size() || XData.size() != YData.size())
 	{
 		return false;
 	}
 	double dSumX = 0, dSumXY = 0, dSumY = 0, dSumX2 = 0;
 	uint32_t nSize = XData.size();
+	// 累积计算最小二乘法所需的四个统计量
 	for (uint32_t nIndex = 0; nIndex < nSize; nIndex++)
 	{
-		dSumX += XData[nIndex];
-		dSumY += YData[nIndex];
-		dSumXY += XData[nIndex] * YData[nIndex];
-		dSumX2 += XData[nIndex] * XData[nIndex];
+		dSumX += XData[nIndex]; // Σx
+		dSumY += YData[nIndex]; // Σy
+		dSumXY += XData[nIndex] * YData[nIndex]; // Σ(xy)
+		dSumX2 += XData[nIndex] * XData[nIndex]; // Σ(x²)
 	}
 
+	// 奇异性检查：
+	// 1. 检查分母是否为0；
+	// 2. 当所有X值相同时会出现：垂直线，无法用`y=kx+b`表示
+	// 使用浮点数直接与0比较不够鲁棒，应该用阈值判断比较好
 	if (0 == nSize * dSumX2 - dSumX * dSumX)
 	{
 		return false;
 	}
 
 	k = (nSize * dSumXY - dSumX * dSumY) / (nSize * dSumX2 - dSumX * dSumX);
-	b = dSumY / nSize - dSumX / nSize * k;
+	// b = dSumY / nSize - dSumX / nSize * k;
+	b = (dSumY - k * dSumX) / nSize;
 	return true;
 }
 
 void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameTNoiseType& TNoise, bool& bRes, RawDataContainer& DataContainer)
 {
+	// 分析多帧图像数据，计算指定区域内的时域噪声：
+	// 1. 像素级时域噪声；
+	// 2. 行级时域噪声；
+	// 3. 列级时域噪声；
+	// 4. 以及它们之间的关系；
 	bRes = true;
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -2488,6 +2706,10 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	{
 		RealRoi = *ROI;
 	}
+	// 验证：
+	// 1. 帧数必须 >= 2，至少需要两帧才能计算标准差；
+	// 2. 索引范围必须有效；
+	// 3. ROI 边界必须合法；
 	if (nNumber < 2 || nIndexStart >= DataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameTNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -2505,50 +2727,59 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
 
-	CAPSDataContainer PixelTNoiseArray;
+	CAPSDataContainer PixelTNoiseArray; // 存储每个像素的时域噪声
 	PixelTNoiseArray.Init(nRow, nCol);
 
-	CAPSDataContainer RowDataArray;
+	CAPSDataContainer RowDataArray; // 存储每行在各帧的累加值
 	RowDataArray.Init(nRow, nNumber, true);
 
-	std::vector<double> RowNoise(nRow, 0);
-	std::vector<double> ColNoise(nCol, 0);
+	std::vector<double> RowNoise(nRow, 0); // 每行的噪声
+	std::vector<double> ColNoise(nCol, 0); // 每列的噪声
 
-	CAPSDataContainer ColDataArray;
+	CAPSDataContainer ColDataArray; // 存储每列在各帧的累加值
 	ColDataArray.Init(nCol, nNumber, true);
 
 	std::vector<double> onePixelInMultiFrames(nNumber);
 
-	for (uint32_t nRows = 0; nRows < nRow; nRows++)
+	for (uint32_t nRows = 0; nRows < nRow; nRows++) // 每一行
 	{
-		for (uint32_t nCols = 0; nCols < nCol; nCols++)
+		for (uint32_t nCols = 0; nCols < nCol; nCols++) // 每一列
 		{
-			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++) // 每一帧
 			{
+				// 提取同一像素位置在不同帧的值
 				double dValue = DataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 				onePixelInMultiFrames[nIndex] = dValue;
+				// 累加到行数据和列数据
 				RowDataArray.m_RawData[nRows][nIndex] += dValue;
 				ColDataArray.m_RawData[nCols][nIndex] += dValue;
 			}
+			// 计算该像素的时域标准差
 			PixelTNoiseArray.m_RawData[nRows][nCols] = Std(onePixelInMultiFrames, nNumber);
 		}
 	}
+	// 将累加值转换为平均值
 	RowDataArray /= nCol;
 	ColDataArray /= nRow;
 
+	// 计算每行的时域标准差
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
 		RowNoise[nRows] = Std(RowDataArray.m_RawData[nRows], nNumber);
 	}
+
+	// 计算每列的时域标准差
 	for (uint32_t nCols = 0; nCols < nCol; nCols++)
 	{
 		ColNoise[nCols] = Std(ColDataArray.m_RawData[nCols], nNumber);
 	}
 
-	TNoise.RowTemp = RMS(RowNoise, nRow);
-	TNoise.ColTemp = RMS(ColNoise, nCol);
-	TNoise.TempNoise = RMS(PixelTNoiseArray);
+	TNoise.RowTemp = RMS(RowNoise, nRow); // 行噪声的RMS值, 行方向的系统性噪声(可能由于读出电路)
+	TNoise.ColTemp = RMS(ColNoise, nCol); // 列噪声的RMS值, 列方向的系统噪声(可能由于列放大器)
+	TNoise.TempNoise = RMS(PixelTNoiseArray); // 总时域噪声
+	// 分离出Pixel噪声(减去行、列相关噪声) , 纯随机像素噪声(光子散粒噪声等)
 	TNoise.PixelTemp = sqrt(TNoise.TempNoise * TNoise.TempNoise - TNoise.RowTemp * TNoise.RowTemp - TNoise.ColTemp * TNoise.ColTemp);
+	// 计算噪声比例, 用于评估噪声的主要来源
 	if (TNoise.RowTemp > 0)
 	{
 		TNoise.TempRNRatio = TNoise.PixelTemp / TNoise.RowTemp;
@@ -2565,11 +2796,14 @@ void CAlpAPSMPAlgorithm::SubFrameTNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	{
 		TNoise.TempCNRatio = -1;
 	}
+	// 物理意义：
+	// 实现了噪声分解模型：总时域噪声² = 像素级噪声² + 行相关噪声² + 列相关噪声²
 	return;
 }
 
 void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameSNoiseType& SNoiseData, bool& bRes, RawDataContainer& DataContainer)
 {
+	// 计算子帧数据的空间噪声统计特性, 包括整体噪声、行噪声、列噪声
 	bRes = true;
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -2596,12 +2830,13 @@ void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, 
 	}
 	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
-	CAPSDataContainer PixelSNoiseArray;
+	CAPSDataContainer PixelSNoiseArray; // 存储平均后的像素值
 	PixelSNoiseArray.Init(nRow, nCol, true);
 
-	std::vector<double> RowMean(nRow, 0);
-	std::vector<double> ColMean(nCol, 0);
+	std::vector<double> RowMean(nRow, 0); // 每行的平均值
+	std::vector<double> ColMean(nCol, 0);// 每列的平均值
 
+	// 对所有帧求平均
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
 		for (uint32_t nCols = 0; nCols < nCol; nCols++)
@@ -2611,10 +2846,10 @@ void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, 
 			{
 				dValue += DataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 			}
-			dValue = round(dValue / nNumber);
+			dValue = round(dValue / nNumber); // 四舍五入
 			PixelSNoiseArray.m_RawData[nRows][nCols] = dValue;
-			RowMean[nRows] += dValue;
-			ColMean[nCols] += dValue;
+			RowMean[nRows] += dValue; // 累加行和
+			ColMean[nCols] += dValue; // 累加列和
 		}
 	}
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
@@ -2626,9 +2861,9 @@ void CAlpAPSMPAlgorithm::SubFrameSNoise(uint32_t nIndexStart, uint32_t nNumber, 
 		ColMean[nCols] /= nRow;
 	}
 
-	SNoiseData.SNoise = Std(PixelSNoiseArray);
-	SNoiseData.RowSNoise = Std(RowMean, nRow);
-	SNoiseData.ColSNoise = Std(ColMean, nCol);
+	SNoiseData.SNoise = Std(PixelSNoiseArray); // 整体Pixel标准差
+	SNoiseData.RowSNoise = Std(RowMean, nRow); // 行平均的标准差
+	SNoiseData.ColSNoise = Std(ColMean, nCol); // 列平均的标准差
 	return;
 }
 
@@ -2732,6 +2967,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 				//double dSurroundPixle = SortData[uSize / 2];
 				double dCurrentPixel = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
 
+				// 比值法
 				if (abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle > m_AlgorithmThre.dBadPixelThre)
 				{
 					//BadpixelRes.BadPixelMask.BadPixelNum++;
@@ -2837,6 +3073,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 	}
 	for (uint32_t nRows = m_AlgorithmThre.nBadLineRadius; nRows < nRow - m_AlgorithmThre.nBadLineRadius; nRows++)
 	{
+		// 计算局部邻域的行均值(半径m_AlgorithmThre.nBadLineRadius范围内，排除当前行)
 		double dBaseMean = 0;
 		for (uint32_t n = nRows - m_AlgorithmThre.nBadLineRadius; n <= nRows + m_AlgorithmThre.nBadLineRadius; n++)
 		{
@@ -2846,6 +3083,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 			}
 		}
 		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		// 比值判断
 		if (abs(RowMean[nRows] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
 		{
 			BadpixelRes.DefectRowNum++;
@@ -2872,6 +3110,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 
 void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& HotpixelRes, bool& bRes)
 {
+	// 检测并统计坏点、坏行、坏列
 	bRes = true;
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -2920,6 +3159,8 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 	HotpixelRes.BadPixelMask.BadPixelNum = 0;
 	std::map<Local, float> DiffMap;
 
+	// 对指定的多帧图像，计算每个像素的均值
+	
 	for (uint32_t nRows = 0; nRows < nRow + m_AlgorithmThre.nBadPixelRadius; nRows++)
 	{
 		for (uint32_t nCols = 0; nCols < nCol + m_AlgorithmThre.nBadPixelRadius; nCols++)
@@ -2935,6 +3176,11 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 			}
 			if ((nRows - m_AlgorithmThre.nBadPixelRadius < nRow) && (nCols - m_AlgorithmThre.nBadPixelRadius < nCol))
 			{
+				// 邻域比较，对每个像素：
+				// 1. 获取其周围半径为nBadPixelRadius的邻域像素；
+				// 2. 计算邻域均值时，去掉最大值和最小值，避免异常值影响；
+				// 3. 比较当前像素与邻域均值的差异；
+				// 4. 如果差异超过阈值dHotPixelThre，标记为坏点；
 				uint32_t uSize = 0;
 				double dSurroundPixle = 0;
 				double dMax = -1;
@@ -2985,6 +3231,10 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 		}
 	}
 
+	// 使用广度优先搜索(BFS)算法，将相邻的坏点聚合成连通区域：
+	// 1. Singlet, 单点: 孤立的单个坏点；
+	// 2. Couplet, 双点：两个相邻的坏点；
+	// 3. Cluster, 簇：3个或以上相邻的坏点；
 	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
 
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
@@ -3003,8 +3253,10 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 					Local temp = Search[nCur];
 					nCur++;
 					AreaSize++;
+					// BFS搜索8邻域连通性
 					for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 					{
+						// 检查相邻坏点并加入连通域
 						if (nTempRows >= 0 && nTempRows < nRow)
 						{
 							for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
@@ -3050,6 +3302,11 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 			}
 		}
 	}
+
+	// 坏行、坏列检测：
+	// 1. 计算每行每列的像素均值；
+	// 2. 与整体基准均值dBaseMean比较；
+	// 3. 如果差异超过阈值dHotLineThre，标记为坏行或坏列；
 	std::vector<double> RowMean(nRow, 0);
 	std::vector<double> ColMean(nCol, 0);
 
@@ -3077,6 +3334,7 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
 		RowMean[nRows] /= nCol;
+		// 行均值检测
 		if (abs(RowMean[nRows] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
 		{
 			HotpixelRes.DefectRowNum++;
@@ -3085,6 +3343,7 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 	for (uint32_t nCols = 0; nCols < nCol; nCols++)
 	{
 		ColMean[nCols] /= nRow;
+		// 列均值检测
 		if (abs(ColMean[nCols] - dBaseMean) > m_AlgorithmThre.dHotLineThre)
 		{
 			HotpixelRes.DefectColNum++;
@@ -3126,8 +3385,41 @@ void CAlpAPSMPAlgorithm::SubFrameHotPixel(uint32_t nIndexStart, uint32_t nNumber
 	return;
 }
 
+/*
+## 两个函数的对比分析
+
+| 对比维度 | SubFrameBLC | SubFrameBLCByColBase |
+|---------|-------------|---------------------|
+| **基准值参数** | `double& BaseMean` (单一值) | `std::vector<double>& BaseMean` (向量) |
+| **校正方式** | 全局统一校正 | 逐列独立校正 |
+| **适用场景** | 传感器暗电流均匀分布 | 传感器存在列间差异/列固定模式噪声(CFPN) |
+| **参数检查** | 无需检查向量大小 | 需验证 `BaseMean.size() == ROI列数` |
+| **校正精度** | 较低（忽略列间差异） | 较高（考虑每列特性） |
+| **计算复杂度** | 较低 | 稍高（需索引向量） |
+| **内存占用** | 单个double值 | 需存储整列的基准值向量 |
+
+### 核心差异示意
+
+**SubFrameBLC (全局校正):**
+```
+所有像素 -= 100  (假设BaseMean = 100)
+
+[120, 150, 130]    [20, 50, 30]
+[110, 140, 125] -> [10, 40, 25]
+[115, 145, 135]    [15, 45, 35]
+```
+
+**SubFrameBLCByColBase (按列校正):**
+```
+第0列 -= 100, 第1列 -= 105, 第2列 -= 95
+
+[120, 150, 130]    [20, 45, 35]
+[110, 140, 125] -> [10, 35, 30]
+[115, 145, 135]    [15, 40, 40]
+*/
 void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, double& BaseMean, bool& bRes)
 {
+	// 对指定范围内的图像帧进行全局统一的黑电平校正，所有像素减去同一个基准值
 	bRes = true;
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -3140,14 +3432,14 @@ void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROI
 	}
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 	{
-		std::string strErr = "SubFrameDPC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+		std::string strErr = "SubFrameBLC: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
 		bRes = false;
 		return;
 	}
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
-		std::string strErr = "SubFrameDPC: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		std::string strErr = "SubFrameBLC: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
 		WriteLog(strErr, nChannelIndex);
 		bRes = false;
 		return;
@@ -3159,26 +3451,31 @@ void CAlpAPSMPAlgorithm::SubFrameBLC(uint32_t nIndexStart, uint32_t nNumber, ROI
 		{
 			for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
 			{
+				// 每个像素减去统一标量
 				m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols] -= BaseMean;
 				if (m_bUse16SubFrame)
 				{
 					uint32_t nSubFrameChannel = nChannelIndex * 4;
 					if ((nRows & 1) == 0 && (nCols & 1) == 0)
 					{
-
+						// (偶行, 偶列): +0
 					}
 					else if ((nRows & 1) == 0 && (nCols & 1) == 1)
 					{
+						// (偶行, 奇列): +1
 						nSubFrameChannel += 1;
 					}
 					else if ((nRows & 1) == 1 && (nCols & 1) == 0)
 					{
+						// (奇行, 偶列): +2
 						nSubFrameChannel += 2;
 					}
 					else
 					{
+						// (奇行, 奇列): +3
 						nSubFrameChannel += 3;
 					}
+					// 然后对子帧进行相同的校正
 					m_16SubRawDataContainer[nSubFrameChannel][nIndexStart + nIndex].m_RawData[nRows >> 1][nCols >> 1] -= BaseMean;
 				}
 			}
@@ -3224,6 +3521,11 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 			CAPSDataContainer& CurRawData = m_RawDataContainer[nChannelIndex][nIndexStart + nFrameIndex];
 			uint32_t nSize = 0;
 			double dMeanData = 0;
+			// 3*3邻域均值差值, 对每个坏点执行:
+			// 1. 遍历坏点周围的3*3邻域(8个像素);
+			// 2. 排除邻域中的其他坏点;
+			// 3. 计算有效邻域像素的均值;
+			// 4. 用均值替换坏点;
 			for (uint32_t nCurRows = nBadpixelRows - 1; nCurRows <= nBadpixelRows + 1; nCurRows++)
 			{
 				if (nCurRows >= RealRoi.Up && nCurRows <= RealRoi.Down)
@@ -3240,6 +3542,7 @@ void CAlpAPSMPAlgorithm::SubFrameDPC(uint32_t nIndexStart, uint32_t nNumber, ROI
 			}
 			if (nSize > 0)
 			{
+				// 均值替换坏点
 				CurRawData.m_RawData[nBadpixelRows][nBadpixelCols] = round(dMeanData / nSize);
 				if (m_bUse16SubFrame)
 				{
@@ -3316,6 +3619,8 @@ void CAlpAPSMPAlgorithm::SubFrameDataMean(uint32_t nIndexStart, uint32_t nNumber
 
 void CAlpAPSMPAlgorithm::SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, std::vector<double>& BaseMean, bool& bRes)
 {
+	// 按列基准进行黑电平校正(Black Level Correction, BLC)
+	// 对指定范围内的图像帧进行黑电平校正，逐列减去对应的基准值(暗电流/偏置)
 	bRes = true;
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -3355,9 +3660,11 @@ void CAlpAPSMPAlgorithm::SubFrameBLCByColBase(uint32_t nIndexStart, uint32_t nNu
 		{
 			for (uint32_t nCols = RealRoi.Left; nCols <= RealRoi.Right; nCols++)
 			{
+				// 每个像素减去对应列的基准值
 				m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols] -= BaseMean[nCols - RealRoi.Left];
 				if (m_bUse16SubFrame)
 				{
+					// 需要处理拜耳模式的4个子通道
 					uint32_t nSubFrameChannel = nChannelIndex * 4;
 					if ((nRows & 1) == 0 && (nCols & 1) == 0)
 					{
@@ -3474,7 +3781,11 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 	{
 		RealRoi = *ROI;
 	}
-	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+	// 检查参数. 
+	// 1. index error; 2. ROI border overflow error; 3. BlockSize calc error;
+	if (0 == nNumber || // 帧数为0
+		nIndexStart >= m_RawDataContainer[nChannelIndex].size() || // 起始索引越界
+		(nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size()) // 结束索引越界
 	{
 		std::string strErr = "SubFrameBlockMean: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
@@ -3482,7 +3793,10 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 		return;
 	}
 
-	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	if (RealRoi.Down >= m_nChannelRow || // 下边界超出图像行数
+		RealRoi.Right >= m_nChannelCol ||  // 右边界超出图像列数
+		RealRoi.Down < RealRoi.Up || // 下边界在上边界之上（逻辑错误）
+		RealRoi.Right < RealRoi.Left) // 右边界在左边界之左（逻辑错误）
 	{
 		std::string strErr = "SubFrameBlockMean: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
 		WriteLog(strErr, nChannelIndex);
@@ -3490,38 +3804,59 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 		return;
 	}
 
+	// 计算ROI区域的实际行数和列数
 	int32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	int32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+
+	// 计算每个Block 的基础大小
 	int32_t nRowBlockSizeBase = nSubRowBlockSize != 0 ? nSubRowBlockSize : nRow / nRowBlockNum;
 	int32_t nColBlockSizeBase = nSubColBlockSize != 0 ? nSubColBlockSize : nCol / nColBlockNum;
+	// 计算无法均分的余数
 	int32_t nRowMod = nRow - nRowBlockNum * nRowBlockSizeBase;
 	int32_t nColMod = nCol - nColBlockNum * nColBlockSizeBase;
+	// 比如：如果ROI有100行，要分成3块，每块基础大小33行，余数=100-3x33=1
 
+	// 初始化输出容器为 nRowBlockNum*nColBlockNum
 	BlockData.Init(nRowBlockNum, nColBlockNum);
 
+	// double loop, 遍历所有的block
+	/*
+	余数分配示例：
+
+		假设100行分3块，基础块33行，余数1行
+		第0块：33 + 1 / 2 = 33行（整除向下取整）
+		第1块：33行
+		第2块：33 + 1 / 2 = 33行
+		实际总和：33 + 33 + 33 = 99行（会有1行未分配，这是整除导致的精度损失）
+		
+		注意：如果余数是奇数，这种分配方式会丢失1个像素
+	*/
 	int32_t nRowBlockSize = 0, nColBlockSize = 0, nRowIndex = RealRoi.Up, nColIndex = RealRoi.Left;
 	for (uint32_t nRowBlockIndex = 0; nRowBlockIndex < nRowBlockNum; nRowBlockIndex++)
 	{
+		// 余数分配策略：首尾block分别获得一半余数
 		if (0 == nRowBlockIndex || nRowBlockNum - 1 == nRowBlockIndex)
 		{
-			nRowBlockSize = nRowBlockSizeBase + nRowMod / 2;
+			nRowBlockSize = nRowBlockSizeBase + nRowMod / 2; // 第一块或最后一块
 		}
 		else
 		{
-			nRowBlockSize = nRowBlockSizeBase;
+			nRowBlockSize = nRowBlockSizeBase; // 中间块
 		}
-		nColIndex = RealRoi.Left;
+		nColIndex = RealRoi.Left; // 每行开始时重置列索引
 		for (uint32_t nColBlockIndex = 0; nColBlockIndex < nColBlockNum; nColBlockIndex++)
 		{
+			// 使用同样的余数分配策略
 			if (0 == nColBlockIndex || nColBlockNum - 1 == nColBlockIndex)
 			{
 				nColBlockSize = nColBlockSizeBase + nColMod / 2;
 			}
 			else
 			{
-				nColBlockSize = nColBlockSizeBase;
+				nColBlockSize = nColBlockSizeBase; // 中间块
 			}
 
+			// block size 有效性检测
 			if (nRowBlockSize <= 0 || nColBlockSize <= 0)
 			{
 				std::string strErr = "SubFrameBlockMean: BlockSize error: RowBlockSize: " + std::to_string(nRowBlockSize) + ", ColBlockSize: " + std::to_string(nColBlockSize);
@@ -3530,27 +3865,67 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 				return;
 			}
 
-			ROIArea temp = { nRowIndex, nRowIndex + nRowBlockSize - 1, nColIndex, nColIndex + nColBlockSize - 1 };
+			ROIArea temp = { 
+				nRowIndex, // Up: 起始行；
+				nRowIndex + nRowBlockSize - 1, // Down: 结束行;
+				nColIndex, // Left: 起始列；
+				nColIndex + nColBlockSize - 1  // Right: 结束列
+			};
 
-			double dValue = 0;
+			double dValue = 0; // 声明重复 
 			BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] = 0;
+			// 遍历当前block的每一行
 			for (uint32_t nRows = temp.Up; nRows <= temp.Down; nRows++)
 			{
+				// 遍历当前block的每一列
 				for (uint32_t nCols = temp.Left; nCols <= temp.Right; nCols++)
 				{
-					double dValue = 0;
+					double dValue = 0; // 声明重复, 循环外层声明失效
+					// 遍历多帧, 对同一像素求平均
 					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 					{
+						// 累加从nIndexStart开始的nNumber中, 位置(nRows,nCols) 的像素值
+						// 对于块内的某个像素位置 (nRows, nCols)，取所有帧（从 nIndexStart 到 nIndexStart + nNumber - 1）在该位置的像素值，求平均值。
 						dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows][nCols];
 					}
+					// 将多帧平均值(四舍五入后)累加到块数据中
 					BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] += round(dValue / nNumber);
 				}
 			}
+			// 循环后, BlockData.m_RawData[nRowBlockIndex][nColBlockIndex]累加了该block内所有像素的多帧平均值
+			// 除以block内的像素总数，得到该block的最终平均值
 			BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] /= (nRowBlockSize * nColBlockSize);
-			nColIndex += nColBlockSize;
+			nColIndex += nColBlockSize; // 移动到下一列block的起始位置
 		}
-		nRowIndex += nRowBlockSize;
+		nRowIndex += nRowBlockSize; // 移动到下一行block的起始位置
 	}
+
+	/*
+	计算流程
+	假设：
+
+		有3帧图像（帧0、帧1、帧2）
+		ROI区域是4×4像素
+		分成2×2块（每块2×2像素）
+
+		第一个块（左上角）的计算：
+
+		对块内第一个像素(0,0)：
+
+		帧0的(0,0) = 100
+		帧1的(0,0) = 102
+		帧2的(0,0) = 98
+		多帧平均 = round((100+102+98)/3) = round(100) = 100
+
+		对块内所有4个像素重复上述过程，假设得到：
+
+		(0,0): 100
+		(0,1): 105
+		(1,0): 95
+		(1,1): 100
+
+		块平均 = (100+105+95+100) / 4 = 100
+	*/
 }
 
 void CAlpAPSMPAlgorithm::SetDataToSubFrame(uint32_t nIndex, uint32_t nRows, uint32_t nCols, double dValue)
@@ -3898,6 +4273,7 @@ void CAlpAPSMPAlgorithm::SetDataToSubFrame(uint32_t nIndex, uint32_t nRows, uint
 
 void CAlpAPSMPAlgorithm::SubFrameLocalToTotalLocal(Local SubLocal, SubFrameIndex nChannelIndex, Local& TotalLocal)
 {
+	// 根据不同的Bayer模式和颜色通道，将Bayer图像中某个颜色通道的子帧坐标转换为完整图像的总体坐标。
 	uint32_t nSubRows = SubLocal.x, nSubCols = SubLocal.y;
 	uint32_t nTotalRows = 0, nTotalCols = 0;
 
@@ -5171,6 +5547,8 @@ void CAlpAPSMPAlgorithm::TotalLocalToSubFrameLocal(Local TotalLocal, SubFrameInd
 
 void CAlpAPSMPAlgorithm::SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, SubFrameIndex nChannelIndex, APSReadNoiseType& ReadNoiseRes, bool& bRes, RawDataContainer& DataContainer)
 {
+	// 计算两帧暗场图像之间的差异来测量ReadNoise
+	// init && ROI setting
 	bRes = true;
 	ROIArea RealRoi = { 0 };
 	if (ROI == nullptr)
@@ -5181,6 +5559,7 @@ void CAlpAPSMPAlgorithm::SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, R
 	{
 		RealRoi = *ROI;
 	}
+	// 帧索引边界检测
 	if (nIndex1 > DataContainer[nChannelIndex].size() || nIndex2 > DataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameReadNoise: Index error: nIndex1: " + std::to_string(nIndex1) + ", nIndex2: " + std::to_string(nIndex2);
@@ -5188,6 +5567,7 @@ void CAlpAPSMPAlgorithm::SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, R
 		bRes = false;
 		return;
 	}
+	// ROI 边界检查
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "SubFrameTNoise: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
@@ -5199,6 +5579,7 @@ void CAlpAPSMPAlgorithm::SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, R
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
 	std::vector<double> AllPixel(nRow * nCol * SubFrameIndex::All);
 
+	// 逐个像素计算两帧图像的差值
 	uint32_t nCur = 0;
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
@@ -5209,7 +5590,11 @@ void CAlpAPSMPAlgorithm::SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, R
 			AllPixel[nCur++] = value1 - value2;
 		}
 	}
+	// ReadNoise = σ_差值 / √2
 	ReadNoiseRes = Std(AllPixel, nCur) / sqrt(2);
+	// 原理：两帧独立图像的差值方差 = 2σ²(单帧);
+	// 差值标准差 = √(2σ²) = √2*σ; 
+	// therefore, 单帧噪声 = 差值标准差 / √2;
 }
 
 void CAlpAPSMPAlgorithm::ImportDataTo16SubFrame(uint32_t nIndexStart, uint32_t nNumber)

@@ -777,8 +777,18 @@ void CAlp003CAAPSMPAlgorithm::DPC_HVS(uint32_t nIndex, ROIArea* ROI, std::vector
 
 void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSubFrameBadpixelType& BadpixelRes, bool& bRes)
 {
+	// 对某个通道(nChannelIndex) 的Raw图像帧序列进行坏点检测，并输出坏点、坏列、坏行等信息。
+	/*
+	* 其检测内容包括：
+	* 坏点检测（像素异常）；
+	* 异常点连通域分析（单点、双点、cluster等）；
+	* 坏行检测；
+	* 坏列检测；
+	* 返回坏点映射图和统计信息；
+	*/
 	bRes = true;
 	ROIArea RealRoi = { 0 };
+	// ROI && 输入参数检查
 	if (ROI == nullptr)
 	{
 		RealRoi = m_ActiveArea;
@@ -787,6 +797,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 	{
 		RealRoi = *ROI;
 	}
+	// 检查帧数量与索引是否合法
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 	{
 		std::string strErr = "SubFrameBadPixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -794,6 +805,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 		bRes = false;
 		return;
 	}
+	// 检查ROI是否越界
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
 		std::string strErr = "SubFrameBadPixel: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
@@ -804,6 +816,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
 	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
 
+	// 申请内存 PixelMeanArray 存储每个像素在nNumber帧中的平均值
 	CAPSDataContainer PixelMeanArray;
 	PixelMeanArray.Init(nRow, nCol, true);
 	std::vector<std::vector<uint32_t>> BadPixelMask(nRow);
@@ -830,20 +843,26 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 		{
 			if (nRows < nRow && nCols < nCol)
 			{
+				// 若使用HVS DPC模式(m_bHVS_DPC == true)且像素位置为奇数行/列(odd,odd)，赋值为10000作为无效值
 				if (m_bHVS_DPC && nRows % 2 == 1 && nCols % 2 == 1)
 				{
 					PixelMeanArray.m_RawData[nRows][nCols] = 10000;
 				}
+				// 若无特殊情况，求均值
 				else
 				{
 					double dValue = 0;
 					for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 					{
+						// value = sum over frames
 						dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
 					}
 					PixelMeanArray.m_RawData[nRows][nCols] = round(dValue / nNumber);
 				}
 			}
+			// 基于邻域的坏点检测
+			// 对于ROI内每个像素：
+			// 使用一个方形邻域（大小：2*radius+1），跳过中心点，求邻域平均
 			if ((nRows - m_AlgorithmThre.nBadPixelRadius < nRow) && (nCols - m_AlgorithmThre.nBadPixelRadius < nCol) && PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius] != 10000)
 			{
 				uint32_t uSize = 0;
@@ -858,6 +877,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 						{
 							dSurroundPixle += PixelMeanArray.m_RawData[nRows - i][nCols - j];
 							//SortData[uSize] = PixelMeanArray.m_RawData[nRows - i][nCols - j];
+							// 找到最大值、最小值
 							if (dMax < PixelMeanArray.m_RawData[nRows - i][nCols - j])
 							{
 								dMax = PixelMeanArray.m_RawData[nRows - i][nCols - j];
@@ -872,8 +892,10 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 				}
 				if (uSize > 2)
 				{
+					// 去掉最大值、最小值，求邻域平均dSurroundPixel
 					dSurroundPixle = (dSurroundPixle - dMax - dMin) / (uSize - 2);
 				}
+				// 如果 uSize <= 2, 使用 center value 作为邻域周围值
 				else
 				{
 					dSurroundPixle = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
@@ -882,6 +904,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 				//double dSurroundPixle = SortData[uSize / 2];
 				double dCurrentPixel = PixelMeanArray.m_RawData[nRows - m_AlgorithmThre.nBadPixelRadius][nCols - m_AlgorithmThre.nBadPixelRadius];
 
+				// 判断坏点条件，阈值判断坏点
 				if (abs(dCurrentPixel - dSurroundPixle) / dSurroundPixle > m_AlgorithmThre.dBadPixelThre)
 				{
 					//BadpixelRes.BadPixelMask.BadPixelNum++;
@@ -896,12 +919,18 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 			}
 		}
 	}
+
+	// 连通区域分析，识别Singlet、Couplet、Cluster
+	// 对 BadPixelMask 进行8邻域 BFS/Flood Fill：
+	// 找出所有坏点的连通簇；
+	// 统计区域大小 AreaSize；
 	uint32_t ConnectedAreaFlag = 0xFFFFFFFF;
 
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
 		for (uint32_t nCols = 0; nCols < nCol; nCols++)
 		{
+			// 遍历 BadPixelMask, 遇到值为1的像素作特殊处理
 			if (BadPixelMask[nRows][nCols] != 0 && BadPixelMask[nRows][nCols] < ConnectedAreaFlag)
 			{
 				uint32_t AreaSize = 0;
@@ -930,6 +959,10 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 					}
 				}
 				uint8_t uFlag = 0;
+				// 分类逻辑
+				// AreaSize = 1 -> 单坏点；
+				// AreaSize = 2 -> 双坏点；
+				// AreaSize >= 3 -> Cluster；
 				if (AreaSize == 1)
 				{
 					BadpixelRes.SingletNum++;
@@ -949,6 +982,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 				{
 					BadpixelRes.MaxClusterSize = AreaSize;
 				}
+				// 所有坏点簇都记录到BadpixelRes.BadPixelMask里, 记录各个坏点对应的类型标识和差异度
 				for (uint32_t n = 0; n < Search.size(); n++)
 				{
 					BadpixelRes.BadPixelMask.LocalData.push_back(Search[n]);
@@ -961,9 +995,11 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 		}
 	}
 
+	// 坏行、坏列检测
 	std::vector<double> RowMean(nRow, 0);
 	std::vector<double> ColMean(nCol, 0);
 
+	// 计算ROI内每行/列的平均灰度值：
 	for (uint32_t nRows = 0; nRows < nRow; nRows++)
 	{
 		for (uint32_t nCols = 0; nCols < nCol; nCols++)
@@ -985,6 +1021,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 	{
 		ColMean[nCols] /= nRow;
 	}
+	// 使用半径范围附近的行/列平均值来进行判断是否异常
 	for (uint32_t nRows = m_AlgorithmThre.nBadLineRadius; nRows < nRow - m_AlgorithmThre.nBadLineRadius; nRows++)
 	{
 		double dBaseMean = 0;
@@ -996,6 +1033,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 			}
 		}
 		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		// abs(RowMean - 周围行均值) / 周围行均值 > 阈值 → 坏行
 		if (abs(RowMean[nRows] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
 		{
 			BadpixelRes.DefectRowNum++;
@@ -1012,6 +1050,7 @@ void CAlp003CAAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nN
 			}
 		}
 		dBaseMean /= 2 * m_AlgorithmThre.nBadLineRadius;
+		// abs(ColMean - 周围列均值) / 周围列均值 > 阈值 → 坏列
 		if (abs(ColMean[nCols] - dBaseMean) / dBaseMean > m_AlgorithmThre.dBadLineThre)
 		{
 			BadpixelRes.DefectColNum++;
