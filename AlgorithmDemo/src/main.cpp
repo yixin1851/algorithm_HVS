@@ -1,10 +1,10 @@
-#include "AlpMPAlgoInterface.h"
+#include "../AlpMPAlgoInterface.h"
 #include <fstream>
 #include <iostream>
-#include "ImageTest.h"
+#include "../ImageTest.h"
 
 
-//ATE²ÉÍ¼½Ó¿Ú
+//ATEï¿½ï¿½Í¼ï¿½Ó¿ï¿½
 
 int main()
 {
@@ -31,8 +31,8 @@ int main()
 
 	//GetSensitivityUniformityData2(datapath, "./SensitivityUniformity.csv");
 
-	//std::string data1 = "D:\\Data\\EVSÄ£×éÐÔÄÜÆÀ²â_20230512\\ÕýÓ¡Á¿²ú¹âÔ´\\003BA-1-2#\\1.5mv";
-	//std::string data2 = "D:\\Data\\EVSÄ£×éÐÔÄÜÆÀ²â_20230512\\ÕýÓ¡Á¿²ú¹âÔ´\\003BA-1-2#\\3mv";
+	//std::string data1 = "D:\\Data\\EVSÄ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½_20230512\\ï¿½ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´\\003BA-1-2#\\1.5mv";
+	//std::string data2 = "D:\\Data\\EVSÄ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½_20230512\\ï¿½ï¿½Ó¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´\\003BA-1-2#\\3mv";
 
 	//GetImageSensitivityData(data1, data1 + "/ImageSensitivity.csv");
 	//GetImageSensitivityData(data2, data2 + "/ImageSensitivity.csv");

@@ -25,6 +25,19 @@
 #define DVS_DEAD_PIXEL_FLAG 0x01
 #define DVS_HOT_PIXEL_FLAG 0x04
 
+#ifdef API_C_TYPE_INTERFACE
+#include "AlpMPAlgoCTypeInterface.h"
+#else
+// =======[ Public Type ]=====
+typedef enum
+{
+	Gb,
+	B,
+	R,
+	Gr,
+	All,
+}SubFrameIndex;
+
 typedef enum
 {
 	ALP_003AA,
@@ -38,24 +51,6 @@ typedef enum
 
 typedef enum
 {
-	RAW8,
-	RAW10,
-	RAW12,
-	UNPACK10,
-	UNPACK12,
-}APSRawType;
-
-typedef enum
-{
-	Gb,
-	B,
-	R,
-	Gr,
-	All,
-}SubFrameIndex;
-
-typedef enum
-{
 	BayerGBRG,
 	BayerBGGR,
 	BayerRGGB,
@@ -65,6 +60,34 @@ typedef enum
 	QuadBayerRGGB,
 	QuadBayerGRBG,
 }PixelFormatType;
+
+typedef enum
+{
+	OffEventsOnly = 1,
+	OnEventsOnly,
+	On_OffEvents,
+}DVSLightTrigerType;
+
+typedef struct
+{
+	uint32_t Up;
+	uint32_t Down;
+	uint32_t Left;
+	uint32_t Right;
+}ROIArea;
+// =================================
+#endif
+
+typedef enum
+{
+	RAW8,
+	RAW10,
+	RAW12,
+	UNPACK10,
+	UNPACK12,
+}APSRawType;
+
+
 
 typedef enum
 {
@@ -81,13 +104,7 @@ typedef enum
 typedef std::vector<std::vector<uint8_t>> ImgType;
 typedef std::vector<std::vector<double>> APSType;
 
-typedef struct
-{
-	uint32_t Up;
-	uint32_t Down;
-	uint32_t Left;
-	uint32_t Right;
-}ROIArea;
+
 
 typedef struct
 {
@@ -368,12 +385,7 @@ typedef struct
 	std::vector<uint32_t> OffEventsPeakPos;
 }DVSPeakInfo;
 
-typedef enum
-{
-	OffEventsOnly = 1,
-	OnEventsOnly,
-	On_OffEvents,
-}DVSLightTrigerType;
+
 
 typedef struct
 {
