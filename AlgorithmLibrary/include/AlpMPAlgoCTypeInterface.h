@@ -476,6 +476,13 @@ typedef struct {
     uint32_t nSpatialResponseUniformityColBlockNum;
 } CDVSAlgorithmThre;
 
+// C接口的结构体定义
+typedef struct {
+    double TNoiseFrame;
+    APSSubFrameTNoiseType *SubFrameTNoiseData;
+    size_t SubFrameTNoiseDataCount;
+} APSTNoiseTypeC;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -550,17 +557,6 @@ ALP_ALGO_DLL_API_C void __stdcall DeleteHandleAPS(HANDLE h);
 ALP_ALGO_DLL_API_C uint32_t __stdcall ImportRawDataAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens,
                                                        uint32_t nIndexStart, uint32_t nNumber);
 
-// C接口的结构体定义
-typedef struct {
-    double TNoiseFrame;
-    APSSubFrameTNoiseType *SubFrameTNoiseData;
-    size_t SubFrameTNoiseDataCount;
-} APSTNoiseTypeC;
-
-ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(
-    APSTNoiseTypeC *apsTNoiseRes
-);
-
 /**
  * @brief CType接口, 获取TNoise数据
  * @note 调用成功后，必须调用 TNoiseAPS_Free() 释放内存
@@ -583,8 +579,10 @@ ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(
 ALP_ALGO_DLL_API_C uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
                                                 APSTNoiseTypeC *apsTNoiseRes);
 
+ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(APSTNoiseTypeC *apsTNoiseRes);
+
 // std::vector
-ALP_ALGO_DLL_API_C uint32_t SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSSNoiseType *APSSNoiseRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSSNoiseType *APSSNoiseRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
                                                   DVSLightTrigerType Light, CDVSBadpixelData *BadpixelRes);
