@@ -75,8 +75,6 @@ typedef struct
 	uint32_t Left;
 	uint32_t Right;
 }ROIArea;
-// =================================
-#endif
 
 typedef enum
 {
@@ -86,8 +84,6 @@ typedef enum
 	UNPACK10,
 	UNPACK12,
 }APSRawType;
-
-
 
 typedef enum
 {
@@ -441,7 +437,8 @@ typedef enum
 	BEYOND_MAX_RES_NUM = 0x8000000A,
 	EVENTS_EQU_ZERO = 0x8000000B,
 }DvsErrCode;
-
+// =================================
+#endif
 class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
 {
 public:
