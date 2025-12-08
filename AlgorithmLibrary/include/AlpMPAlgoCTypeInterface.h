@@ -14,6 +14,9 @@
 
 typedef void *HANDLE;
 
+// C接口需要设置该宏, 或在工程编译期间进行预编译
+// #define API_C_TYPE_INTERFACE 1
+
 #ifndef API_C_TYPE_INTERFACE
 #else
 // =======[ Public Type ]=====
@@ -584,8 +587,7 @@ ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(APSTNoiseTypeC *apsTNoiseRes);
 // std::vector
 ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSSNoiseType *APSSNoiseRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
-                                                  DVSLightTrigerType Light, CDVSBadpixelData *BadpixelRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSBadpixelType *BadpixelRes);
 
 // std::vector    APSBadpixelType
 ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
