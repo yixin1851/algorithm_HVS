@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.21)
 
 project(AlgorithmLibrary LANGUAGES CXX C)
 if (${MSVC})
@@ -101,6 +101,8 @@ endfunction()
 # add_version_info(AnotherLib)]]
 # 子目录
 add_subdirectory(AlgorithmLibrary)
+
+add_subdirectory(AlgorithmTest)
 
 ## 子目录
 #add_subdirectory(AlgorithmDemo)
