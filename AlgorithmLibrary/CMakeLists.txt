@@ -15,14 +15,16 @@ target_include_directories(AlgorithmLibrary PRIVATE
 # 指示在构建该库时导出符号
 target_compile_definitions(AlgorithmLibrary PRIVATE API_EXPORTS)
 target_compile_definitions(AlgorithmLibrary PRIVATE API_C_TYPE_INTERFACE)
+message(STATUS "\${CMAKE_SOURCE_DIR}:" ${CMAKE_SOURCE_DIR})
+message(STATUS "\${CMAKE_CURRENT_LIST_DIR}:" ${CMAKE_CURRENT_LIST_DIR})
 
 # 可选：设置输出名称和版本信息
 set_target_properties(AlgorithmLibrary PROPERTIES
         OUTPUT_NAME "AlgorithmLibrary"
         VERSION "${FILE_VERSION}"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CURRENT_PLATFORM}/bin"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CURRENT_PLATFORM}/bin"
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/${CURRENT_PLATFORM}/bin"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ReleaseAlgorithmLibrary/${CURRENT_PLATFORM}/bin"
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ReleaseAlgorithmLibrary/${CURRENT_PLATFORM}/bin"
+        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/ReleaseAlgorithmLibrary/${CURRENT_PLATFORM}/bin"
 )
 add_version_info(AlgorithmLibrary)
 #[[
