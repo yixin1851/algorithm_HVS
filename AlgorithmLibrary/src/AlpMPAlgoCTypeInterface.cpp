@@ -575,7 +575,8 @@ uint32_t __stdcall BLCAPS_3(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ui
     }
 }
 
-uint32_t __stdcall YShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, APSYShadingType &YShadingRes) {
+uint32_t __stdcall YShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                               APSYShadingType &YShadingRes) {
     if (h) {
         APSYShadingType YShading;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->YShading(nIndexStart, nNumber, ROI, YShading);
@@ -596,7 +597,7 @@ uint32_t __stdcall YShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
 }
 
 uint32_t __stdcall ColorShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                         APSColorShadingType &ColorShadingRes) {
+                                   APSColorShadingType &ColorShadingRes) {
     if (h) {
         APSColorShadingType ColorShading;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->
@@ -624,7 +625,8 @@ uint32_t __stdcall ColorShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNum
     }
 }
 
-uint32_t __stdcall ReadNoiseAPS(HANDLE h, uint32_t nIndex1, uint32_t nIndex2, ROIArea *ROI, APSReadNoiseType &ReadNoiseRes) {
+uint32_t __stdcall ReadNoiseAPS(HANDLE h, uint32_t nIndex1, uint32_t nIndex2, ROIArea *ROI,
+                                APSReadNoiseType &ReadNoiseRes) {
     if (h) {
         APSReadNoiseType ReadNoise;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->ReadNoise(nIndex1, nIndex2, ROI, ReadNoise);
@@ -641,7 +643,7 @@ uint32_t __stdcall ReadNoiseAPS(HANDLE h, uint32_t nIndex1, uint32_t nIndex2, RO
 }
 
 uint32_t __stdcall OpticalCenterAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                          APSOpticalCenterType &OpticalCenterRes) {
+                                    APSOpticalCenterType &OpticalCenterRes) {
     if (h) {
         APSOpticalCenterType OpticalCenterType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OpticalCenter(
@@ -660,7 +662,7 @@ uint32_t __stdcall OpticalCenterAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
 }
 
 uint32_t __stdcall PedestalVariationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                              APSPedestalVariationType &PedestalVariationRes) {
+                                        APSPedestalVariationType &PedestalVariationRes) {
     if (h) {
         APSPedestalVariationType PedestalVariationType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->PedestalVariation(
@@ -737,14 +739,15 @@ static uint32_t DarkCurrentImpl(
     }
 }
 
-uint32_t __stdcall DarkCurrentDataMeanAPS(HANDLE h, const APSDataMeanType *dataMean, size_t dataMeanCount, const double *expTime,
-                                size_t expTimeCount, APSDarkCurrentType *darkCurrentRes) {
+uint32_t __stdcall DarkCurrentDataMeanAPS(HANDLE h, const APSDataMeanType *dataMean, size_t dataMeanCount,
+                                          const double *expTime,
+                                          size_t expTimeCount, APSDarkCurrentType *darkCurrentRes) {
     return DarkCurrentImpl(h, dataMean, dataMeanCount, expTime, expTimeCount, darkCurrentRes);
 }
 
 uint32_t __stdcall DarkCurrentTNoiseAPS(HANDLE h, const APSTNoiseType *pTNoiseData, size_t iTNoiseDataCount,
-                              const double *expTime,
-                              size_t expTimeCount, APSDarkCurrentType *darkCurrentRes) {
+                                        const double *expTime,
+                                        size_t expTimeCount, APSDarkCurrentType *darkCurrentRes) {
     return DarkCurrentImpl(h, pTNoiseData, iTNoiseDataCount, expTime, expTimeCount, darkCurrentRes);
 }
 
@@ -777,7 +780,8 @@ uint32_t __stdcall DSNUAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROI
     }
 }
 
-uint32_t __stdcall DataMeanAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, APSDataMeanType &DataMeanRes) {
+uint32_t __stdcall DataMeanAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                               APSDataMeanType &DataMeanRes) {
     if (h) {
         APSDataMeanType DataMeanType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->DataMean(nIndexStart, nNumber, ROI, DataMeanType);
@@ -795,7 +799,7 @@ uint32_t __stdcall DataMeanAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
 }
 
 uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> &LightMean, std::vector<double> &ExpTime,
-                      APSLinearityType &LinearityRes) {
+                                APSLinearityType &LinearityRes) {
     if (h) {
         APSLinearityType LinearityType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Linearity(LightMean, ExpTime, LinearityType);
@@ -812,8 +816,8 @@ uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> &LightMea
 }
 
 uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> &LightTNoiseData,
-                              std::vector<APSDataMeanType> &LightMean, APSTNoiseType DarkTNoiseBase,
-                              APSOverallSystemGainType &GainRes) {
+                                        std::vector<APSDataMeanType> &LightMean, APSTNoiseType DarkTNoiseBase,
+                                        APSOverallSystemGainType &GainRes) {
     if (h) {
         APSOverallSystemGainType GainType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OverallSystemGain(
@@ -830,8 +834,9 @@ uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> &Li
     }
 }
 
-uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, SubFrameIndex nChannelIndex,
-                       APSSaturationType &SaturationRes) {
+uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                                 SubFrameIndex nChannelIndex,
+                                 APSSaturationType &SaturationRes) {
     if (h) {
         APSSaturationType SaturationType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Saturation(
@@ -851,7 +856,7 @@ uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumbe
 }
 
 uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, SubFrameIndex nChannelIndex,
-                 APSOETCType &OETCRes) {
+                           APSOETCType &OETCRes) {
     if (h) {
         APSOETCType OETCType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OETC(nIndexStart, nNumber, ROI, nChannelIndex,
@@ -876,8 +881,9 @@ uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROI
     }
 }
 
-uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, SubFrameIndex nChannelIndex,
-                         APSSSNRType &SSNRRes) {
+uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                                   SubFrameIndex nChannelIndex,
+                                   APSSSNRType &SSNRRes) {
     if (h) {
         APSSSNRType SSNRType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Linearity(
@@ -897,8 +903,9 @@ uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNum
     }
 }
 
-uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, SubFrameIndex nChannelIndex,
-                   bool bNormalize, ImgType &ImgData) {
+uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                             SubFrameIndex nChannelIndex,
+                             bool bNormalize, ImgType &ImgData) {
     if (h) {
         ImgType ImgDataType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Show(nIndexStart, nNumber, ROI, nChannelIndex,
@@ -915,8 +922,9 @@ uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, R
     }
 }
 
-uint32_t __stdcall ShowAPS_2(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, SubFrameIndex nChannelIndex,
-                   APSType &ImgData) {
+uint32_t __stdcall ShowAPS_2(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                             SubFrameIndex nChannelIndex,
+                             APSType &ImgData) {
     if (h) {
         APSType ImgDataType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Show(nIndexStart, nNumber, ROI, nChannelIndex,
@@ -1008,7 +1016,12 @@ uint32_t __stdcall SaveBinAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens, const
 
 uint32_t __stdcall GetActiveAreaAPS(HANDLE h, ROIArea &ROIAreaRes) {
     if (h) {
-        ROIAreaRes = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetActiveArea();
+        ROIArea ROIAreaTmp;
+        ROIAreaTmp = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetActiveArea();
+        ROIAreaRes.Up = ROIAreaTmp.Up;
+        ROIAreaRes.Down = ROIAreaTmp.Down;
+        ROIAreaRes.Left = ROIAreaTmp.Left;
+        ROIAreaRes.Right = ROIAreaTmp.Right;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;

@@ -564,18 +564,22 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall ImportRawDataAPS(HANDLE h, uint8_t *pRawDa
  * @brief CType接口, 获取TNoise数据
  * @note 调用成功后，必须调用 TNoiseAPS_Free() 释放内存
  * @warning 忘记调用 TNoiseAPS_Free() 会导致内存泄漏
- * // Example:
- *  APSTNoiseTypeC result = {0};
- *  FreeCallback freeFunc = nullptr;
- *  void* userData = nullptr;
- *
- *  uint32_t ret = TNoiseAPS(h, 0, 10, &result, &freeFunc, &userData);
- *  if (ret == TEST_NO_ERROR) {
- *      // 使用数据...
- *
- *      // 释放
- *      if (freeFunc) {
- *          TNoiseAPS_Free(userData);
+ * @example
+ *  void example() {
+ *      HANDLE h = ...; // handle
+ *      APSTNoiseTypeC result = {0};
+ *      uint32_t ret = TNoiseAPS(h, 0, 10, &result);
+ *      if (ret == TEST_NO_ERROR) {
+ *          printf("TNoiseFrame: %f\n", result.TNoiseFrame);
+ *          printf("SubFrame count: %zu\n", (size_t)result.SubFrameTNoiseDataCount);
+ *          // process data
+ *          for (size_t i = 0; i < result.SubFrameTNoiseDataCount; i++) {
+ *              // process result.SubFrameTNoiseData[i]
+ *          }
+ *          // release APSTNoiseTypeC
+ *          TNoiseAPS_Free(&result);
+ *      } else {
+ *          printf("Error code: %u\n", ret);
  *      }
  *  }
  */
@@ -585,9 +589,11 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, 
 ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(APSTNoiseTypeC *apsTNoiseRes);
 
 // std::vector
-ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSSNoiseType *APSSNoiseRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                APSSNoiseType *APSSNoiseRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSBadpixelType *BadpixelRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                  APSBadpixelType *BadpixelRes);
 
 // std::vector    APSBadpixelType
 ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
