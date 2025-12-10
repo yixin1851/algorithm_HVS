@@ -61,7 +61,7 @@ protected:
 	bool EventModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRowStart, uint32_t nRowStop, uint32_t nColStart, uint32_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex);
 	void SetData(CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, uint8_t nSubFrameIndex, uint8_t nEventFlag);
 private:
-	bool m_bHVS;
+	uint32_t m_subsample_num;
 	uint32_t m_row_offset_table[64];
 	uint32_t m_col_offset_table[64];
 	uint32_t m_subframe_order[64];

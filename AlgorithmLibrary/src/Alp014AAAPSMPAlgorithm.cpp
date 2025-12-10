@@ -1330,12 +1330,19 @@ bool CAlp014AAAPSMPAlgorithm::Saturation(uint32_t nIndexStart, uint32_t nNumber,
 	return true;
 }
 
-bool CAlp014AAAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSOETCType& OETCRes)
+bool CAlp014AAAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nNumberInOneStep, ROIArea* ROI, SubFrameIndex nChannelIndex, APSOETCType& OETCRes)
 {
 	uint32_t nChannelNum = m_nMaxSubFramesNum;
 	if (nChannelIndex >= nChannelNum)
 	{
 		std::string strErr = "OETC: SubFrameIndex beyond the max num";
+		WriteLog(strErr, nChannelIndex);
+		return false;
+	}
+
+	if (nNumberInOneStep == 0)
+	{
+		std::string strErr = "OETC: NumberInOneStep is 0";
 		WriteLog(strErr, nChannelIndex);
 		return false;
 	}
@@ -1362,26 +1369,27 @@ bool CAlp014AAAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, ROIAr
 
 	RawDataContainer& DataContainer = m_RawDataContainer;
 
-	OETCRes.ReadNoiseData.resize(nNumber / 2);
-	OETCRes.DataMean.resize(nNumber / 2);
-	OETCRes.TNoiseData.resize(nNumber / 2);
+	OETCRes.ReadNoiseData.resize(nNumber / nNumberInOneStep);
+	OETCRes.DataMean.resize(nNumber / nNumberInOneStep);
+	OETCRes.TNoiseData.resize(nNumber / nNumberInOneStep);
 	bool bRes = false;
 
-	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex += 2)
+	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex += nNumberInOneStep)
 	{
-		SubFrameDataMean(nIndexStart + nIndex, 2, &RealRoi, nChannelIndex, OETCRes.DataMean[nIndex / 2], bRes, DataContainer);
+		SubFrameDataMean(nIndexStart + nIndex, nNumberInOneStep, &RealRoi, nChannelIndex, OETCRes.DataMean[nIndex / nNumberInOneStep], bRes, DataContainer);
 		if (!bRes)
 		{
 			return false;
 		}
 		APSSubFrameTNoiseType temp;
-		SubFrameTNoise(nIndexStart + nIndex, 2, &RealRoi, nChannelIndex, temp, bRes, DataContainer);
+		SubFrameTNoise(nIndexStart + nIndex, nNumberInOneStep, &RealRoi, nChannelIndex, temp, bRes, DataContainer);
 		if (!bRes)
 		{
 			return false;
 		}
-		OETCRes.TNoiseData[nIndex / 2] = temp.TempNoise;
-		SubFrameReadNoise(nIndexStart + nIndex, nIndexStart + nIndex + 1, &RealRoi, nChannelIndex, OETCRes.ReadNoiseData[nIndex / 2], bRes, DataContainer);
+		OETCRes.TNoiseData[nIndex / nNumberInOneStep] = temp.TempNoise;
+		OETCRes.ReadNoiseData[nIndex / nNumberInOneStep] = temp.TempNoise;
+		//SubFrameReadNoise(nIndexStart + nIndex, nIndexStart + nIndex + 1, &RealRoi, nChannelIndex, OETCRes.ReadNoiseData[nIndex / 2], bRes, DataContainer);
 		if (!bRes)
 		{
 			return false;

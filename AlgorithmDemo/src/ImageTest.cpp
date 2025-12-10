@@ -628,7 +628,7 @@ void GetOETC(std::string datapath)
 	if (bRet)
 	{
 		APSOETCType res;
-		gAPSInterface->OETC(0, 46, nullptr, SubFrameIndex::Gb, res);
+		gAPSInterface->OETC(0, 46, 2, nullptr, SubFrameIndex::Gb, res);
 
 		std::cout << "DR(db): " << res.DR_dB << std::endl;
 		std::cout << "ReadNoise(e-): " << res.ReadNoise_e << std::endl;

@@ -399,3 +399,5 @@ FodyWeavers.xsd
 
 # Clion file
 .idea/*
+*.7z
+*.zip

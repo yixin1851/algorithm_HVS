@@ -6,6 +6,7 @@
 
 uint32_t EVS_only_readout_order[] = { 0 , 2 , 8 , 10 , 16 , 18 , 24 , 26 , 32 , 34 , 40 , 42 , 48 , 50 , 56 , 58,  1 , 3 , 9 , 11 , 17 , 19 , 25 , 27 , 33, 35, 41, 43, 49, 51, 57 , 59, 4 , 6 , 12 , 14 , 20 , 22 , 28, 30, 36, 38, 44, 46, 52, 54, 60 , 62, 5 , 7 , 13 , 15 , 21 , 23 , 29, 31, 37, 39, 45, 47, 53, 55, 61 , 63 };
 uint32_t HVS_readout_order[] = {1 , 3 , 9 , 11 , 17 , 19 , 25 , 27 , 33, 35, 41, 43, 49, 51, 57 , 59, 4 , 6 , 12 , 14 , 20 , 22 , 28, 30, 36, 38, 44, 46, 52, 54, 60 , 62};
+uint32_t subsample_1_2_readout_order[] = { 1 , 3 , 9 , 11 , 17 , 19 , 25 , 27 , 33, 35, 41, 43, 49, 51, 57 , 59};
 
 
 CAlp014BADVSMPAlgorithm::CAlp014BADVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code)
@@ -13,7 +14,7 @@ CAlp014BADVSMPAlgorithm::CAlp014BADVSMPAlgorithm(SensorType Sensortype, std::str
 {
 	if ((code & DVS_Code_HVS) == DVS_Code_HVS)
 	{
-		m_bHVS = true;
+		m_subsample_num = 32;
 		m_nTotalRow = 512;
 		m_nTotalCol = 1280;
 
@@ -41,11 +42,35 @@ CAlp014BADVSMPAlgorithm::CAlp014BADVSMPAlgorithm(SensorType Sensortype, std::str
 			m_row_offset_table[i] = HVS_readout_order[i] / 8;
 		}
 	}
+	else if ((code & DVS_Code_1_2_Subsample) == DVS_Code_1_2_Subsample)
+	{
+		m_subsample_num = 16;
+		m_nTotalRow = 512;
+		m_nTotalCol = 640;
+
+		for (uint32_t i = 0; i < 16; i += 1)
+		{
+			m_subframe_order[i] = subsample_1_2_readout_order[i];
+
+			switch (subsample_1_2_readout_order[i] % 8)
+			{
+			case 1:
+				m_col_offset_table[i] = 0;
+				break;
+			case 3:
+				m_col_offset_table[i] = 1;
+				break;
+			default:
+				break;
+			}
+			m_row_offset_table[i] = subsample_1_2_readout_order[i] / 8;
+		}
+	}
 	else
 	{
 		m_nTotalRow = 1024;
 		m_nTotalCol = 1280;
-		m_bHVS = false;
+		m_subsample_num = 64;
 
 		for (uint32_t i = 0; i < 64; i++)
 		{
@@ -75,9 +100,35 @@ bool CAlp014BADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 		m_RawDataContainer[nIndexStart + nIndex].Init(m_nTotalRow, m_nTotalCol, true, m_PixelFormat);
 		uint8_t nSubFrameIndex = 0;
 		uint64_t nTimeStamp = 0;
-		uint32_t nMaxSubFrame = m_bHVS ? 32 : 64;
-		uint32_t nRow = m_bHVS ? m_nTotalRow / 8 : m_nTotalRow / 16;
-		uint32_t nCol = m_nTotalCol / 4;
+		uint32_t nMaxSubFrame = m_subsample_num;
+		uint32_t nRow = 0;
+		
+		if (m_subsample_num == 64)
+		{
+			nRow = m_nTotalRow / 16;
+		}
+		else if (m_subsample_num == 32)
+		{
+			nRow = m_nTotalRow / 8;
+		}
+		else if (m_subsample_num == 16)
+		{
+			nRow = m_nTotalRow / 8;
+		}
+
+		uint32_t nCol = 0;
+		if (m_subsample_num == 64)
+		{
+			nCol = m_nTotalCol / 4;
+		}
+		else if (m_subsample_num == 32)
+		{
+			nCol = m_nTotalCol / 4;
+		}
+		else if (m_subsample_num == 16)
+		{
+			nCol = m_nTotalCol / 2;
+		}
 
 		while (nNeedSubFrameIndex != nMaxSubFrame)
 		{
@@ -137,6 +188,16 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 
 	nSubFrameIndex = Static->Subframe;
 
+	uint8_t nSubFrameInPixelArray = 0;
+
+	for (; nSubFrameInPixelArray < m_subsample_num; nSubFrameInPixelArray++)
+	{
+		if (nSubFrameIndex == m_subframe_order[nSubFrameInPixelArray])
+		{
+			break;
+		}
+	}
+
 	if ((Static->Roi_row_stop - Static->Roi_row_start + 1) > nRow || (Static->Roi_col_stop - Static->Roi_col_start + 1) > nCol)
 	{
 		return false;
@@ -146,11 +207,11 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 
 	if (Static->frame_mode == 0)
 	{
-		bRet = EventModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameIndex);
+		bRet = EventModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameInPixelArray);
 	}
 	else
 	{
-		bRet = FrameModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameIndex);
+		bRet = FrameModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameInPixelArray);
 	}
 	if (bRet)
 	{
@@ -177,9 +238,13 @@ bool CAlp014BADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 
 	uint32_t nRowStep = 16;
 	uint32_t nColStep = 4;
-	if (m_bHVS)
+	if (m_subsample_num == 16 || m_subsample_num == 32)
 	{
 		nRowStep = 8;
+	}
+	if (m_subsample_num == 16)
+	{
+		nColStep = 2;
 	}
 	nRowStart *= nRowStep;
 	nColStart *= nColStep;
@@ -246,9 +311,13 @@ bool CAlp014BADVSMPAlgorithm::EventModeDecode(uint8_t* pucBinData, CDVSDataConta
 
 	uint32_t nRowStep = 16;
 	uint32_t nColStep = 4;
-	if (m_bHVS)
+	if (m_subsample_num == 16 || m_subsample_num == 32)
 	{
 		nRowStep = 8;
+	}
+	if (m_subsample_num == 16)
+	{
+		nColStep = 2;
 	}
 	nRowStart *= nRowStep;
 	nColStart *= nColStep;
