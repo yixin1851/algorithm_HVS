@@ -78,6 +78,7 @@ typedef enum {
 typedef enum {
     DVS_Code_1_4_Bining = 1,
     DVS_Code_HVS = 2,
+	DVS_Code_1_2_Subsample = 4,
 } DVSCodeType;
 
 typedef std::vector<std::vector<uint8_t> > ImgType;
@@ -651,7 +652,8 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector
 ALP_ALGO_DLL_API_C uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                     SubFrameIndex nChannelIndex, APSSaturationType &SaturationRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+ALP_ALGO_DLL_API_C uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                              uint32_t nNumberInOneStep, ROIArea *ROI,
                                               SubFrameIndex nChannelIndex, APSOETCType &OETCRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,

@@ -855,11 +855,11 @@ uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumbe
     }
 }
 
-uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, SubFrameIndex nChannelIndex,
+uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nNumberInOneStep, ROIArea *ROI, SubFrameIndex nChannelIndex,
                            APSOETCType &OETCRes) {
     if (h) {
         APSOETCType OETCType;
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OETC(nIndexStart, nNumber, ROI, nChannelIndex,
+        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OETC(nIndexStart, nNumber, nNumberInOneStep, ROI, nChannelIndex,
                                                                         OETCType);
 
         if (bRet) {
