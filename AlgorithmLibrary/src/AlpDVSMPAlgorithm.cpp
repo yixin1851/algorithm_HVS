@@ -240,7 +240,10 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 			}
 		}
 	}
+    // 归一化处理
+    // 除以(分块像素数*帧数), 得到平均触发率
 	UniformityBlockData /= nRowBlockSize * nColBlockSize * nNumber;
+    // *100转换为百分比
 	UniformityBlockData *= 100;
 
 	double dMeanValue = Mean(UniformityBlockData);
@@ -250,7 +253,7 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	Min(dMinValue, temp, UniformityBlockData);
 	//UniformityRes.UniformityRatio = (dMaxValue - dMinValue) / dMeanValue * 100;
 	//UniformityRes.UniformityRatio = Std(UniformityBlockData, nullptr);
-	UniformityRes.UniformityRatio = dMaxValue - dMinValue;
+	UniformityRes.UniformityRatio = dMaxValue - dMinValue; // 该值越小表示均匀性越好, 各分块事件分布越一致
 	UniformityRes.UniformityBlockData.swap(UniformityBlockData.m_RawData);
 	return true;
 }
