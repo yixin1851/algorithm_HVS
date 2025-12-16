@@ -1,10 +1,10 @@
 #ifdef API_C_TYPE_INTERFACE
 #include "AlpMPAlgoCTypeInterface.h"
+#include <windows.h>
 #include "AlpMPAlgoInterface.h"
 
 HANDLE __stdcall InitHandleDVS(SensorType Sensortype, PixelFormatType Pixelformat, int code) {
-    CAlpDVSMPAlgoInterface *pInterface = CreateDVSAlgoInterface(Sensortype, "", Pixelformat, code);
-
+    CAlpDVSMPAlgoInterface *pInterface = CreateDVSAlgoInterface(Sensortype, "./", Pixelformat, code);
     return reinterpret_cast<HANDLE>(pInterface);
 }
 
@@ -30,7 +30,7 @@ uint32_t __stdcall ImportRawDataDVS(HANDLE h, uint8_t *pRawData, uint64_t nLens,
 }
 
 uint32_t __stdcall EventsNumberCountDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                        CEventsNumberCountData *EventsNumberCountRes) {
+                                        DVSEventsNumberCountType *EventsNumberCountRes) {
     if (h) {
         DVSEventsNumberCountType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->EventsNumberCount(nIndexStart, nNumber, res);
@@ -39,7 +39,7 @@ uint32_t __stdcall EventsNumberCountDVS(HANDLE h, uint32_t nIndexStart, uint32_t
             if (res.nDataNumber > MAX_DATA_NUMBER) {
                 return BEYOND_MAX_RES_NUM;
             }
-
+            EventsNumberCountRes->nDataNumber = res.nDataNumber;
             for (uint32_t nIndex = 0; nIndex < res.nDataNumber; nIndex++) {
                 for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All + 1; nChannel++) {
                     EventsNumberCountRes->AllEventsNum[nChannel][nIndex] = res.AllEventsNum[nChannel][nIndex];
@@ -59,7 +59,7 @@ uint32_t __stdcall EventsNumberCountDVS(HANDLE h, uint32_t nIndexStart, uint32_t
 }
 
 uint32_t __stdcall StationaryNoiseDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                      CStationaryNoiseData *StationaryNoiseRes) {
+                                      DVSStationaryNoiseType *StationaryNoiseRes) {
     if (h) {
         DVSStationaryNoiseType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->StationaryNoise(nIndexStart, nNumber, res);
@@ -71,8 +71,10 @@ uint32_t __stdcall StationaryNoiseDVS(HANDLE h, uint32_t nIndexStart, uint32_t n
             StationaryNoiseRes->dStationaryNoiseStdOn = res.dStationaryNoiseStdOn;
             StationaryNoiseRes->dStationaryNoiseStdOff = res.dStationaryNoiseStdOff;
             StationaryNoiseRes->dStationaryNoiseStdAll = res.dStationaryNoiseStdAll;
-            StationaryNoiseRes->dStationaryColSNoise = res.dStationaryColTNoise;
-            StationaryNoiseRes->dStationaryRowSNoise = res.dStationaryRowTNoise;
+            StationaryNoiseRes->dMaxStationaryNoise = res.dMaxStationaryNoise;
+            StationaryNoiseRes->dStationaryColTNoise = res.dStationaryColTNoise;
+            StationaryNoiseRes->dStationaryRowTNoise = res.dStationaryRowTNoise;
+            StationaryNoiseRes->nFlashFrameNumber = res.nFlashFrameNumber;
 
             return TEST_NO_ERROR;
         } else {
@@ -84,12 +86,13 @@ uint32_t __stdcall StationaryNoiseDVS(HANDLE h, uint32_t nIndexStart, uint32_t n
 }
 
 uint32_t __stdcall StationaryUniformityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                           CStationaryUniformityData *UniformityRes) {
+                                           DVSStationaryUniformityType *UniformityRes) {
     if (h) {
         DVSStationaryUniformityType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->StationaryUniformity(nIndexStart, nNumber, res);
 
         if (bRet) {
+            UniformityRes->UniformityBlockData.assign(res.UniformityBlockData.begin(), res.UniformityBlockData.end());
             UniformityRes->UniformityRatio = res.UniformityRatio;
             return TEST_NO_ERROR;
         } else {
@@ -100,7 +103,7 @@ uint32_t __stdcall StationaryUniformityDVS(HANDLE h, uint32_t nIndexStart, uint3
     }
 }
 
-uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, CHotpixelData *HotpixelRes) {
+uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelType *HotpixelRes) {
     if (h) {
         DVSHotpixelType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, res);
@@ -113,6 +116,7 @@ uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
             HotpixelRes->TripletNum = res.TripletNum;
             HotpixelRes->FourConnectedNum = res.FourConnectedNum;
             HotpixelRes->ClusterNum = res.ClusterNum;
+            HotpixelRes->HotPixelMask = res.HotPixelMask;
 
             return TEST_NO_ERROR;
         } else {
@@ -123,7 +127,7 @@ uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
     }
 }
 
-uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum, CPeakInfo *Peak,
+uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum, DVSPeakInfo *Peak,
                                DVSLightTrigerType Light) {
     if (h) {
         DVSPeakInfo res;
@@ -157,19 +161,20 @@ uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
 
 uint32_t __stdcall ImageContrastSensitivityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
                                                DVSLightTrigerType Light,
-                                               CImageContrastSensitivityData *ImageContrastSensitivityRes) {
+                                               DVSImageContrastSensitivityType *ImageContrastSensitivityRes) {
     if (h) {
         DVSImageContrastSensitivityType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->ImageContrastSensitivity(
             nIndexStart, nNumber, nullptr, nPeakNum, Light, res);
 
         if (bRet) {
-            ImageContrastSensitivityRes->B_Gb_OffEventsRatio = res.B_Gb_OffEventsRatio;
-            ImageContrastSensitivityRes->B_Gb_OnEventsRatio = res.B_Gb_OnEventsRatio;
-            ImageContrastSensitivityRes->Gr_Gb_OffEventsRatio = res.Gr_Gb_OffEventsRatio;
-            ImageContrastSensitivityRes->Gr_Gb_OnEventsRatio = res.Gr_Gb_OnEventsRatio;
-            ImageContrastSensitivityRes->R_Gb_OffEventsRatio = res.R_Gb_OffEventsRatio;
             ImageContrastSensitivityRes->R_Gb_OnEventsRatio = res.R_Gb_OnEventsRatio;
+            ImageContrastSensitivityRes->B_Gb_OnEventsRatio = res.B_Gb_OnEventsRatio;
+            ImageContrastSensitivityRes->Gr_Gb_OnEventsRatio = res.Gr_Gb_OnEventsRatio;
+
+            ImageContrastSensitivityRes->R_Gb_OffEventsRatio = res.R_Gb_OffEventsRatio;
+            ImageContrastSensitivityRes->B_Gb_OffEventsRatio = res.B_Gb_OffEventsRatio;
+            ImageContrastSensitivityRes->Gr_Gb_OffEventsRatio = res.Gr_Gb_OffEventsRatio;
 
             for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All + 1; nChannel++) {
                 ImageContrastSensitivityRes->OffEventsRatio[nChannel] = res.OffEventsRatio[nChannel];
@@ -185,14 +190,15 @@ uint32_t __stdcall ImageContrastSensitivityDVS(HANDLE h, uint32_t nIndexStart, u
     }
 }
 
-uint32_t __stdcall AccompaniedPeakAndDelayedPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
+uint32_t __stdcall AccompaniedPeakAndDelayedPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                    DVSPeakInfo *Peak, uint32_t nPeakNum,
                                                     DVSLightTrigerType Light,
-                                                    CAccompaniedPeakAndDelayedPeakData *
+                                                    DVSAccompaniedPeakAndDelayedPeakType *
                                                     AccompaniedPeakAndDelayedPeakRes) {
     if (h) {
         DVSAccompaniedPeakAndDelayedPeakType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->AccompaniedPeakAndDelayedPeak(
-            nIndexStart, nNumber, nullptr, nPeakNum, Light, res);
+            nIndexStart, nNumber, Peak, nPeakNum, Light, res);
 
         if (bRet) {
             for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All + 1; nChannel++) {
@@ -215,21 +221,27 @@ uint32_t __stdcall AccompaniedPeakAndDelayedPeakDVS(HANDLE h, uint32_t nIndexSta
     }
 }
 
-uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                uint32_t nPeakNum, DVSLightTrigerType Light,
-                                                CSpatialResponseUniformityData *SpatialResponseUniformityRes) {
+uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                ROIArea *ROI, DVSPeakInfo *Peak, uint32_t nPeakNum,
+                                                DVSLightTrigerType Light,
+                                                DVSSpatialResponseUniformityType *
+                                                SpatialResponseUniformityRes) {
     if (h) {
         DVSSpatialResponseUniformityType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->SpatialResponseUniformity(
-            nIndexStart, nNumber, ROI, nullptr, nPeakNum, Light, res);
+            nIndexStart, nNumber, ROI, Peak, nPeakNum, Light, res);
 
         if (bRet) {
             for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All + 1; nChannel++) {
-                SpatialResponseUniformityRes->dOffEventsUniformityRatio[nChannel] = res.dOffEventsUniformityRatio[
-                    nChannel];
                 SpatialResponseUniformityRes->dOnEventsUniformityRatio[nChannel] = res.dOnEventsUniformityRatio[
                     nChannel];
+                SpatialResponseUniformityRes->dOffEventsUniformityRatio[nChannel] = res.dOffEventsUniformityRatio[
+                    nChannel];
             }
+            SpatialResponseUniformityRes->OnEventsUniformityBlockData->assign(
+                res.OnEventsUniformityBlockData->begin(), res.OnEventsUniformityBlockData->end());
+            SpatialResponseUniformityRes->OffEventsUniformityBlockData->assign(
+                res.OffEventsUniformityBlockData->begin(), res.OffEventsUniformityBlockData->end());
 
             return TEST_NO_ERROR;
         } else {
@@ -240,18 +252,24 @@ uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uint32_t nIndexStart, 
     }
 }
 
-uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
-                               DVSLightTrigerType Light, CDVSBadpixelData *BadpixelRes) {
+uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo *Peak,
+                               uint32_t nPeakNum, DVSLightTrigerType Light,
+                               DVSBadpixelType *BadpixelRes) {
     if (h) {
         DVSBadpixelType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->BadPixel(
-            nIndexStart, nNumber, nullptr, nPeakNum, Light, res);
+            nIndexStart, nNumber, Peak, nPeakNum, Light, res);
 
         if (bRet) {
             BadpixelRes->nOffEventsClusterNum = res.nOffEventsClusterNum;
             BadpixelRes->nOffEventsDeadPixelNum = res.nOffEventsDeadPixelNum;
+            BadpixelRes->nOffEventsDeadLineNum = res.nOffEventsDeadLineNum;
+            BadpixelRes->OffEventsBadPixelMask = res.OffEventsBadPixelMask;
+
             BadpixelRes->nOnEventsClusterNum = res.nOnEventsClusterNum;
             BadpixelRes->nOnEventsDeadPixelNum = res.nOnEventsDeadPixelNum;
+            BadpixelRes->nOnEventsDeadLineNum = res.nOnEventsDeadLineNum;
+            BadpixelRes->OnEventsBadPixelMask = res.OnEventsBadPixelMask;
 
             return TEST_NO_ERROR;
         } else {
@@ -262,8 +280,8 @@ uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
     }
 }
 
-uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag, uint8_t OffEventFlag,
-                           uint8_t *ImgData) {
+uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag,
+                           uint8_t OffEventFlag, ImgType *ImgData) {
     if (h) {
         ImgType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->Show(nIndex, NoEventFlag, OnEventFlag, OffEventFlag,
@@ -275,7 +293,8 @@ uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8
 
             for (uint32_t nRows = 0; nRows < nTotalRow; nRows++) {
                 for (uint32_t nCols = 0; nCols < nTotalCol; nCols++) {
-                    ImgData[nRows * nTotalCol + nCols] = res[nRows][nCols];
+                    // ImgData[nRows * nTotalCol + nCols] = res[nRows][nCols];
+                    ImgData->assign(res.begin(), res.end());
                 }
             }
             return TEST_NO_ERROR;
@@ -296,18 +315,21 @@ uint32_t __stdcall SetMultiThreadEnableDVS(HANDLE h, bool bEnable) {
     }
 }
 
-uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, CDVSAlgorithmThre *AlgoThre) {
+uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre) {
     if (h) {
         DVSAlgorithmThre res;
-
         res.dHotPixelThre = AlgoThre->dHotPixelThre;
         res.dHotLineThre = AlgoThre->dHotLineThre;
         res.dDeadPixelThre = AlgoThre->dDeadPixelThre;
+        res.dDeadLineThre = AlgoThre->dDeadLineThre;
+        res.nHotPixelClusterSizeThre = AlgoThre->nHotPixelClusterSizeThre;
+        res.nDeadPixelClusterSizeThre = AlgoThre->nDeadPixelClusterSizeThre;
         res.nPeakCycle = AlgoThre->nPeakCycle;
         res.nStationaryUniformityRowBlockNum = AlgoThre->nStationaryUniformityRowBlockNum;
         res.nStationaryUniformityColBlockNum = AlgoThre->nStationaryUniformityColBlockNum;
         res.nSpatialResponseUniformityRowBlockNum = AlgoThre->nSpatialResponseUniformityRowBlockNum;
         res.nSpatialResponseUniformityColBlockNum = AlgoThre->nSpatialResponseUniformityColBlockNum;
+        res.dFlashRatioThre = AlgoThre->dFlashRatioThre;
 
         reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->SetAlgorithmThre(res);
         return TEST_NO_ERROR;
@@ -316,20 +338,22 @@ uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, CDVSAlgorithmThre *AlgoThre) {
     }
 }
 
-uint32_t __stdcall GetAlgorithmThreDVS(HANDLE h, CDVSAlgorithmThre *AlgoThre) {
+uint32_t __stdcall GetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre) {
     if (h) {
         DVSAlgorithmThre res;
-
         res = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetAlgorithmThre();
-
-        AlgoThre->dDeadPixelThre = res.dDeadPixelThre;
-        AlgoThre->dHotLineThre = res.dHotLineThre;
         AlgoThre->dHotPixelThre = res.dHotPixelThre;
+        AlgoThre->dHotLineThre = res.dHotLineThre;
+        AlgoThre->dDeadPixelThre = res.dDeadPixelThre;
+        AlgoThre->dDeadLineThre = res.dDeadLineThre;
+        AlgoThre->nHotPixelClusterSizeThre = res.nHotPixelClusterSizeThre;
+        AlgoThre->nDeadPixelClusterSizeThre = res.nDeadPixelClusterSizeThre;
         AlgoThre->nPeakCycle = res.nPeakCycle;
-        AlgoThre->nSpatialResponseUniformityColBlockNum = res.nSpatialResponseUniformityColBlockNum;
-        AlgoThre->nSpatialResponseUniformityRowBlockNum = res.nSpatialResponseUniformityRowBlockNum;
-        AlgoThre->nStationaryUniformityColBlockNum = res.nStationaryUniformityColBlockNum;
         AlgoThre->nStationaryUniformityRowBlockNum = res.nStationaryUniformityRowBlockNum;
+        AlgoThre->nStationaryUniformityColBlockNum = res.nStationaryUniformityColBlockNum;
+        AlgoThre->nSpatialResponseUniformityRowBlockNum = res.nSpatialResponseUniformityRowBlockNum;
+        AlgoThre->nSpatialResponseUniformityColBlockNum = res.nSpatialResponseUniformityColBlockNum;
+        AlgoThre->dFlashRatioThre = res.dFlashRatioThre;
 
         return TEST_NO_ERROR;
     } else {
@@ -348,9 +372,45 @@ uint32_t __stdcall GetDataNumDVS(HANDLE h, uint32_t *nDataNum) {
     }
 }
 
+uint32_t __stdcall GetActiveAreaDVS(HANDLE h, ROIArea *ROI) {
+    if (h) {
+        ROIArea tROI;
+        tROI = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetActiveArea();
+        ROI->Up = tROI.Up;
+        ROI->Down = tROI.Down;
+        ROI->Left = tROI.Left;
+        ROI->Right = tROI.Right;
+        return TEST_NO_ERROR;
+    } else {
+        return ALGO_HANDLE_ERROR;
+    }
+}
+
+uint32_t __stdcall SetActiveAreaDVS(HANDLE h, ROIArea ROI) {
+    if (h) {
+        reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->SetActiveArea(ROI);
+        return TEST_NO_ERROR;
+    } else {
+        return ALGO_HANDLE_ERROR;
+    }
+}
+
+uint32_t __stdcall SetLogEnableDVS(HANDLE h, bool bEnable) {
+    if (h) {
+        reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->SetLogEnable(bEnable);
+        return TEST_NO_ERROR;
+    } else {
+        return ALGO_HANDLE_ERROR;
+    }
+}
+
 uint32_t __stdcall GetRawDataSizeDVS(HANDLE h, uint32_t *nRow, uint32_t *nCol) {
     if (h) {
-        reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetRawDataSize(*nRow, *nCol);
+        uint32_t tRow = 0;
+        uint32_t tCol = 0;
+        reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetRawDataSize(tRow, tCol);
+        *nRow = tRow;
+        *nCol = tCol;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
@@ -371,9 +431,9 @@ uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint32_t nLen) {
     }
 }
 
-// | ============= APS ================= |
+// | ============= APS =============================================================================================== |
 HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype, PixelFormatType Pixelformat, int code) {
-    CAlpAPSMPAlgoInterface *pInterface = CreateAPSAlgoInterface(Sensortype, APSRawtype, "", Pixelformat, code);
+    CAlpAPSMPAlgoInterface *pInterface = CreateAPSAlgoInterface(Sensortype, APSRawtype, "./", Pixelformat, code);
 
     return reinterpret_cast<HANDLE>(pInterface);
 }
@@ -399,7 +459,7 @@ uint32_t __stdcall ImportRawDataAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens,
     }
 }
 
-uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSTNoiseTypeC *apsTNoiseRes) {
+uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, APSTNoiseTypeC *apsTNoiseRes) {
     if (!h) {
         return ALGO_HANDLE_ERROR;
     }
@@ -413,7 +473,7 @@ uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, A
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->TNoise(
             nIndexStart,
             nNumber,
-            nullptr,
+            ROI,
             res
         );
 
@@ -459,10 +519,10 @@ void __stdcall TNoiseAPS_Free(APSTNoiseTypeC *apsTNoiseRes) {
     }
 }
 
-uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSSNoiseType *APSSNoiseRes) {
+uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, APSSNoiseType *APSSNoiseRes) {
     if (h) {
         APSSNoiseType res;
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SNoise(nIndexStart, nNumber, nullptr, res);
+        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SNoise(nIndexStart, nNumber, ROI, res);
 
         if (bRet) {
             APSSNoiseRes->SubFrameSNoiseData = res.SubFrameSNoiseData;
@@ -477,11 +537,12 @@ uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, A
     }
 }
 
-uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSBadpixelType *BadpixelRes) {
+uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                               APSBadpixelType *BadpixelRes) {
     if (h) {
         APSBadpixelType res;
 
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->BadPixel(nIndexStart, nNumber, nullptr, res);
+        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->BadPixel(nIndexStart, nNumber, ROI, res);
 
         if (bRet) {
             BadpixelRes->BadPixelNum = res.BadPixelNum;
@@ -491,6 +552,7 @@ uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
             BadpixelRes->ClusterNum = res.ClusterNum;
             BadpixelRes->MaxClusterSize = res.MaxClusterSize;
             BadpixelRes->SubFrameBadpixelData = res.SubFrameBadpixelData;
+            BadpixelRes->BadPixelMask = res.BadPixelMask;
 
             return TEST_NO_ERROR;
         } else {
@@ -501,11 +563,10 @@ uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
     }
 }
 
-uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, APSBadpixelType *HotpixelRes) {
+uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, APSBadpixelType *HotpixelRes) {
     if (h) {
         APSBadpixelType res;
-        // bRet = m_pAPSAlgoInterface->HotPixel(nIndexStart, nNumber, roi, m_HotPixel);
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, nullptr, res);
+        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, ROI, res);
 
         if (bRet) {
             HotpixelRes->BadPixelNum = res.BadPixelNum;
@@ -515,6 +576,7 @@ uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
             HotpixelRes->ClusterNum = res.ClusterNum;
             HotpixelRes->MaxClusterSize = res.MaxClusterSize;
             HotpixelRes->SubFrameBadpixelData = res.SubFrameBadpixelData;
+            HotpixelRes->BadPixelMask = res.BadPixelMask;
 
             return TEST_NO_ERROR;
         } else {
@@ -576,17 +638,17 @@ uint32_t __stdcall BLCAPS_3(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ui
 }
 
 uint32_t __stdcall YShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                               APSYShadingType &YShadingRes) {
+                               APSYShadingType *YShadingRes) {
     if (h) {
         APSYShadingType YShading;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->YShading(nIndexStart, nNumber, ROI, YShading);
 
         if (bRet) {
-            YShadingRes.YShadingData = YShading.YShadingData;
-            YShadingRes.YShadingLB = YShading.YShadingLB;
-            YShadingRes.YShadingLT = YShading.YShadingLT;
-            YShadingRes.YShadingRB = YShading.YShadingRB;
-            YShadingRes.YShadingRT = YShading.YShadingRT;
+            YShadingRes->YShadingData = YShading.YShadingData;
+            YShadingRes->YShadingLB = YShading.YShadingLB;
+            YShadingRes->YShadingLT = YShading.YShadingLT;
+            YShadingRes->YShadingRB = YShading.YShadingRB;
+            YShadingRes->YShadingRT = YShading.YShadingRT;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -597,24 +659,24 @@ uint32_t __stdcall YShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
 }
 
 uint32_t __stdcall ColorShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                   APSColorShadingType &ColorShadingRes) {
+                                   APSColorShadingType *ColorShadingRes) {
     if (h) {
         APSColorShadingType ColorShading;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->
                 ColorShading(nIndexStart, nNumber, ROI, ColorShading);
 
         if (bRet) {
-            ColorShadingRes.ColorShadingBGData = ColorShading.ColorShadingBGData;
-            ColorShadingRes.ColorShadingBGLB = ColorShading.ColorShadingBGLB;
-            ColorShadingRes.ColorShadingBGLT = ColorShading.ColorShadingBGLT;
-            ColorShadingRes.ColorShadingBGRB = ColorShading.ColorShadingBGRB;
-            ColorShadingRes.ColorShadingBGRT = ColorShading.ColorShadingBGRT;
+            ColorShadingRes->ColorShadingBGData = ColorShading.ColorShadingBGData;
+            ColorShadingRes->ColorShadingBGLB = ColorShading.ColorShadingBGLB;
+            ColorShadingRes->ColorShadingBGLT = ColorShading.ColorShadingBGLT;
+            ColorShadingRes->ColorShadingBGRB = ColorShading.ColorShadingBGRB;
+            ColorShadingRes->ColorShadingBGRT = ColorShading.ColorShadingBGRT;
 
-            ColorShadingRes.ColorShadingRGData = ColorShading.ColorShadingRGData;
-            ColorShadingRes.ColorShadingRGLB = ColorShading.ColorShadingRGLB;
-            ColorShadingRes.ColorShadingRGLT = ColorShading.ColorShadingRGLT;
-            ColorShadingRes.ColorShadingRGRB = ColorShading.ColorShadingRGRB;
-            ColorShadingRes.ColorShadingRGRT = ColorShading.ColorShadingRGRT;
+            ColorShadingRes->ColorShadingRGData = ColorShading.ColorShadingRGData;
+            ColorShadingRes->ColorShadingRGLB = ColorShading.ColorShadingRGLB;
+            ColorShadingRes->ColorShadingRGLT = ColorShading.ColorShadingRGLT;
+            ColorShadingRes->ColorShadingRGRB = ColorShading.ColorShadingRGRB;
+            ColorShadingRes->ColorShadingRGRT = ColorShading.ColorShadingRGRT;
 
             return TEST_NO_ERROR;
         } else {
@@ -626,13 +688,13 @@ uint32_t __stdcall ColorShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNum
 }
 
 uint32_t __stdcall ReadNoiseAPS(HANDLE h, uint32_t nIndex1, uint32_t nIndex2, ROIArea *ROI,
-                                APSReadNoiseType &ReadNoiseRes) {
+                                APSReadNoiseType *ReadNoiseRes) {
     if (h) {
         APSReadNoiseType ReadNoise;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->ReadNoise(nIndex1, nIndex2, ROI, ReadNoise);
 
         if (bRet) {
-            ReadNoiseRes = ReadNoise;
+            *ReadNoiseRes = ReadNoise;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -662,21 +724,21 @@ uint32_t __stdcall OpticalCenterAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
 }
 
 uint32_t __stdcall PedestalVariationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                        APSPedestalVariationType &PedestalVariationRes) {
+                                        APSPedestalVariationType *PedestalVariationRes) {
     if (h) {
         APSPedestalVariationType PedestalVariationType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->PedestalVariation(
             nIndexStart, nNumber, ROI, PedestalVariationType);
 
         if (bRet) {
-            PedestalVariationRes.PedestalMax[0] = PedestalVariationType.PedestalMax[0];
-            PedestalVariationRes.PedestalMin[0] = PedestalVariationType.PedestalMin[0];
-            PedestalVariationRes.PedestalMax[1] = PedestalVariationType.PedestalMax[1];
-            PedestalVariationRes.PedestalMin[1] = PedestalVariationType.PedestalMin[1];
-            PedestalVariationRes.PedestalMax[2] = PedestalVariationType.PedestalMax[2];
-            PedestalVariationRes.PedestalMin[2] = PedestalVariationType.PedestalMin[2];
-            PedestalVariationRes.PedestalMax[3] = PedestalVariationType.PedestalMax[3];
-            PedestalVariationRes.PedestalMin[3] = PedestalVariationType.PedestalMin[3];
+            PedestalVariationRes->PedestalMax[0] = PedestalVariationType.PedestalMax[0];
+            PedestalVariationRes->PedestalMin[0] = PedestalVariationType.PedestalMin[0];
+            PedestalVariationRes->PedestalMax[1] = PedestalVariationType.PedestalMax[1];
+            PedestalVariationRes->PedestalMin[1] = PedestalVariationType.PedestalMin[1];
+            PedestalVariationRes->PedestalMax[2] = PedestalVariationType.PedestalMax[2];
+            PedestalVariationRes->PedestalMin[2] = PedestalVariationType.PedestalMin[2];
+            PedestalVariationRes->PedestalMax[3] = PedestalVariationType.PedestalMax[3];
+            PedestalVariationRes->PedestalMin[3] = PedestalVariationType.PedestalMin[3];
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -781,14 +843,14 @@ uint32_t __stdcall DSNUAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROI
 }
 
 uint32_t __stdcall DataMeanAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                               APSDataMeanType &DataMeanRes) {
+                               APSDataMeanType *DataMeanRes) {
     if (h) {
         APSDataMeanType DataMeanType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->DataMean(nIndexStart, nNumber, ROI, DataMeanType);
 
         if (bRet) {
-            DataMeanRes.DataMeanFrame = DataMeanType.DataMeanFrame;
-            DataMeanRes.SubFrameDataMean = DataMeanType.SubFrameDataMean;
+            DataMeanRes->DataMeanFrame = DataMeanType.DataMeanFrame;
+            DataMeanRes->SubFrameDataMean = DataMeanType.SubFrameDataMean;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -798,14 +860,14 @@ uint32_t __stdcall DataMeanAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
     }
 }
 
-uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> &LightMean, std::vector<double> &ExpTime,
-                                APSLinearityType &LinearityRes) {
+uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> *LightMean, std::vector<double> *ExpTime,
+                                APSLinearityType *LinearityRes) {
     if (h) {
         APSLinearityType LinearityType;
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Linearity(LightMean, ExpTime, LinearityType);
+        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Linearity(*LightMean, *ExpTime, LinearityType);
 
         if (bRet) {
-            LinearityRes.SubFrameLinearityData = LinearityType.SubFrameLinearityData;
+            LinearityRes->SubFrameLinearityData = LinearityType.SubFrameLinearityData;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -815,16 +877,16 @@ uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> &LightMea
     }
 }
 
-uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> &LightTNoiseData,
-                                        std::vector<APSDataMeanType> &LightMean, APSTNoiseType DarkTNoiseBase,
-                                        APSOverallSystemGainType &GainRes) {
+uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> *LightTNoiseData,
+                                        std::vector<APSDataMeanType> *LightMean, APSTNoiseType DarkTNoiseBase,
+                                        APSOverallSystemGainType *GainRes) {
     if (h) {
         APSOverallSystemGainType GainType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OverallSystemGain(
-            LightTNoiseData, LightMean, DarkTNoiseBase, GainType);
+            *LightTNoiseData, *LightMean, DarkTNoiseBase, GainType);
 
         if (bRet) {
-            GainRes.SubFrameGainK = GainType.SubFrameGainK;
+            GainRes->SubFrameGainK = GainType.SubFrameGainK;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -836,16 +898,16 @@ uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> &Li
 
 uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                  SubFrameIndex nChannelIndex,
-                                 APSSaturationType &SaturationRes) {
+                                 APSSaturationType *SaturationRes) {
     if (h) {
         APSSaturationType SaturationType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Saturation(
             nIndexStart, nNumber, ROI, nChannelIndex, SaturationType);
 
         if (bRet) {
-            SaturationRes.SaturationMean = SaturationType.SaturationMean;
-            SaturationRes.SaturationSNR = SaturationType.SaturationSNR;
-            SaturationRes.SaturationTNoise = SaturationType.SaturationTNoise;
+            SaturationRes->SaturationMean = SaturationType.SaturationMean;
+            SaturationRes->SaturationSNR = SaturationType.SaturationSNR;
+            SaturationRes->SaturationTNoise = SaturationType.SaturationTNoise;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -855,23 +917,24 @@ uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumbe
     }
 }
 
-uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nNumberInOneStep, ROIArea *ROI, SubFrameIndex nChannelIndex,
-                           APSOETCType &OETCRes) {
+uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nNumberInOneStep, ROIArea *ROI,
+                           SubFrameIndex nChannelIndex,
+                           APSOETCType *OETCRes) {
     if (h) {
         APSOETCType OETCType;
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OETC(nIndexStart, nNumber, nNumberInOneStep, ROI, nChannelIndex,
-                                                                        OETCType);
+        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OETC(nIndexStart, nNumber, nNumberInOneStep, ROI,
+                                                                        nChannelIndex, OETCType);
 
         if (bRet) {
-            OETCRes.DataMean = OETCType.DataMean;
-            OETCRes.ReadNoise = OETCType.ReadNoise;
-            OETCRes.TNoiseData = OETCType.TNoiseData;
-            OETCRes.ConversionGain = OETCType.ConversionGain;
-            OETCRes.DR_dB = OETCType.DR_dB;
-            OETCRes.FWC = OETCType.FWC;
-            OETCRes.FWC_e = OETCType.FWC_e;
-            OETCRes.ReadNoise_e = OETCType.ReadNoise_e;
-            OETCRes.ReadNoiseData = OETCType.ReadNoiseData;
+            OETCRes->DataMean = OETCType.DataMean;
+            OETCRes->ReadNoise = OETCType.ReadNoise;
+            OETCRes->TNoiseData = OETCType.TNoiseData;
+            OETCRes->ConversionGain = OETCType.ConversionGain;
+            OETCRes->DR_dB = OETCType.DR_dB;
+            OETCRes->FWC = OETCType.FWC;
+            OETCRes->FWC_e = OETCType.FWC_e;
+            OETCRes->ReadNoise_e = OETCType.ReadNoise_e;
+            OETCRes->ReadNoiseData = OETCType.ReadNoiseData;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -883,17 +946,17 @@ uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uin
 
 uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                    SubFrameIndex nChannelIndex,
-                                   APSSSNRType &SSNRRes) {
+                                   APSSSNRType *SSNRRes) {
     if (h) {
         APSSSNRType SSNRType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Linearity(
             nIndexStart, nNumber, ROI, nChannelIndex, SSNRType);
 
         if (bRet) {
-            SSNRRes.DataMean = SSNRType.DataMean;
-            SSNRRes.MaxSSNR = SSNRType.MaxSSNR;
-            SSNRRes.SNoiseData = SSNRType.SNoiseData;
-            SSNRRes.SSNR = SSNRType.SSNR;
+            SSNRRes->DataMean = SSNRType.DataMean;
+            SSNRRes->MaxSSNR = SSNRType.MaxSSNR;
+            SSNRRes->SNoiseData = SSNRType.SNoiseData;
+            SSNRRes->SSNR = SSNRType.SSNR;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -905,14 +968,14 @@ uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNum
 
 uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                              SubFrameIndex nChannelIndex,
-                             bool bNormalize, ImgType &ImgData) {
+                             bool bNormalize, ImgType *ImgData) {
     if (h) {
         ImgType ImgDataType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Show(nIndexStart, nNumber, ROI, nChannelIndex,
                                                                         bNormalize, ImgDataType);
 
         if (bRet) {
-            ImgData = ImgDataType;
+            ImgData->assign(ImgDataType.begin(), ImgDataType.end());
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -924,14 +987,14 @@ uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, R
 
 uint32_t __stdcall ShowAPS_2(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                              SubFrameIndex nChannelIndex,
-                             APSType &ImgData) {
+                             APSType *ImgData) {
     if (h) {
         APSType ImgDataType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Show(nIndexStart, nNumber, ROI, nChannelIndex,
                                                                         ImgDataType);
 
         if (bRet) {
-            ImgData = ImgDataType;
+            ImgData->assign(ImgDataType.begin(), ImgDataType.end());
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -975,19 +1038,66 @@ uint32_t __stdcall SetLogEnableAPS(HANDLE h, bool bEnable) {
     }
 }
 
-uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre &AlgoThre) {
+uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
     if (h) {
-        reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SetAlgorithmThre(AlgoThre);
+        APSAlgorithmThre res;
+        res.dHotPixelThre = AlgoThre->dHotPixelThre;
+        res.dHotLineThre = AlgoThre->dHotLineThre;
+        res.dBadPixelThre = AlgoThre->dBadPixelThre;
+        res.dBadLineThre = AlgoThre->dBadLineThre;
+        res.nBadPixelRadius = AlgoThre->nBadPixelRadius;
+        res.nBadLineRadius = AlgoThre->nBadLineRadius;
+        res.nDSNURowBlockNum = AlgoThre->nDSNURowBlockNum;
+        res.nDSNUColBlockNum = AlgoThre->nDSNUColBlockNum;
+        res.nDSNURowBlockSize = AlgoThre->nDSNURowBlockSize;
+        res.nDSNUColBlockSize = AlgoThre->nDSNUColBlockSize;
+        res.nYShadingRowBlockNum = AlgoThre->nYShadingRowBlockNum;
+        res.nYShadingColBlockNum = AlgoThre->nYShadingColBlockNum;
+        res.nColorShadingRowBlockNum = AlgoThre->nColorShadingRowBlockNum;
+        res.nColorShadingColBlockNum = AlgoThre->nColorShadingColBlockNum;
+        res.nPedestalVariationRowBlockNum = AlgoThre->nPedestalVariationRowBlockNum;
+        res.nPedestalVariationColBlockNum = AlgoThre->nPedestalVariationColBlockNum;
+        res.nPedestalVariationRowBlockSize = AlgoThre->nPedestalVariationRowBlockSize;
+        res.nPedestalVariationColBlockSize = AlgoThre->nPedestalVariationColBlockSize;
+        res.nBadPixelMaxLen = AlgoThre->nBadPixelMaxLen;
+        res.nBadPixelLocalRowOffset = AlgoThre->nBadPixelLocalRowOffset;
+        res.nBadPixelLocalColOffset = AlgoThre->nBadPixelLocalColOffset;
+        res.nLinearityRadius = AlgoThre->nLinearityRadius;
+        res.nOETCRadius = AlgoThre->nOETCRadius;
+        reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SetAlgorithmThre(res);
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
     }
 }
 
-uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre &AlgoThre) {
+uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
     if (h) {
-        AlgoThre = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetAlgorithmThre();
-
+        APSAlgorithmThre res;
+        res = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetAlgorithmThre();
+        AlgoThre->dHotPixelThre = res.dHotPixelThre;
+        AlgoThre->dHotLineThre = res.dHotLineThre;
+        AlgoThre->dBadPixelThre = res.dBadPixelThre;
+        AlgoThre->dBadLineThre = res.dBadLineThre;
+        AlgoThre->nBadPixelRadius = res.nBadPixelRadius;
+        AlgoThre->nBadLineRadius = res.nBadLineRadius;
+        AlgoThre->nDSNURowBlockNum = res.nDSNURowBlockNum;
+        AlgoThre->nDSNUColBlockNum = res.nDSNUColBlockNum;
+        AlgoThre->nDSNURowBlockSize = res.nDSNURowBlockSize;
+        AlgoThre->nDSNUColBlockSize = res.nDSNUColBlockSize;
+        AlgoThre->nYShadingRowBlockNum = res.nYShadingRowBlockNum;
+        AlgoThre->nYShadingColBlockNum = res.nYShadingColBlockNum;
+        AlgoThre->nColorShadingRowBlockNum = res.nColorShadingRowBlockNum;
+        AlgoThre->nColorShadingColBlockNum = res.nColorShadingColBlockNum;
+        AlgoThre->nPedestalVariationRowBlockNum = res.nPedestalVariationRowBlockNum;
+        AlgoThre->nPedestalVariationColBlockNum = res.nPedestalVariationColBlockNum;
+        AlgoThre->nPedestalVariationRowBlockSize = res.nPedestalVariationRowBlockSize;
+        AlgoThre->nPedestalVariationColBlockSize = res.nPedestalVariationColBlockSize;
+        AlgoThre->nBadPixelMaxLen = res.nBadPixelMaxLen;
+        AlgoThre->nBadPixelLocalRowOffset = res.nBadPixelLocalRowOffset;
+        AlgoThre->nBadPixelLocalColOffset = res.nBadPixelLocalColOffset;
+        AlgoThre->nLinearityRadius = res.nLinearityRadius;
+        AlgoThre->nOETCRadius = res.nOETCRadius;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
@@ -1014,23 +1124,27 @@ uint32_t __stdcall SaveBinAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens, const
     }
 }
 
-uint32_t __stdcall GetActiveAreaAPS(HANDLE h, ROIArea &ROIAreaRes) {
+uint32_t __stdcall GetActiveAreaAPS(HANDLE h, ROIArea *ROIAreaRes) {
     if (h) {
         ROIArea ROIAreaTmp;
         ROIAreaTmp = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetActiveArea();
-        ROIAreaRes.Up = ROIAreaTmp.Up;
-        ROIAreaRes.Down = ROIAreaTmp.Down;
-        ROIAreaRes.Left = ROIAreaTmp.Left;
-        ROIAreaRes.Right = ROIAreaTmp.Right;
+        ROIAreaRes->Up = ROIAreaTmp.Up;
+        ROIAreaRes->Down = ROIAreaTmp.Down;
+        ROIAreaRes->Left = ROIAreaTmp.Left;
+        ROIAreaRes->Right = ROIAreaTmp.Right;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
     }
 }
 
-uint32_t __stdcall GetRawDataSizeAPS(HANDLE h, uint32_t &nRow, uint32_t &nCol) {
+uint32_t __stdcall GetRawDataSizeAPS(HANDLE h, uint32_t *nRow, uint32_t *nCol) {
     if (h) {
-        reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetRawDataSize(nRow, nCol);
+        uint32_t tRow = 0;
+        uint32_t tCol = 0;
+        reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetRawDataSize(tRow, tCol);
+        *nRow = tRow;
+        *nCol = tCol;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
@@ -1069,12 +1183,15 @@ uint32_t __stdcall AlpGetVersionAPS(HANDLE h, char *ver, uint32_t nLen) {
     }
 }
 
-uint32_t __stdcall GetCodeAPS(HANDLE h, int &Code) {
+uint32_t __stdcall GetCodeAPS(HANDLE h, int *Code) {
     if (h) {
-        Code = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
+        int tCode = 0;
+        tCode = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
+        *Code = tCode;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
     }
 }
+
 #endif

@@ -15,7 +15,7 @@
 typedef void *HANDLE;
 
 // C接口需要设置该宏, 或在工程编译期间进行预编译
-// #define API_C_TYPE_INTERFACE 1
+// #define API_C_TYPE_INTERFACE
 
 #ifndef API_C_TYPE_INTERFACE
 #else
@@ -78,7 +78,7 @@ typedef enum {
 typedef enum {
     DVS_Code_1_4_Bining = 1,
     DVS_Code_HVS = 2,
-	DVS_Code_1_2_Subsample = 4,
+    DVS_Code_1_2_Subsample = 4,
 } DVSCodeType;
 
 typedef std::vector<std::vector<uint8_t> > ImgType;
@@ -491,9 +491,7 @@ typedef struct {
 extern "C" {
 #endif
 // | ============ DVS ================================================================================================ |
-ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleDVS(SensorType Sensortype,
-                                                  PixelFormatType Pixelformat = PixelFormatType::BayerGBRG,
-                                                  int code = 0);
+ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleDVS(SensorType Sensortype, PixelFormatType Pixelformat, int code = 0);
 
 ALP_ALGO_DLL_API_C void __stdcall DeleteHandleDVS(HANDLE h);
 
@@ -501,49 +499,57 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall ImportRawDataDVS(HANDLE h, uint8_t *pRawDa
                                                        uint32_t nIndexStart, uint32_t nNumber);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall EventsNumberCountDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                           CEventsNumberCountData *EventsNumberCountRes);
+                                                           DVSEventsNumberCountType *EventsNumberCountRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall StationaryNoiseDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                         CStationaryNoiseData *StationaryNoiseRes);
+                                                         DVSStationaryNoiseType *StationaryNoiseRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall StationaryUniformityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                              CStationaryUniformityData *UniformityRes);
+                                                              DVSStationaryUniformityType *UniformityRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                  CHotpixelData *HotpixelRes);
+                                                  DVSHotpixelType *HotpixelRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
-                                                  CPeakInfo *Peak, DVSLightTrigerType Light);
+                                                  DVSPeakInfo *Peak, DVSLightTrigerType Light);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ImageContrastSensitivityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
                                                                   uint32_t nPeakNum, DVSLightTrigerType Light,
-                                                                  CImageContrastSensitivityData *
+                                                                  DVSImageContrastSensitivityType *
                                                                   ImageContrastSensitivityRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall AccompaniedPeakAndDelayedPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                                       uint32_t nPeakNum, DVSLightTrigerType Light,
-                                                                       CAccompaniedPeakAndDelayedPeakData *
+                                                                       DVSPeakInfo *Peak, uint32_t nPeakNum,
+                                                                       DVSLightTrigerType Light,
+                                                                       DVSAccompaniedPeakAndDelayedPeakType *
                                                                        AccompaniedPeakAndDelayedPeakRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                                   ROIArea *ROI, uint32_t nPeakNum,
+                                                                   ROIArea *ROI, DVSPeakInfo *Peak, uint32_t nPeakNum,
                                                                    DVSLightTrigerType Light,
-                                                                   CSpatialResponseUniformityData *
+                                                                   DVSSpatialResponseUniformityType *
                                                                    SpatialResponseUniformityRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
-                                                  DVSLightTrigerType Light, CDVSBadpixelData *BadpixelRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo *Peak,
+                                                  uint32_t nPeakNum, DVSLightTrigerType Light,
+                                                  DVSBadpixelType *BadpixelRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag,
-                                              uint8_t OffEventFlag, uint8_t *ImgData);
+                                              uint8_t OffEventFlag, ImgType *ImgData);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SetMultiThreadEnableDVS(HANDLE h, bool bEnable);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, CDVSAlgorithmThre *AlgoThre);
+ALP_ALGO_DLL_API_C uint32_t __stdcall SetLogEnableDVS(HANDLE h, bool bEnable);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall GetAlgorithmThreDVS(HANDLE h, CDVSAlgorithmThre *AlgoThre);
+ALP_ALGO_DLL_API_C uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre);
+
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall GetDataNumDVS(HANDLE h, uint32_t *nDataNum);
+
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetActiveAreaDVS(ROIArea *ROI);
+
+ALP_ALGO_DLL_API_C uint32_t __stdcall SetActiveAreaDVS(ROIArea ROI);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall GetRawDataSizeDVS(HANDLE h, uint32_t *nRow, uint32_t *nCol);
 
@@ -553,8 +559,7 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint
 
 // | ============ APS ================================================================================================ |
 ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype,
-                                                  PixelFormatType Pixelformat = PixelFormatType::BayerGBRG,
-                                                  int code = 0);
+                                                  PixelFormatType Pixelformat, int code);
 
 ALP_ALGO_DLL_API_C void __stdcall DeleteHandleAPS(HANDLE h);
 
@@ -584,20 +589,20 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall ImportRawDataAPS(HANDLE h, uint8_t *pRawDa
  *      }
  *  }
  */
-ALP_ALGO_DLL_API_C uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+ALP_ALGO_DLL_API_C uint32_t __stdcall TNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                 APSTNoiseTypeC *apsTNoiseRes);
 
 ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(APSTNoiseTypeC *apsTNoiseRes);
 
 // std::vector
-ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                 APSSNoiseType *APSSNoiseRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                   APSBadpixelType *BadpixelRes);
 
 // std::vector    APSBadpixelType
-ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                   APSBadpixelType *HotpixelRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall BLCAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber);
@@ -610,20 +615,20 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall BLCAPS_3(HANDLE h, uint32_t nIndexStart, u
                                                uint32_t nBaseIndexStart, uint32_t nBaseNumber);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall YShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                  APSYShadingType &YShadingRes);
+                                                  APSYShadingType *YShadingRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ColorShadingAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                      APSColorShadingType &ColorShadingRes);
+                                                      APSColorShadingType *ColorShadingRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall OpticalCenterAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                       APSOpticalCenterType &OpticalCenterRes);
+                                                       APSOpticalCenterType *OpticalCenterRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall PedestalVariationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
                                                            ROIArea *ROI,
-                                                           APSPedestalVariationType &PedestalVariationRes);
+                                                           APSPedestalVariationType *PedestalVariationRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ReadNoiseAPS(HANDLE h, uint32_t nIndex1, uint32_t nIndex2, ROIArea *ROI,
-                                                   APSReadNoiseType &ReadNoiseRes);
+                                                   APSReadNoiseType *ReadNoiseRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall DarkCurrentDataMeanAPS(HANDLE h, const APSDataMeanType *dataMean,
                                                              size_t dataMeanCount, const double *expTime,
@@ -637,33 +642,33 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall DSNUAPS(HANDLE h, uint32_t nIndexStart, ui
                                               APSDSNUType &DSNURes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall DataMeanAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                  APSDataMeanType &DataMean);
+                                                  APSDataMeanType *DataMean);
 
 // C std::vector不兼容
-ALP_ALGO_DLL_API_C uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> &LightMean,
-                                                   std::vector<double> &ExpTime, APSLinearityType &LinearityRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall LinearityAPS(HANDLE h, std::vector<APSDataMeanType> *LightMean,
+                                                   std::vector<double> *ExpTime, APSLinearityType *LinearityRes);
 
 // C std::vector不兼容
-ALP_ALGO_DLL_API_C uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> &LightTNoiseData,
-                                                           std::vector<APSDataMeanType> &LightMean,
+ALP_ALGO_DLL_API_C uint32_t __stdcall OverallSystemGainAPS(HANDLE h, std::vector<APSTNoiseType> *LightTNoiseData,
+                                                           std::vector<APSDataMeanType> *LightMean,
                                                            APSTNoiseType DarkTNoiseBase,
-                                                           APSOverallSystemGainType &GainRes);
+                                                           APSOverallSystemGainType *GainRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SaturationAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                    SubFrameIndex nChannelIndex, APSSaturationType &SaturationRes);
+                                                    SubFrameIndex nChannelIndex, APSSaturationType *SaturationRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall OETCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
                                               uint32_t nNumberInOneStep, ROIArea *ROI,
-                                              SubFrameIndex nChannelIndex, APSOETCType &OETCRes);
+                                              SubFrameIndex nChannelIndex, APSOETCType *OETCRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall LinearitySNRAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                      SubFrameIndex nChannelIndex, APSSSNRType &SSNRRes);
+                                                      SubFrameIndex nChannelIndex, APSSSNRType *SSNRRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                SubFrameIndex nChannelIndex, bool bNormalize, ImgType &ImgData);
+                                                SubFrameIndex nChannelIndex, bool bNormalize, ImgType *ImgData);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_2(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                SubFrameIndex nChannelIndex, APSType &ImgData);
+                                                SubFrameIndex nChannelIndex, APSType *ImgData);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_3(HANDLE h, uint32_t nIndex, uint16_t *RawData);
 
@@ -671,17 +676,17 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall SetMultiThreadEnableAPS(HANDLE h, bool bEn
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SetLogEnableAPS(HANDLE h, bool bEnable = true);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre &AlgoThre);
+ALP_ALGO_DLL_API_C uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre &AlgoThre);
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall GetDataNumAPS(HANDLE h, uint32_t &DataNum);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SaveBinAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens, const char *strSavePath);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall GetActiveAreaAPS(HANDLE h, ROIArea &ROIAreaRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetActiveAreaAPS(HANDLE h, ROIArea *ROIAreaRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall GetRawDataSizeAPS(HANDLE h, uint32_t &nRow, uint32_t &nCol);
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetRawDataSizeAPS(HANDLE h, uint32_t *nRow, uint32_t *nCol);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SetActiveAreaAPS(HANDLE h, ROIArea ActiveArea);
 
@@ -689,7 +694,7 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall SetRawDataSizeAPS(HANDLE h, uint32_t nRow,
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall AlpGetVersionAPS(HANDLE h, char *ver, uint32_t nLen);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall GetCodeAPS(HANDLE h, int &Code);
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetCodeAPS(HANDLE h, int *Code);
 #ifdef __cplusplus
 }
 #endif
