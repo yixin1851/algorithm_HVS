@@ -2,8 +2,10 @@
 
 CP量产算法库
 
-AlgorithmDemo: 量产测试调用算法库的demo
+AlgorithmDemo: 量产测试调用算法库的Demo
 
 AlgorithmLibrary：算法库主体代码
 
 AlgorithmTest：离线分析调试工具代码
+
+AlgorithmCTypeTest: 量产算法库 CTypeInterface API 测试 Demo
