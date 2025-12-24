@@ -101,8 +101,9 @@ endfunction()
 # add_version_info(AnotherLib)]]
 # 子目录
 add_subdirectory(AlgorithmLibrary)
-
 add_subdirectory(AlgorithmTest)
+add_subdirectory(AlgorithmCTypeTest)
+
 
 ## 子目录
 #add_subdirectory(AlgorithmDemo)

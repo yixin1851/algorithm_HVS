@@ -269,4 +269,4 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Release${PROJECT_NAME}/${CURRENT_PLATFORM}/bin"
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/Release${PROJECT_NAME}/${CURRENT_PLATFORM}/bin"
 )
-add_version_info(AlgorithmTest)
+add_version_info(${PROJECT_NAME})
