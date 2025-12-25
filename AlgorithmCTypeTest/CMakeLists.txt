@@ -18,6 +18,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/third_lib/ReleaseAlgorithmLibrary/CTypeInterface/${CURRENT_PLATFORM}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/DVS
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/APS
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
