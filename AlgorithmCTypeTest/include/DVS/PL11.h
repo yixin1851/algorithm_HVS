@@ -4,7 +4,7 @@
 
 #ifndef ALGORITHMLIBRARY_PL11_H
 #define ALGORITHMLIBRARY_PL11_H
-#include "public.h"
+#include "../public.h"
 #include "AlpMPAlgoCTypeInterface.h"
 #include <string>
 int calcPL11()

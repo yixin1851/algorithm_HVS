@@ -8,6 +8,26 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <map>
+#include "AlpMPAlgoCTypeInterface.h"
+
+struct d_003ca_point3
+{
+    int x;
+    int y;
+    int z;
+
+    d_003ca_point3() :x(0), y(0), z(0) {}
+    d_003ca_point3(int v_x, int v_y, int v_z) :x(v_x), y(v_y), z(v_z) {}
+};
+
+namespace {
+    std::map<std::string, APSDataMeanType> RegisterData;
+    std::map<std::string, APSBadpixelType> APSBadPixelData;
+    std::map<std::string, APSBadpixelType*> APSBadPixelDataPtr;
+    std::map<std::string, std::vector<Local>> DPSBadPixelArray;
+    std::map<std::string, std::vector<d_003ca_point3>> DPS3DPointArray;
+}
 
 int ImageCapture_capture(std::string path, unsigned char rawDataBuf[], unsigned long rawDataBufLen,
                          unsigned long &rawDataRealLen, void *frameInfo) {
@@ -39,4 +59,41 @@ bool check_ret(std::string func, int func_ret) {
     }
     return true;
 };
+
+bool Set_RegisterData(std::string stKey, int iduts, APSDataMeanType& dblValue)
+{
+    std::string regName;
+    regName = stKey + "_" + std::to_string(iduts);
+
+    if (RegisterData.find(regName) == RegisterData.end())
+        RegisterData.insert(make_pair(regName, dblValue));
+    else
+        RegisterData.find(regName)->second = dblValue;
+
+    return true;
+}
+
+bool Get_RegisterData(std::string stKey, int iduts, APSDataMeanType& dblValue)
+{
+    std::string regName;
+    regName = stKey + "_" + std::to_string(iduts);
+
+    if (RegisterData.find(regName) == RegisterData.end())
+        return false;
+
+    dblValue = RegisterData[regName];
+    //dblValue.DataMeanFrame = RegisterData[regName].DataMeanFrame;
+    //dblValue.SubFrameDataMean = RegisterData[regName].SubFrameDataMean;
+    //std::cout << "DataMean_Total: " << dblValue.DataMeanFrame << std::endl;
+    //std::cout << "DataMean_Gb: " << dblValue.SubFrameDataMean[0] << std::endl;
+    //std::cout << "DataMean_B: " << dblValue.SubFrameDataMean[1] << std::endl;
+    //std::cout << "DataMean_R: " << dblValue.SubFrameDataMean[2] << std::endl;
+    //std::cout << "DataMean_Gr: " << dblValue.SubFrameDataMean[3] << std::endl;
+    return true;
+}
+
+void Reset_RegisterData(void)
+{
+    RegisterData.clear();
+}
 #endif //ALGORITHMLIBRARY_PUBLIC_H
