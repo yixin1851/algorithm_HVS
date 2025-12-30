@@ -105,6 +105,7 @@ uint8_t CDVSDataContainer::GetData(uint32_t nRows, uint32_t nCols)
 
 void CDVSDataContainer::CountEvents(ROIArea& Roi)
 {
+    // 初始化各channel的事件计数器
 	for (uint32_t nIndex = 0; nIndex <= SubFrameIndex::All; nIndex++)
 	{
 		m_NoEventsNum[nIndex] = 0;
@@ -112,10 +113,12 @@ void CDVSDataContainer::CountEvents(ROIArea& Roi)
 		m_OnEventsNum[nIndex] = 0;
 		m_OffEventsNum[nIndex] = 0;
 	}
+    // 初始化每行的事件计数器
 	for (uint32_t nRows = 0; nRows < m_nRow; nRows++)
 	{
 		m_RowAllEventsNum[nRows] = 0;
 	}
+    // 初始化每列的事件计数器
 	for (uint32_t nCols = 0; nCols < m_nCol; nCols++)
 	{
 		m_ColAllEventsNum[nCols] = 0;
