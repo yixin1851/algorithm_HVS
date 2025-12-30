@@ -3,8 +3,8 @@
 #include <windows.h>
 #include "AlpMPAlgoInterface.h"
 
-HANDLE __stdcall InitHandleDVS(SensorType Sensortype, PixelFormatType Pixelformat, int code) {
-    CAlpDVSMPAlgoInterface *pInterface = CreateDVSAlgoInterface(Sensortype, "./", Pixelformat, code);
+HANDLE __stdcall InitHandleDVS(SensorType Sensortype, char *strLogDir, PixelFormatType Pixelformat, int code) {
+    CAlpDVSMPAlgoInterface *pInterface = CreateDVSAlgoInterface(Sensortype, strLogDir, Pixelformat, code);
     return reinterpret_cast<HANDLE>(pInterface);
 }
 
@@ -40,13 +40,11 @@ uint32_t __stdcall EventsNumberCountDVS(HANDLE h, uint32_t nIndexStart, uint32_t
                 return BEYOND_MAX_RES_NUM;
             }
             EventsNumberCountRes->nDataNumber = res.nDataNumber;
-            for (uint32_t nIndex = 0; nIndex < res.nDataNumber; nIndex++) {
-                for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All + 1; nChannel++) {
-                    EventsNumberCountRes->AllEventsNum[nChannel][nIndex] = res.AllEventsNum[nChannel][nIndex];
-                    EventsNumberCountRes->NoEventsNum[nChannel][nIndex] = res.NoEventsNum[nChannel][nIndex];
-                    EventsNumberCountRes->OffEventsNum[nChannel][nIndex] = res.OffEventsNum[nChannel][nIndex];
-                    EventsNumberCountRes->OnEventsNum[nChannel][nIndex] = res.OnEventsNum[nChannel][nIndex];
-                }
+            for (uint32_t nChannel = 0; nChannel < SubFrameIndex::All + 1; nChannel++) {
+                EventsNumberCountRes->AllEventsNum[nChannel] = res.AllEventsNum[nChannel];
+                EventsNumberCountRes->NoEventsNum[nChannel] = res.NoEventsNum[nChannel];
+                EventsNumberCountRes->OffEventsNum[nChannel] = res.OffEventsNum[nChannel];
+                EventsNumberCountRes->OnEventsNum[nChannel] = res.OnEventsNum[nChannel];
             }
 
             return TEST_NO_ERROR;
@@ -103,27 +101,97 @@ uint32_t __stdcall StationaryUniformityDVS(HANDLE h, uint32_t nIndexStart, uint3
     }
 }
 
-uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSHotpixelType *HotpixelRes) {
-    if (h) {
-        DVSHotpixelType res;
-        bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, res);
-
-        if (bRet) {
-            HotpixelRes->HotLineNum = res.HotLineNum;
-            HotpixelRes->HotPixelNum = res.HotPixelNum;
-            HotpixelRes->SingletNum = res.SingletNum;
-            HotpixelRes->CoupletNum = res.CoupletNum;
-            HotpixelRes->TripletNum = res.TripletNum;
-            HotpixelRes->FourConnectedNum = res.FourConnectedNum;
-            HotpixelRes->ClusterNum = res.ClusterNum;
-            HotpixelRes->HotPixelMask = res.HotPixelMask;
-
-            return TEST_NO_ERROR;
-        } else {
-            return reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetErrCode();
+// 释放函数
+void __stdcall HotPixelTypeCDVS_Free(DVSHotpixelTypeC *HotpixelRes) {
+    if (HotpixelRes) {
+        if (HotpixelRes->HotPixelMask.LocalData) {
+            delete[] HotpixelRes->HotPixelMask.LocalData;
+            HotpixelRes->HotPixelMask.LocalData = nullptr;
+            HotpixelRes->HotPixelMask.LocalDataSize = 0;
         }
-    } else {
+
+        if (HotpixelRes->HotPixelMask.Flag) {
+            delete[] HotpixelRes->HotPixelMask.Flag;
+            HotpixelRes->HotPixelMask.Flag = nullptr;
+            HotpixelRes->HotPixelMask.FlagSize = 0;
+        }
+
+        if (HotpixelRes->HotPixelMask.DiffData) {
+            delete[] HotpixelRes->HotPixelMask.DiffData;
+            HotpixelRes->HotPixelMask.DiffData = nullptr;
+            HotpixelRes->HotPixelMask.DiffDataSize = 0;
+        }
+    }
+}
+
+uint32_t __stdcall HotPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                    DVSHotpixelTypeC *HotpixelRes) {
+    // 参数检查
+    if (!h) {
         return ALGO_HANDLE_ERROR;
+    }
+    if (!HotpixelRes) {
+        return INVALID_PARAMETER_ERROR;
+    }
+
+    DVSHotpixelType res;
+    bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, res);
+
+    if (!bRet) {
+        return reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetErrCode();
+    }
+
+    try {
+        HotpixelRes->HotLineNum = res.HotLineNum;
+        HotpixelRes->HotPixelNum = res.HotPixelNum;
+        HotpixelRes->SingletNum = res.SingletNum;
+        HotpixelRes->CoupletNum = res.CoupletNum;
+        HotpixelRes->TripletNum = res.TripletNum;
+        HotpixelRes->FourConnectedNum = res.FourConnectedNum;
+        HotpixelRes->ClusterNum = res.ClusterNum;
+        HotpixelRes->HotPixelMask.BadPixelNum = res.HotPixelMask.BadPixelNum;
+
+        // LocalData
+        HotpixelRes->HotPixelMask.LocalDataSize = res.HotPixelMask.LocalData.size();
+        if (HotpixelRes->HotPixelMask.LocalDataSize > 0) {
+            HotpixelRes->HotPixelMask.LocalData =
+                    new Local[HotpixelRes->HotPixelMask.LocalDataSize];
+            std::copy(res.HotPixelMask.LocalData.begin(),
+                      res.HotPixelMask.LocalData.end(),
+                      HotpixelRes->HotPixelMask.LocalData);
+        } else {
+            HotpixelRes->HotPixelMask.LocalData = nullptr;
+        }
+
+        // Flag
+        HotpixelRes->HotPixelMask.FlagSize = res.HotPixelMask.Flag.size();
+        if (HotpixelRes->HotPixelMask.FlagSize > 0) {
+            HotpixelRes->HotPixelMask.Flag =
+                    new uint8_t[HotpixelRes->HotPixelMask.FlagSize];
+            std::copy(res.HotPixelMask.Flag.begin(),
+                      res.HotPixelMask.Flag.end(),
+                      HotpixelRes->HotPixelMask.Flag);
+        } else {
+            HotpixelRes->HotPixelMask.Flag = nullptr;
+        }
+
+        // DiffData
+        HotpixelRes->HotPixelMask.DiffDataSize = res.HotPixelMask.DiffData.size();
+        if (HotpixelRes->HotPixelMask.DiffDataSize > 0) {
+            HotpixelRes->HotPixelMask.DiffData =
+                    new uint32_t[HotpixelRes->HotPixelMask.DiffDataSize];
+            std::copy(res.HotPixelMask.DiffData.begin(),
+                      res.HotPixelMask.DiffData.end(),
+                      HotpixelRes->HotPixelMask.DiffData);
+        } else {
+            HotpixelRes->HotPixelMask.DiffData = nullptr;
+        }
+
+        return TEST_NO_ERROR;
+    } catch (const std::bad_alloc &) {
+        // 清理已分配的内存
+        HotPixelTypeCDVS_Free(HotpixelRes);
+        return MEMORY_ALLOCATION_ERROR;
     }
 }
 
@@ -141,14 +209,15 @@ uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
 
             Peak->nOffEventsPeakNumber = res.nOffEventsPeakNumber;
             Peak->nOnEventsPeakNumber = res.nOnEventsPeakNumber;
-
-            for (uint32_t nIndex = 0; nIndex < res.nOffEventsPeakNumber; nIndex++) {
-                Peak->OffEventsPeakPos[nIndex] = res.OffEventsPeakPos[nIndex];
-            }
-
-            for (uint32_t nIndex = 0; nIndex < res.nOnEventsPeakNumber; nIndex++) {
-                Peak->OnEventsPeakPos[nIndex] = res.OnEventsPeakPos[nIndex];
-            }
+            Peak->OffEventsPeakPos = res.OffEventsPeakPos;
+            Peak->OnEventsPeakPos = res.OnEventsPeakPos;
+            // for (uint32_t nIndex = 0; nIndex < res.nOffEventsPeakNumber; nIndex++) {
+            //     Peak->OffEventsPeakPos[nIndex] = res.OffEventsPeakPos[nIndex];
+            // }
+            //
+            // for (uint32_t nIndex = 0; nIndex < res.nOnEventsPeakNumber; nIndex++) {
+            //     Peak->OnEventsPeakPos[nIndex] = res.OnEventsPeakPos[nIndex];
+            // }
 
             return TEST_NO_ERROR;
         } else {
@@ -159,13 +228,15 @@ uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
     }
 }
 
-uint32_t __stdcall ImageContrastSensitivityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
-                                               DVSLightTrigerType Light,
-                                               DVSImageContrastSensitivityType *ImageContrastSensitivityRes) {
+uint32_t __stdcall ImageContrastSensitivityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                               DVSPeakInfo *Peak,
+                                               uint32_t nPeakNum, DVSLightTrigerType Light,
+                                               DVSImageContrastSensitivityType *
+                                               ImageContrastSensitivityRes) {
     if (h) {
         DVSImageContrastSensitivityType res;
         bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->ImageContrastSensitivity(
-            nIndexStart, nNumber, nullptr, nPeakNum, Light, res);
+            nIndexStart, nNumber, Peak, nPeakNum, Light, res);
 
         if (bRet) {
             ImageContrastSensitivityRes->R_Gb_OnEventsRatio = res.R_Gb_OnEventsRatio;
@@ -252,31 +323,158 @@ uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uint32_t nIndexStart, 
     }
 }
 
-uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo *Peak,
-                               uint32_t nPeakNum, DVSLightTrigerType Light,
-                               DVSBadpixelType *BadpixelRes) {
-    if (h) {
-        DVSBadpixelType res;
-        bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->BadPixel(
-            nIndexStart, nNumber, Peak, nPeakNum, Light, res);
-
-        if (bRet) {
-            BadpixelRes->nOffEventsClusterNum = res.nOffEventsClusterNum;
-            BadpixelRes->nOffEventsDeadPixelNum = res.nOffEventsDeadPixelNum;
-            BadpixelRes->nOffEventsDeadLineNum = res.nOffEventsDeadLineNum;
-            BadpixelRes->OffEventsBadPixelMask = res.OffEventsBadPixelMask;
-
-            BadpixelRes->nOnEventsClusterNum = res.nOnEventsClusterNum;
-            BadpixelRes->nOnEventsDeadPixelNum = res.nOnEventsDeadPixelNum;
-            BadpixelRes->nOnEventsDeadLineNum = res.nOnEventsDeadLineNum;
-            BadpixelRes->OnEventsBadPixelMask = res.OnEventsBadPixelMask;
-
-            return TEST_NO_ERROR;
-        } else {
-            return reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetErrCode();
-        }
-    } else {
+uint32_t __stdcall BadPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo *Peak,
+                                    uint32_t nPeakNum, DVSLightTrigerType Light,
+                                    DVSBadpixelTypeC *BadpixelRes) {
+    // 参数检查
+    if (!h) {
         return ALGO_HANDLE_ERROR;
+    }
+    if (!BadpixelRes) {
+        return INVALID_PARAMETER_ERROR;
+    }
+
+    DVSBadpixelType res;
+    bool bRet = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->BadPixel(
+        nIndexStart, nNumber, Peak, nPeakNum, Light, res);
+
+    if (!bRet) {
+        return reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetErrCode();
+    }
+
+    try {
+        // ========== OffEvents 部分 ==========
+        BadpixelRes->nOffEventsClusterNum = res.nOffEventsClusterNum;
+        BadpixelRes->nOffEventsDeadPixelNum = res.nOffEventsDeadPixelNum;
+        BadpixelRes->nOffEventsDeadLineNum = res.nOffEventsDeadLineNum;
+        BadpixelRes->OffEventsBadPixelMask.BadPixelNum = res.OffEventsBadPixelMask.BadPixelNum;
+
+        // LocalData
+        BadpixelRes->OffEventsBadPixelMask.LocalDataSize = res.OffEventsBadPixelMask.LocalData.size();
+        if (BadpixelRes->OffEventsBadPixelMask.LocalDataSize > 0) {
+            BadpixelRes->OffEventsBadPixelMask.LocalData =
+                    new Local[BadpixelRes->OffEventsBadPixelMask.LocalDataSize];
+            std::copy(res.OffEventsBadPixelMask.LocalData.begin(),
+                      res.OffEventsBadPixelMask.LocalData.end(),
+                      BadpixelRes->OffEventsBadPixelMask.LocalData);
+        } else {
+            BadpixelRes->OffEventsBadPixelMask.LocalData = nullptr;
+        }
+
+        // Flag
+        BadpixelRes->OffEventsBadPixelMask.FlagSize = res.OffEventsBadPixelMask.Flag.size();
+        if (BadpixelRes->OffEventsBadPixelMask.FlagSize > 0) {
+            BadpixelRes->OffEventsBadPixelMask.Flag =
+                    new uint8_t[BadpixelRes->OffEventsBadPixelMask.FlagSize];
+            std::copy(res.OffEventsBadPixelMask.Flag.begin(),
+                      res.OffEventsBadPixelMask.Flag.end(),
+                      BadpixelRes->OffEventsBadPixelMask.Flag);
+        } else {
+            BadpixelRes->OffEventsBadPixelMask.Flag = nullptr;
+        }
+
+        // DiffData
+        BadpixelRes->OffEventsBadPixelMask.DiffDataSize = res.OffEventsBadPixelMask.DiffData.size();
+        if (BadpixelRes->OffEventsBadPixelMask.DiffDataSize > 0) {
+            BadpixelRes->OffEventsBadPixelMask.DiffData =
+                    new uint32_t[BadpixelRes->OffEventsBadPixelMask.DiffDataSize];
+            std::copy(res.OffEventsBadPixelMask.DiffData.begin(),
+                      res.OffEventsBadPixelMask.DiffData.end(),
+                      BadpixelRes->OffEventsBadPixelMask.DiffData);
+        } else {
+            BadpixelRes->OffEventsBadPixelMask.DiffData = nullptr;
+        }
+
+        // ========== OnEvents 部分 ==========
+        BadpixelRes->nOnEventsClusterNum = res.nOnEventsClusterNum;
+        BadpixelRes->nOnEventsDeadPixelNum = res.nOnEventsDeadPixelNum;
+        BadpixelRes->nOnEventsDeadLineNum = res.nOnEventsDeadLineNum;
+        BadpixelRes->OnEventsBadPixelMask.BadPixelNum = res.OnEventsBadPixelMask.BadPixelNum;
+
+        // LocalData
+        BadpixelRes->OnEventsBadPixelMask.LocalDataSize = res.OnEventsBadPixelMask.LocalData.size();
+        if (BadpixelRes->OnEventsBadPixelMask.LocalDataSize > 0) {
+            BadpixelRes->OnEventsBadPixelMask.LocalData =
+                    new Local[BadpixelRes->OnEventsBadPixelMask.LocalDataSize];
+            std::copy(res.OnEventsBadPixelMask.LocalData.begin(),
+                      res.OnEventsBadPixelMask.LocalData.end(),
+                      BadpixelRes->OnEventsBadPixelMask.LocalData);
+        } else {
+            BadpixelRes->OnEventsBadPixelMask.LocalData = nullptr;
+        }
+
+        // Flag
+        BadpixelRes->OnEventsBadPixelMask.FlagSize = res.OnEventsBadPixelMask.Flag.size();
+        if (BadpixelRes->OnEventsBadPixelMask.FlagSize > 0) {
+            BadpixelRes->OnEventsBadPixelMask.Flag =
+                    new uint8_t[BadpixelRes->OnEventsBadPixelMask.FlagSize];
+            std::copy(res.OnEventsBadPixelMask.Flag.begin(),
+                      res.OnEventsBadPixelMask.Flag.end(),
+                      BadpixelRes->OnEventsBadPixelMask.Flag);
+        } else {
+            BadpixelRes->OnEventsBadPixelMask.Flag = nullptr;
+        }
+
+        // DiffData
+        BadpixelRes->OnEventsBadPixelMask.DiffDataSize = res.OnEventsBadPixelMask.DiffData.size();
+        if (BadpixelRes->OnEventsBadPixelMask.DiffDataSize > 0) {
+            BadpixelRes->OnEventsBadPixelMask.DiffData =
+                    new uint32_t[BadpixelRes->OnEventsBadPixelMask.DiffDataSize];
+            std::copy(res.OnEventsBadPixelMask.DiffData.begin(),
+                      res.OnEventsBadPixelMask.DiffData.end(),
+                      BadpixelRes->OnEventsBadPixelMask.DiffData);
+        } else {
+            BadpixelRes->OnEventsBadPixelMask.DiffData = nullptr;
+        }
+
+        return TEST_NO_ERROR;
+    } catch (const std::bad_alloc &) {
+        // 清理已分配的内存
+        BadPixelTypeCDVS_Free(BadpixelRes);
+        return MEMORY_ALLOCATION_ERROR;
+    }
+}
+
+// 释放函数
+void __stdcall BadPixelTypeCDVS_Free(DVSBadpixelTypeC *BadpixelRes) {
+    if (!BadpixelRes) return;
+
+    // ========== OffEvents 部分 ==========
+    if (BadpixelRes->OffEventsBadPixelMask.LocalData) {
+        delete[] BadpixelRes->OffEventsBadPixelMask.LocalData;
+        BadpixelRes->OffEventsBadPixelMask.LocalData = nullptr;
+        BadpixelRes->OffEventsBadPixelMask.LocalDataSize = 0;
+    }
+
+    if (BadpixelRes->OffEventsBadPixelMask.Flag) {
+        delete[] BadpixelRes->OffEventsBadPixelMask.Flag;
+        BadpixelRes->OffEventsBadPixelMask.Flag = nullptr;
+        BadpixelRes->OffEventsBadPixelMask.FlagSize = 0;
+    }
+
+    if (BadpixelRes->OffEventsBadPixelMask.DiffData) {
+        delete[] BadpixelRes->OffEventsBadPixelMask.DiffData;
+        BadpixelRes->OffEventsBadPixelMask.DiffData = nullptr;
+        BadpixelRes->OffEventsBadPixelMask.DiffDataSize = 0;
+    }
+
+    // ========== OnEvents 部分 ==========
+    if (BadpixelRes->OnEventsBadPixelMask.LocalData) {
+        delete[] BadpixelRes->OnEventsBadPixelMask.LocalData;
+        BadpixelRes->OnEventsBadPixelMask.LocalData = nullptr;
+        BadpixelRes->OnEventsBadPixelMask.LocalDataSize = 0;
+    }
+
+    if (BadpixelRes->OnEventsBadPixelMask.Flag) {
+        delete[] BadpixelRes->OnEventsBadPixelMask.Flag;
+        BadpixelRes->OnEventsBadPixelMask.Flag = nullptr;
+        BadpixelRes->OnEventsBadPixelMask.FlagSize = 0;
+    }
+
+    if (BadpixelRes->OnEventsBadPixelMask.DiffData) {
+        delete[] BadpixelRes->OnEventsBadPixelMask.DiffData;
+        BadpixelRes->OnEventsBadPixelMask.DiffData = nullptr;
+        BadpixelRes->OnEventsBadPixelMask.DiffDataSize = 0;
     }
 }
 
@@ -432,8 +630,8 @@ uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint32_t nLen) {
 }
 
 // | ============= APS =============================================================================================== |
-HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype, PixelFormatType Pixelformat, int code) {
-    CAlpAPSMPAlgoInterface *pInterface = CreateAPSAlgoInterface(Sensortype, APSRawtype, "./", Pixelformat, code);
+HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype, char *strLogDir, PixelFormatType Pixelformat, int code) {
+    CAlpAPSMPAlgoInterface *pInterface = CreateAPSAlgoInterface(Sensortype, APSRawtype, strLogDir, Pixelformat, code);
 
     return reinterpret_cast<HANDLE>(pInterface);
 }
@@ -537,53 +735,342 @@ uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, R
     }
 }
 
-uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                               APSBadpixelType *BadpixelRes) {
-    if (h) {
-        APSBadpixelType res;
-
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->BadPixel(nIndexStart, nNumber, ROI, res);
-
-        if (bRet) {
-            BadpixelRes->BadPixelNum = res.BadPixelNum;
-            BadpixelRes->SingletNum = res.SingletNum;
-            BadpixelRes->CoupletNum = res.CoupletNum;
-            BadpixelRes->LadderNum = res.LadderNum;
-            BadpixelRes->ClusterNum = res.ClusterNum;
-            BadpixelRes->MaxClusterSize = res.MaxClusterSize;
-            BadpixelRes->SubFrameBadpixelData = res.SubFrameBadpixelData;
-            BadpixelRes->BadPixelMask = res.BadPixelMask;
-
-            return TEST_NO_ERROR;
-        } else {
-            return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
-        }
-    } else {
+uint32_t __stdcall BadPixelTypeCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                                    APSBadpixelTypeC *BadpixelRes) {
+    // 参数检查
+    if (!h) {
         return ALGO_HANDLE_ERROR;
+    }
+    if (!BadpixelRes) {
+        return INVALID_PARAMETER_ERROR;
+    }
+
+    APSBadpixelType res;
+    bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->BadPixel(nIndexStart, nNumber, ROI, res);
+
+    if (!bRet) {
+        return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
+    }
+
+    try {
+        BadpixelRes->BadPixelNum = res.BadPixelNum;
+        BadpixelRes->SingletNum = res.SingletNum;
+        BadpixelRes->CoupletNum = res.CoupletNum;
+        BadpixelRes->LadderNum = res.LadderNum;
+        BadpixelRes->ClusterNum = res.ClusterNum;
+        BadpixelRes->MaxClusterSize = res.MaxClusterSize;
+
+        // BadPixelMask
+        BadpixelRes->BadPixelMask.BadPixelNum = res.BadPixelMask.BadPixelNum;
+
+        // LocalData
+        BadpixelRes->BadPixelMask.LocalDataSize = res.BadPixelMask.LocalData.size();
+        if (BadpixelRes->BadPixelMask.LocalDataSize > 0) {
+            BadpixelRes->BadPixelMask.LocalData = new Local[BadpixelRes->BadPixelMask.LocalDataSize];
+            std::copy(res.BadPixelMask.LocalData.begin(),
+                      res.BadPixelMask.LocalData.end(),
+                      BadpixelRes->BadPixelMask.LocalData);
+        } else {
+            BadpixelRes->BadPixelMask.LocalData = nullptr;
+        }
+
+        // Flag
+        BadpixelRes->BadPixelMask.FlagSize = res.BadPixelMask.Flag.size();
+        if (BadpixelRes->BadPixelMask.FlagSize > 0) {
+            BadpixelRes->BadPixelMask.Flag = new uint8_t[BadpixelRes->BadPixelMask.FlagSize];
+            std::copy(res.BadPixelMask.Flag.begin(),
+                      res.BadPixelMask.Flag.end(),
+                      BadpixelRes->BadPixelMask.Flag);
+        } else {
+            BadpixelRes->BadPixelMask.Flag = nullptr;
+        }
+
+        // DiffData
+        BadpixelRes->BadPixelMask.DiffDataSize = res.BadPixelMask.DiffData.size();
+        if (BadpixelRes->BadPixelMask.DiffDataSize > 0) {
+            BadpixelRes->BadPixelMask.DiffData = new uint32_t[BadpixelRes->BadPixelMask.DiffDataSize];
+            std::copy(res.BadPixelMask.DiffData.begin(),
+                      res.BadPixelMask.DiffData.end(),
+                      BadpixelRes->BadPixelMask.DiffData);
+        } else {
+            BadpixelRes->BadPixelMask.DiffData = nullptr;
+        }
+
+        // SubFrameBadpixelData
+        BadpixelRes->SubFrameBadpixelDataSize = res.SubFrameBadpixelData.size();
+        if (BadpixelRes->SubFrameBadpixelDataSize > 0) {
+            BadpixelRes->SubFrameBadpixelData = new APSSubFrameBadpixelTypeC[BadpixelRes->SubFrameBadpixelDataSize];
+
+            // 初始化所有指针为 nullptr
+            for (size_t i = 0; i < BadpixelRes->SubFrameBadpixelDataSize; i++) {
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData = nullptr;
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag = nullptr;
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData = nullptr;
+            }
+
+            for (size_t i = 0; i < BadpixelRes->SubFrameBadpixelDataSize; i++) {
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelNum = res.SubFrameBadpixelData[i].BadPixelNum;
+                BadpixelRes->SubFrameBadpixelData[i].SingletNum = res.SubFrameBadpixelData[i].SingletNum;
+                BadpixelRes->SubFrameBadpixelData[i].CoupletNum = res.SubFrameBadpixelData[i].CoupletNum;
+                BadpixelRes->SubFrameBadpixelData[i].ClusterNum = res.SubFrameBadpixelData[i].ClusterNum;
+                BadpixelRes->SubFrameBadpixelData[i].DefectRowNum = res.SubFrameBadpixelData[i].DefectRowNum;
+                BadpixelRes->SubFrameBadpixelData[i].DefectColNum = res.SubFrameBadpixelData[i].DefectColNum;
+                BadpixelRes->SubFrameBadpixelData[i].MaxClusterSize = res.SubFrameBadpixelData[i].MaxClusterSize;
+
+                // BadPixelMask.BadPixelNum
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.BadPixelNum = res.SubFrameBadpixelData[i].BadPixelMask
+                        .BadPixelNum;
+
+                // LocalData
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize =
+                        res.SubFrameBadpixelData[i].BadPixelMask.LocalData.size();
+                if (BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize > 0) {
+                    BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData =
+                            new Local[BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize];
+                    std::copy(res.SubFrameBadpixelData[i].BadPixelMask.LocalData.begin(),
+                              res.SubFrameBadpixelData[i].BadPixelMask.LocalData.end(),
+                              BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData);
+                }
+
+                // Flag
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize =
+                        res.SubFrameBadpixelData[i].BadPixelMask.Flag.size();
+                if (BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize > 0) {
+                    BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag =
+                            new uint8_t[BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize];
+                    std::copy(res.SubFrameBadpixelData[i].BadPixelMask.Flag.begin(),
+                              res.SubFrameBadpixelData[i].BadPixelMask.Flag.end(),
+                              BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag);
+                }
+
+                // DiffData
+                BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize =
+                        res.SubFrameBadpixelData[i].BadPixelMask.DiffData.size();
+                if (BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize > 0) {
+                    BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData =
+                            new uint32_t[BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize];
+                    std::copy(res.SubFrameBadpixelData[i].BadPixelMask.DiffData.begin(),
+                              res.SubFrameBadpixelData[i].BadPixelMask.DiffData.end(),
+                              BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData);
+                }
+            }
+        } else {
+            BadpixelRes->SubFrameBadpixelData = nullptr;
+        }
+
+        return TEST_NO_ERROR;
+    } catch (const std::bad_alloc &) {
+        // 发生内存分配失败，清理已分配的内存
+        BadPixelTypeCAPS_Free(BadpixelRes);
+        return MEMORY_ALLOCATION_ERROR;
     }
 }
 
-uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, APSBadpixelType *HotpixelRes) {
-    if (h) {
-        APSBadpixelType res;
-        bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, ROI, res);
-
-        if (bRet) {
-            HotpixelRes->BadPixelNum = res.BadPixelNum;
-            HotpixelRes->SingletNum = res.SingletNum;
-            HotpixelRes->CoupletNum = res.CoupletNum;
-            HotpixelRes->LadderNum = res.LadderNum;
-            HotpixelRes->ClusterNum = res.ClusterNum;
-            HotpixelRes->MaxClusterSize = res.MaxClusterSize;
-            HotpixelRes->SubFrameBadpixelData = res.SubFrameBadpixelData;
-            HotpixelRes->BadPixelMask = res.BadPixelMask;
-
-            return TEST_NO_ERROR;
-        } else {
-            return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
+// 释放函数
+void __stdcall BadPixelTypeCAPS_Free(APSBadpixelTypeC *BadpixelRes) {
+    auto customFree = [&](auto *&array, size_t &arraySize)-> void {
+        if (array) {
+            delete[] array;
+            array = nullptr;
+            arraySize = 0;
         }
-    } else {
+    };
+    if (BadpixelRes != nullptr) {
+        customFree(BadpixelRes->BadPixelMask.LocalData, BadpixelRes->BadPixelMask.LocalDataSize);
+        customFree(BadpixelRes->BadPixelMask.Flag, BadpixelRes->BadPixelMask.FlagSize);
+        customFree(BadpixelRes->BadPixelMask.DiffData, BadpixelRes->BadPixelMask.DiffDataSize);
+
+        if (BadpixelRes->SubFrameBadpixelData != nullptr) {
+            int size = BadpixelRes->SubFrameBadpixelDataSize;
+            for (size_t i = 0; i < size; i++) {
+                customFree(BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData,
+                           BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize);
+                customFree(BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag,
+                           BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize);
+                customFree(BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData,
+                           BadpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize);
+            }
+
+            customFree(BadpixelRes->SubFrameBadpixelData, BadpixelRes->SubFrameBadpixelDataSize);
+        }
+    }
+}
+
+uint32_t __stdcall HotPixelTypeCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                    ROIArea *ROI, APSBadpixelTypeC *HotpixelRes) {
+    // 参数检查
+    if (!h) {
         return ALGO_HANDLE_ERROR;
+    }
+    if (!HotpixelRes) {
+        return INVALID_PARAMETER_ERROR;
+    }
+
+    // 初始化指针为 nullptr
+    HotpixelRes->BadPixelMask.LocalData = nullptr;
+    HotpixelRes->BadPixelMask.Flag = nullptr;
+    HotpixelRes->BadPixelMask.DiffData = nullptr;
+    HotpixelRes->SubFrameBadpixelData = nullptr;
+
+    APSBadpixelType res;
+    bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->HotPixel(nIndexStart, nNumber, ROI, res);
+
+    if (!bRet) {
+        return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
+    }
+
+    try {
+        HotpixelRes->BadPixelNum = res.BadPixelNum;
+        HotpixelRes->SingletNum = res.SingletNum;
+        HotpixelRes->CoupletNum = res.CoupletNum;
+        HotpixelRes->LadderNum = res.LadderNum;
+        HotpixelRes->ClusterNum = res.ClusterNum;
+        HotpixelRes->MaxClusterSize = res.MaxClusterSize;
+
+        HotpixelRes->BadPixelMask.BadPixelNum = res.BadPixelMask.BadPixelNum;
+        // LocalData
+        HotpixelRes->BadPixelMask.LocalDataSize = res.BadPixelMask.LocalData.size();
+        if (HotpixelRes->BadPixelMask.LocalDataSize > 0) {
+            HotpixelRes->BadPixelMask.LocalData =
+                    new Local[HotpixelRes->BadPixelMask.LocalDataSize];
+            std::copy(res.BadPixelMask.LocalData.begin(),
+                      res.BadPixelMask.LocalData.end(),
+                      HotpixelRes->BadPixelMask.LocalData);
+        }
+
+        // Flag
+        HotpixelRes->BadPixelMask.FlagSize = res.BadPixelMask.Flag.size();
+        if (HotpixelRes->BadPixelMask.FlagSize > 0) {
+            HotpixelRes->BadPixelMask.Flag =
+                    new uint8_t[HotpixelRes->BadPixelMask.FlagSize];
+            std::copy(res.BadPixelMask.Flag.begin(),
+                      res.BadPixelMask.Flag.end(),
+                      HotpixelRes->BadPixelMask.Flag);
+        }
+
+        // DiffData
+        HotpixelRes->BadPixelMask.DiffDataSize = res.BadPixelMask.DiffData.size();
+        if (HotpixelRes->BadPixelMask.DiffDataSize > 0) {
+            HotpixelRes->BadPixelMask.DiffData =
+                    new uint32_t[HotpixelRes->BadPixelMask.DiffDataSize];
+            std::copy(res.BadPixelMask.DiffData.begin(),
+                      res.BadPixelMask.DiffData.end(),
+                      HotpixelRes->BadPixelMask.DiffData);
+        }
+
+        // SubFrameBadpixelData
+        HotpixelRes->SubFrameBadpixelDataSize = res.SubFrameBadpixelData.size();
+        if (HotpixelRes->SubFrameBadpixelDataSize > 0) {
+            HotpixelRes->SubFrameBadpixelData =
+                    new APSSubFrameBadpixelTypeC[HotpixelRes->SubFrameBadpixelDataSize];
+
+            // 初始化所有指针为 nullptr
+            for (uint32_t i = 0; i < HotpixelRes->SubFrameBadpixelDataSize; i++) {
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData = nullptr;
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag = nullptr;
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData = nullptr;
+            }
+
+            for (uint32_t i = 0; i < HotpixelRes->SubFrameBadpixelDataSize; i++) {
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelNum = res.SubFrameBadpixelData[i].BadPixelNum;
+                HotpixelRes->SubFrameBadpixelData[i].SingletNum = res.SubFrameBadpixelData[i].SingletNum;
+                HotpixelRes->SubFrameBadpixelData[i].CoupletNum = res.SubFrameBadpixelData[i].CoupletNum;
+                HotpixelRes->SubFrameBadpixelData[i].ClusterNum = res.SubFrameBadpixelData[i].ClusterNum;
+                HotpixelRes->SubFrameBadpixelData[i].DefectRowNum = res.SubFrameBadpixelData[i].DefectRowNum;
+                HotpixelRes->SubFrameBadpixelData[i].DefectColNum = res.SubFrameBadpixelData[i].DefectColNum;
+                HotpixelRes->SubFrameBadpixelData[i].MaxClusterSize = res.SubFrameBadpixelData[i].MaxClusterSize;
+
+                // 使用 [i] 索引
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.BadPixelNum =
+                        res.SubFrameBadpixelData[i].BadPixelMask.BadPixelNum;
+
+                // LocalData
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize =
+                        res.SubFrameBadpixelData[i].BadPixelMask.LocalData.size();
+                if (HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize > 0) {
+                    HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData =
+                            new Local[HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalDataSize];
+                    std::copy(res.SubFrameBadpixelData[i].BadPixelMask.LocalData.begin(),
+                              res.SubFrameBadpixelData[i].BadPixelMask.LocalData.end(),
+                              HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData);
+                }
+
+                // Flag
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize =
+                        res.SubFrameBadpixelData[i].BadPixelMask.Flag.size();
+                if (HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize > 0) {
+                    HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag =
+                            new uint8_t[HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.FlagSize];
+                    std::copy(res.SubFrameBadpixelData[i].BadPixelMask.Flag.begin(),
+                              res.SubFrameBadpixelData[i].BadPixelMask.Flag.end(),
+                              HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag);
+                }
+
+                // DiffData
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize =
+                        res.SubFrameBadpixelData[i].BadPixelMask.DiffData.size();
+                if (HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize > 0) {
+                    HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData =
+                            new uint32_t[HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffDataSize];
+                    std::copy(res.SubFrameBadpixelData[i].BadPixelMask.DiffData.begin(),
+                              res.SubFrameBadpixelData[i].BadPixelMask.DiffData.end(),
+                              HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData);
+                }
+            }
+        }
+
+        return TEST_NO_ERROR;
+    } catch (const std::bad_alloc &) {
+        HotPixelTypeCAPS_Free(HotpixelRes);
+        return MEMORY_ALLOCATION_ERROR;
+    }
+}
+
+// 释放函数
+void __stdcall HotPixelTypeCAPS_Free(APSBadpixelTypeC *HotpixelRes) {
+    if (!HotpixelRes) return;
+
+    // 释放顶层 BadPixelMask
+    if (HotpixelRes->BadPixelMask.LocalData) {
+        delete[] HotpixelRes->BadPixelMask.LocalData;
+        HotpixelRes->BadPixelMask.LocalData = nullptr;
+        HotpixelRes->BadPixelMask.LocalDataSize = 0;
+    }
+
+    if (HotpixelRes->BadPixelMask.Flag) {
+        delete[] HotpixelRes->BadPixelMask.Flag;
+        HotpixelRes->BadPixelMask.Flag = nullptr;
+        HotpixelRes->BadPixelMask.FlagSize = 0;
+    }
+
+    if (HotpixelRes->BadPixelMask.DiffData) {
+        delete[] HotpixelRes->BadPixelMask.DiffData;
+        HotpixelRes->BadPixelMask.DiffData = nullptr;
+        HotpixelRes->BadPixelMask.DiffDataSize = 0;
+    }
+
+    // 遍历所有 SubFrameBadpixelData 元素
+    if (HotpixelRes->SubFrameBadpixelData != nullptr) {
+        for (size_t i = 0; i < HotpixelRes->SubFrameBadpixelDataSize; i++) {
+            if (HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData) {
+                delete[] HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData;
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.LocalData = nullptr;
+            }
+
+            if (HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag) {
+                delete[] HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag;
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.Flag = nullptr;
+            }
+
+            if (HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData) {
+                delete[] HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData;
+                HotpixelRes->SubFrameBadpixelData[i].BadPixelMask.DiffData = nullptr;
+            }
+        }
+
+        delete[] HotpixelRes->SubFrameBadpixelData;
+        HotpixelRes->SubFrameBadpixelData = nullptr;
+        HotpixelRes->SubFrameBadpixelDataSize = 0;
     }
 }
 
@@ -705,15 +1192,15 @@ uint32_t __stdcall ReadNoiseAPS(HANDLE h, uint32_t nIndex1, uint32_t nIndex2, RO
 }
 
 uint32_t __stdcall OpticalCenterAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                    APSOpticalCenterType &OpticalCenterRes) {
+                                    APSOpticalCenterType *OpticalCenterRes) {
     if (h) {
         APSOpticalCenterType OpticalCenterType;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->OpticalCenter(
             nIndexStart, nNumber, ROI, OpticalCenterType);
 
         if (bRet) {
-            OpticalCenterRes.CenterCol = OpticalCenterType.CenterCol;
-            OpticalCenterRes.CenterRow = OpticalCenterType.CenterRow;
+            OpticalCenterRes->CenterCol = OpticalCenterType.CenterCol;
+            OpticalCenterRes->CenterRow = OpticalCenterType.CenterRow;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -1104,9 +1591,10 @@ uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
     }
 }
 
-uint32_t __stdcall GetDataNumAPS(HANDLE h, uint32_t &DataNum) {
+uint32_t __stdcall GetDataNumAPS(HANDLE h, uint32_t *DataNum) {
     if (h) {
-        DataNum = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetDataNum();
+        uint32_t tDataNum = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetDataNum();
+        *DataNum = tDataNum;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;

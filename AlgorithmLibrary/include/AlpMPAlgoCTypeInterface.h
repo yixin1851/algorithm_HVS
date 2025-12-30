@@ -101,6 +101,19 @@ typedef struct {
 
 typedef struct {
     uint32_t BadPixelNum;
+    // std::vector<Local> LocalData;
+    Local *LocalData;
+    size_t LocalDataSize;
+    // std::vector<uint8_t> Flag;
+    uint8_t *Flag;
+    size_t FlagSize;
+    // std::vector<float> DiffData;
+    uint32_t *DiffData;
+    size_t DiffDataSize;
+} BadPixelMaskTypeC;
+
+typedef struct {
+    uint32_t BadPixelNum;
     uint32_t SingletNum;
     uint32_t CoupletNum;
     uint32_t ClusterNum;
@@ -120,6 +133,29 @@ typedef struct {
     BadPixelMaskType BadPixelMask;
     std::vector<APSSubFrameBadpixelType> SubFrameBadpixelData;
 } APSBadpixelType;
+
+typedef struct {
+    uint32_t BadPixelNum;
+    uint32_t SingletNum;
+    uint32_t CoupletNum;
+    uint32_t ClusterNum;
+    uint32_t DefectRowNum;
+    uint32_t DefectColNum;
+    uint32_t MaxClusterSize;
+    BadPixelMaskTypeC BadPixelMask;
+} APSSubFrameBadpixelTypeC;
+
+typedef struct {
+    uint32_t BadPixelNum;
+    uint32_t SingletNum;
+    uint32_t CoupletNum;
+    uint32_t LadderNum;
+    uint32_t ClusterNum;
+    uint32_t MaxClusterSize;
+    BadPixelMaskTypeC BadPixelMask;
+    size_t SubFrameBadpixelDataSize;
+    APSSubFrameBadpixelTypeC *SubFrameBadpixelData;
+} APSBadpixelTypeC;
 
 typedef struct {
     double TempNoise;
@@ -337,6 +373,15 @@ typedef struct {
     std::vector<uint32_t> OffEventsPeakPos;
 } DVSPeakInfo;
 
+typedef struct {
+    uint32_t nOnEventsPeakNumber;
+    size_t OnEventsPeakPosSize;
+    uint32_t *OnEventsPeakPos;
+
+    uint32_t nOffEventsPeakNumber;
+    size_t OffEventsPeakPosSize;
+    uint32_t *OffEventsPeakPos;
+} DVSPeakInfoTypeC;
 
 typedef struct {
     std::vector<std::vector<double> > UniformityBlockData;
@@ -363,6 +408,18 @@ typedef struct {
 } DVSBadpixelType;
 
 typedef struct {
+    uint32_t nOffEventsDeadPixelNum;
+    uint32_t nOffEventsDeadLineNum;
+    uint32_t nOffEventsClusterNum;
+    BadPixelMaskTypeC OffEventsBadPixelMask;
+
+    uint32_t nOnEventsDeadPixelNum;
+    uint32_t nOnEventsDeadLineNum;
+    uint32_t nOnEventsClusterNum;
+    BadPixelMaskTypeC OnEventsBadPixelMask;
+} DVSBadpixelTypeC;
+
+typedef struct {
     uint32_t HotPixelNum;
     uint32_t HotLineNum;
     uint32_t SingletNum;
@@ -372,6 +429,17 @@ typedef struct {
     uint32_t ClusterNum;
     BadPixelMaskType HotPixelMask;
 } DVSHotpixelType;
+
+typedef struct {
+    uint32_t HotPixelNum;
+    uint32_t HotLineNum;
+    uint32_t SingletNum;
+    uint32_t CoupletNum;
+    uint32_t TripletNum;
+    uint32_t FourConnectedNum;
+    uint32_t ClusterNum;
+    BadPixelMaskTypeC HotPixelMask;
+} DVSHotpixelTypeC;
 
 typedef enum {
     TEST_NO_ERROR = 0,
@@ -491,7 +559,8 @@ typedef struct {
 extern "C" {
 #endif
 // | ============ DVS ================================================================================================ |
-ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleDVS(SensorType Sensortype, PixelFormatType Pixelformat, int code = 0);
+ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleDVS(SensorType Sensortype, char *strLogDir, PixelFormatType Pixelformat,
+                                                  int code);
 
 ALP_ALGO_DLL_API_C void __stdcall DeleteHandleDVS(HANDLE h);
 
@@ -507,13 +576,11 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall StationaryNoiseDVS(HANDLE h, uint32_t nInd
 ALP_ALGO_DLL_API_C uint32_t __stdcall StationaryUniformityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
                                                               DVSStationaryUniformityType *UniformityRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
-                                                  DVSHotpixelType *HotpixelRes);
-
 ALP_ALGO_DLL_API_C uint32_t __stdcall FindPeakDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, uint32_t nPeakNum,
                                                   DVSPeakInfo *Peak, DVSLightTrigerType Light);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ImageContrastSensitivityDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                                  DVSPeakInfo *Peak,
                                                                   uint32_t nPeakNum, DVSLightTrigerType Light,
                                                                   DVSImageContrastSensitivityType *
                                                                   ImageContrastSensitivityRes);
@@ -530,9 +597,17 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uin
                                                                    DVSSpatialResponseUniformityType *
                                                                    SpatialResponseUniformityRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo *Peak,
-                                                  uint32_t nPeakNum, DVSLightTrigerType Light,
-                                                  DVSBadpixelType *BadpixelRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                       DVSPeakInfo *Peak,
+                                                       uint32_t nPeakNum, DVSLightTrigerType Light,
+                                                       DVSBadpixelTypeC *BadpixelRes);
+
+ALP_ALGO_DLL_API_C void __stdcall BadPixelTypeCDVS_Free(DVSBadpixelTypeC *BadpixelRes);
+
+ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                       DVSHotpixelTypeC *HotpixelRes);
+
+ALP_ALGO_DLL_API_C void __stdcall HotPixelTypeCDVS_Free(DVSHotpixelTypeC *HotpixelRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag,
                                               uint8_t OffEventFlag, ImgType *ImgData);
@@ -558,7 +633,7 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint
 // | ================================================================================================================= |
 
 // | ============ APS ================================================================================================ |
-ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype,
+ALP_ALGO_DLL_API_C HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype, char *strLogDir,
                                                   PixelFormatType Pixelformat, int code);
 
 ALP_ALGO_DLL_API_C void __stdcall DeleteHandleAPS(HANDLE h);
@@ -598,12 +673,15 @@ ALP_ALGO_DLL_API_C void __stdcall TNoiseAPS_Free(APSTNoiseTypeC *apsTNoiseRes);
 ALP_ALGO_DLL_API_C uint32_t __stdcall SNoiseAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                 APSSNoiseType *APSSNoiseRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                  APSBadpixelType *BadpixelRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelTypeCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                                                       APSBadpixelTypeC *BadpixelRes);
 
-// std::vector    APSBadpixelType
-ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
-                                                  APSBadpixelType *HotpixelRes);
+ALP_ALGO_DLL_API_C void __stdcall BadPixelTypeCAPS_Free(APSBadpixelTypeC *BadpixelRes);
+
+ALP_ALGO_DLL_API_C uint32_t __stdcall HotPixelTypeCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
+                                                       APSBadpixelTypeC *HotpixelRes);
+
+ALP_ALGO_DLL_API_C void __stdcall HotPixelTypeCAPS_Free(APSBadpixelTypeC *HotpixelRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall BLCAPS_1(HANDLE h, uint32_t nIndexStart, uint32_t nNumber);
 
@@ -680,7 +758,7 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithm
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall GetDataNumAPS(HANDLE h, uint32_t &DataNum);
+ALP_ALGO_DLL_API_C uint32_t __stdcall GetDataNumAPS(HANDLE h, uint32_t *DataNum);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SaveBinAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens, const char *strSavePath);
 

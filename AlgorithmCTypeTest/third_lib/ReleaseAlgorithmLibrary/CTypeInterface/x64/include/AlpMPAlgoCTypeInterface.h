@@ -531,9 +531,10 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall SpatialResponseUniformityDVS(HANDLE h, uin
                                                                    DVSSpatialResponseUniformityType *
                                                                    SpatialResponseUniformityRes);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo *Peak,
-                                                  uint32_t nPeakNum, DVSLightTrigerType Light,
-                                                  DVSBadpixelType *BadpixelRes);
+ALP_ALGO_DLL_API_C uint32_t __stdcall BadPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNumber,
+                                                       DVSPeakInfo *Peak,
+                                                       uint32_t nPeakNum, DVSLightTrigerType Light,
+                                                       DVSBadpixelType *BadpixelRes);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8_t OnEventFlag,
                                               uint8_t OffEventFlag, ImgType *ImgData);
