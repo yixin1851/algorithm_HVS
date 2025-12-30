@@ -130,6 +130,7 @@ bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumbe
 
 bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes)
 {
+    // 计算DVS传感器静态噪声特征
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
 		std::string strErr = "StationaryNoise: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -152,6 +153,8 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 
 	StationaryNoiseRes.nFlashFrameNumber = 0;
 
+    // 计算所有事件、ON事件、OFF事件的平均噪声率**百分比**
+    // 公式: (平均事件数 / 像素总数) * 100%
 	StationaryNoiseRes.dStationaryNoiseMeanAll = Mean(EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseMeanOn = Mean(EventsNumber.OnEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseMeanOff = Mean(EventsNumber.OffEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
@@ -161,18 +164,22 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 	Max(dMaxValue, nLocal, EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber);
 	StationaryNoiseRes.dMaxStationaryNoise = dMaxValue / nAllSize * 100;
 
+    // 计算标准差
 	StationaryNoiseRes.dStationaryNoiseStdAll = Std(EventsNumber.AllEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseStdOn = Std(EventsNumber.OnEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 	StationaryNoiseRes.dStationaryNoiseStdOff = Std(EventsNumber.OffEventsNum[SubFrameIndex::All], nNumber) / nAllSize * 100;
 
+    // Flash Frame Detect
 	for (int i = 0; i < nNumber; i++)
 	{
+	    // 当某帧事件率超过阈值, 判为**Flash Frame**
 		if (1.0 * EventsNumber.AllEventsNum[SubFrameIndex::All][i] / nAllSize > m_AlgorithmThre.dFlashRatioThre)
 		{
 			StationaryNoiseRes.nFlashFrameNumber++;
 		}
 	}
 
+    // 找到每帧中噪声最大的行
 	std::vector<uint32_t> MaxRowEvents(nNumber, 0);
 	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 	{
@@ -184,8 +191,10 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 			}
 		}
 	}
+    // 计算噪声最大的行的平均噪声率
 	StationaryNoiseRes.dStationaryRowTNoise = Mean(MaxRowEvents, nNumber) / nColSize * 100;
 
+    // 找到每帧中噪声最大的行
 	std::vector<uint32_t> MaxColEvents(nNumber, 0);
 	for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 	{
@@ -197,6 +206,7 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 			}
 		}
 	}
+    // 计算噪声最大的列的平均噪声率
 	StationaryNoiseRes.dStationaryColTNoise = Mean(MaxColEvents, nNumber) / nRowSize * 100;
 
 	double MaxValue = 0;
@@ -207,6 +217,8 @@ bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber,
 
 bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes)
 {
+    // 计算DVS静态均匀性特征
+    // 评估DVS传感器在静态场景下的均匀性表现, 通过将传感器活动区域分块, 统计每个块的事件触发率
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
 		std::string strErr = "StationaryUniformity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -223,6 +235,7 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	UniformityBlockData.Init(m_AlgorithmThre.nStationaryUniformityRowBlockNum, m_AlgorithmThre.nStationaryUniformityColBlockNum, true);
 	UniformityRes.UniformityRatio = 0;
 
+    // 整除计算每个Block包含的像素行数和列数, 余数部分被舍弃
 	uint32_t nRowBlockSize = nRowSize / m_AlgorithmThre.nStationaryUniformityRowBlockNum;
 	uint32_t nColBlockSize = nColSize / m_AlgorithmThre.nStationaryUniformityColBlockNum;
 
@@ -233,6 +246,7 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 			double dValue = 0;
 			for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 			{
+			    // 遍历检测像素是否有事件触发, 有(!0)即对应Block的计数器+1
 				if (0 != m_RawDataContainer[nIndexStart + nIndex].GetData(nRows, nCols))
 				{
 					++UniformityBlockData.m_RawData[(nRows - m_ActiveArea.Up) / nRowBlockSize][(nCols - m_ActiveArea.Left) / nColBlockSize];
@@ -252,9 +266,10 @@ bool CAlpDVSMPAlgorithm::StationaryUniformity(uint32_t nIndexStart, uint32_t nNu
 	Max(dMaxValue, temp, UniformityBlockData);
 	Min(dMinValue, temp, UniformityBlockData);
 	//UniformityRes.UniformityRatio = (dMaxValue - dMinValue) / dMeanValue * 100;
-	//UniformityRes.UniformityRatio = Std(UniformityBlockData, nullptr);
-	UniformityRes.UniformityRatio = dMaxValue - dMinValue; // 该值越小表示均匀性越好, 各分块事件分布越一致
-	UniformityRes.UniformityBlockData.swap(UniformityBlockData.m_RawData);
+    // 极差对异常数据很敏感, 标准差相对会更稳健
+    //UniformityRes.UniformityRatio = Std(UniformityBlockData, nullptr);
+    UniformityRes.UniformityRatio = dMaxValue - dMinValue; // 极差作为均匀性指标, 该值越小表示均匀性越好, 各Block事件分布越一致
+    UniformityRes.UniformityBlockData.swap(UniformityBlockData.m_RawData);
 	return true;
 }
 
@@ -276,6 +291,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 	std::vector<uint32_t> ColBadPixelNum(m_nTotalCol, 0);
 	HotpixelRes.HotPixelNum = 0;
 	HotpixelRes.HotPixelMask.LocalData.clear();
+	HotpixelRes.HotPixelMask.DiffData.clear();
 	HotpixelRes.HotPixelMask.Flag.clear();
 	HotpixelRes.HotPixelMask.BadPixelNum = 0;
 	HotpixelRes.ClusterNum = 0;
@@ -423,13 +439,18 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32
 	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
 		std::vector<uint32_t> peaks, left_edge, right_edge, peak_height, keep;
+	    // 局部极大值检测
 		local_maxima_1d(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All], nNumber, peaks, left_edge, right_edge);
+	    // 记录峰值高度
 		for (int i = 0; i < peaks.size(); i++)
 		{
 			peak_height.push_back(EventsNumberCountRes.OffEventsNum[SubFrameIndex::All][peaks[i]]);
 		}
+	    // 峰值距离过滤, 解决峰值聚集问题, 保留聚类中的最高峰
+	    // nDistance = nCycle /2: 确保同一个事件的多个检测被合并; 避免不同事件的峰值被误删
 		select_by_peak_distance(peaks, peak_height, nCycle / 2, keep);
 
+	    // 构建有效峰值列表
 		std::vector<PeakAndHeight> peak_and_height;
 		for (int i = 0; i < peaks.size(); i++)
 		{
@@ -447,11 +468,14 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32
 			return false;
 		}
 
+	    // 按高度排序
 		std::sort(peak_and_height.begin(), peak_and_height.end(), comparePeakAndHeight);
 
+	    // 从高到低选取 nPeakNum 个峰值
 		for (int i = peak_and_height.size() - 1; i >= 0; i--)
 		{
 			++Peak.nOffEventsPeakNumber;
+		    // 将相对位置转换为全局索引 peak_and_height[i].peak + nIndexStart
 			Peak.OffEventsPeakPos.push_back(nIndexStart + peak_and_height[i].peak);
 			if (Peak.nOffEventsPeakNumber == nPeakNum)
 			{
@@ -460,6 +484,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32
 		}
 	}
 
+    // ON 事件处理同理
 	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		std::vector<uint32_t> peaks, left_edge, right_edge, peak_height, keep;
@@ -505,6 +530,7 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32
 
 bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSImageContrastSensitivityType& ImageContrastSensitivityRes)
 {
+    // 计算DVS传感器在特定光照变化下的对比度灵敏度, 通过分析事件峰值来评估传感器响应特性
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
 		std::string strErr = "ImageContrastSensitivity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -512,6 +538,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
+    // 峰值检测
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
@@ -542,23 +569,31 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 			return false;
 		}
 
+	    // 遍历所有通道
 		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
 			ImageContrastSensitivityRes.OffEventsRatio[nChannel] = 0;
 
+		    // 对指定数量的最新峰值求和平均
 			for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
 			{
+			    // 从最新的峰值开始向前取nPeakNum个峰值, 确保分析最近的数据. Peak -> OffEventsPeakPos[Peak -> nOffEventsPeakNumber - 1 - nIndex]
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] += m_RawDataContainer[Peak->OffEventsPeakPos[Peak->nOffEventsPeakNumber - 1 - nIndex]].m_OffEventsNum[nChannel];
 			}
-
+		    // (∑峰值事件数 / 峰值数量)
 			ImageContrastSensitivityRes.OffEventsRatio[nChannel] /= nPeakNum;
-			if (nChannel == SubFrameIndex::All)
+
+            // **ImageContrastSensitivityRes.OffEventsRatio[nChannel]**表示在亮度增加时, 该通道有百分之多少的像素产生了事件响应, 数值越高说明该通道对亮度上升越敏感
+            // 归一化为百分比, 除以像素总数*100
+            if (nChannel == SubFrameIndex::All)
 			{
+			    // All通道: (∑峰值事件数 / 峰值数量) / 总像素数量 * 100
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] /= nAllSize;
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] *= 100;
 			}
 			else
 			{
+			    // 单通道: (∑峰值事件数 / 峰值数量) / (总像素数量 / 4) * 100
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] /= nAllSize / 4;
 				ImageContrastSensitivityRes.OffEventsRatio[nChannel] *= 100;
 			}
@@ -566,8 +601,12 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 
 		if (ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb] != 0)
 		{
+		    // 以Gb通道为基准, 计算其他通道的相对响应
+		    // R 通道相对于 Gb 通道的 Off 事件响应比率, 理想状态下应接近100%
 			ImageContrastSensitivityRes.R_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::R] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+		    // B 通道相对于 Gb 通道的 Off 事件响应比率, 蓝色光子能量高但在自然光中占比少, 该比率可能天然偏低
 			ImageContrastSensitivityRes.B_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::B] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
+		    // Gr 通道相对于 Gb 通道的 Off 事件响应比率, 理想状态下应接近100%
 			ImageContrastSensitivityRes.Gr_Gb_OffEventsRatio = 100 * ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gr] / ImageContrastSensitivityRes.OffEventsRatio[SubFrameIndex::Gb];
 		}
 		else
@@ -579,6 +618,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 		}
 	}
 
+    // On 事件处理同理
 	if (Light & DVSLightTrigerType::OnEventsOnly)
 	{
 		if (Peak->nOnEventsPeakNumber < nPeakNum || 0 == nPeakNum)
@@ -631,6 +671,7 @@ bool CAlpDVSMPAlgorithm::ImageContrastSensitivity(uint32_t nIndexStart, uint32_t
 
 bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uint32_t nNumber, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSAccompaniedPeakAndDelayedPeakType& AccompaniedPeakAndDelayedPeakRes)
 {
+    // 分析DVS事件数据中峰值位置的 **Accompanied Peak** 和 **Delayed Peak** 的特征, 计算峰值后一帧中 On/Off 事件相对于峰值事件的比率
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
 		std::string strErr = "ImageContrastSensitivity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -638,6 +679,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
+    // 峰值寻找
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
@@ -655,6 +697,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 	}
 	if (Light & DVSLightTrigerType::OffEventsOnly)
 	{
+	    // 峰值数量验证
 		if (Peak->nOffEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
 			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
@@ -663,14 +706,16 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			return false;
 		}
 
+	    // 起始峰值位置确定
 		uint32_t nPeakStartNum = 0;
-
 		if (Peak->OffEventsPeakPos[Peak->nOffEventsPeakNumber - 1] == nIndexStart + nNumber - 1)
 		{
+		    // 最后一个峰在边界上, 向前一个
 			nPeakStartNum = Peak->nOffEventsPeakNumber - 2;
 		}
 		else
 		{
+		    // 从最后一个峰开始
 			nPeakStartNum = Peak->nOffEventsPeakNumber - 1;
 		}
 
@@ -681,14 +726,18 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			double NextOnEventsPeakNumber = 0;
 			for (uint32_t nIndex = 0; nIndex < nPeakNum && nPeakStartNum >= nIndex; nIndex++)
 			{
+			    // 累加最近nPeakNum个峰处的OFF事件数
 				OffEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex]].m_OffEventsNum[nChannel];
+			    // 累加这些峰后一帧的OFF和ON事件数
 				NextOffEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OffEventsNum[nChannel];
 				NextOnEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OnEventsNum[nChannel];
 			}
 
 			if (OffEventsPeakNumber != 0)
 			{
+			    // AccompaniedPeakOffEventsRatio = (峰值后ON事件数 / 峰值OFF事件数) * 100%
 				AccompaniedPeakAndDelayedPeakRes.dAccompaniedPeakOffEventsRatio[nChannel] = NextOnEventsPeakNumber / OffEventsPeakNumber * 100;
+			    // DelayedPeakOffEventsRatio = (峰值后OFF事件数 / 峰值OFF事件数) * 100%
 				AccompaniedPeakAndDelayedPeakRes.dDelayedPeakOffEventsRatio[nChannel] = NextOffEventsPeakNumber / OffEventsPeakNumber * 100;
 			}
 			else
@@ -705,7 +754,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 	{
 		if (Peak->nOnEventsPeakNumber < nPeakNum || 0 == nPeakNum)
 		{
-			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOffEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
+			std::string strErr = "AccompaniedPeakAndDelayedPeak: Peak Number error: Find Peak Num: " + std::to_string(Peak->nOnEventsPeakNumber) + ", Need Peak Num: " + std::to_string(nPeakNum);
 			WriteLog(strErr);
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
@@ -752,6 +801,7 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 
 bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, DVSPeakInfo* Peak, uint32_t nPeakNum, DVSLightTrigerType Light, DVSSpatialResponseUniformityType& SpatialResponseUniformityRes)
 {
+    // 分析DVS传感器在空间上的响应均匀性, 分别处理 ON Events 和 OFF Events
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
 		std::string strErr = "SpatialResponseUniformity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
@@ -759,6 +809,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
 	}
+    // 如果未提供峰值信息, 查找峰值
 	DVSPeakInfo tempPeak;
 	if (Peak == nullptr)
 	{
@@ -806,6 +857,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
+	    // 初始化容器
 		CAPSDataContainer OffEventsUniformityBlockData[SubFrameIndex::All + 1];
 		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
@@ -813,9 +865,11 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = 0;
 		}
 
+	    // Calc BlockSize
 		uint32_t nRowBlockSize = nRowSize / m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum;
 		uint32_t nColBlockSize = nColSize / m_AlgorithmThre.nSpatialResponseUniformityColBlockNum;
 
+	    // 遍历ROI, 按Block对齐
 		for (uint32_t nRows = RealRoi.Up; nRows < RealRoi.Up + nRowBlockSize * m_AlgorithmThre.nSpatialResponseUniformityRowBlockNum; nRows++)
 		{
 			for (uint32_t nCols = RealRoi.Left; nCols < RealRoi.Left + nColBlockSize * m_AlgorithmThre.nSpatialResponseUniformityColBlockNum; nCols++)
@@ -825,13 +879,16 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 
 				GetChannel(nRows, nCols, nChannel);
 
+			    // 统计该像素在最近 nPeakNum 个峰值中的响应此处
 				for (uint32_t nIndex = 0; nIndex < nPeakNum; nIndex++)
 				{
+				    // m_RawDataContainer[PeakPos]
 					if (0 != m_RawDataContainer[Peak->OffEventsPeakPos[Peak->nOffEventsPeakNumber - 1 - nIndex]].GetData(nRows, nCols))
 					{
 						++dValue;
 					}
 				}
+			    // 累加到对应Block中
 				OffEventsUniformityBlockData[SubFrameIndex::All].m_RawData[(nRows - RealRoi.Up) / nRowBlockSize][(nCols - RealRoi.Left) / nColBlockSize] += dValue / nPeakNum;
 				OffEventsUniformityBlockData[nChannel].m_RawData[(nRows - RealRoi.Up) / nRowBlockSize][(nCols - RealRoi.Left) / nColBlockSize] += dValue / nPeakNum;
 			}
@@ -839,6 +896,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 
 		for (uint32_t nChannel = 0; nChannel <= SubFrameIndex::All; nChannel++)
 		{
+		    // 归一化并转换为百分比
 			OffEventsUniformityBlockData[nChannel] /= nRowBlockSize * nColBlockSize;
 			OffEventsUniformityBlockData[nChannel] *= 100;
 
@@ -849,6 +907,7 @@ bool CAlpDVSMPAlgorithm::SpatialResponseUniformity(uint32_t nIndexStart, uint32_
 			Min(dMinValue, temp, OffEventsUniformityBlockData[nChannel]);
 			if (dMeanValue != 0)
 			{
+			    // 计算均匀性指标(百分比), 均匀性比率 = (Block最大响应率 - Block最小响应率) / 平均响应率 * 100
 				SpatialResponseUniformityRes.dOffEventsUniformityRatio[nChannel] = (dMaxValue - dMinValue) / dMeanValue * 100;
 			}
 			else
@@ -976,6 +1035,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.OffEventsBadPixelMask.BadPixelNum = 0;
 		BadpixelRes.OffEventsBadPixelMask.Flag.clear();
 		BadpixelRes.OffEventsBadPixelMask.LocalData.clear();
+		BadpixelRes.OffEventsBadPixelMask.DiffData.clear();
 		BadpixelRes.nOffEventsClusterNum = 0;
 		BadpixelRes.nOffEventsDeadPixelNum = 0;
 		BadpixelRes.nOffEventsDeadLineNum = 0;
@@ -1372,32 +1432,43 @@ void CAlpDVSMPAlgorithm::GetChannel(uint32_t nRows, uint32_t nCols, SubFrameInde
 
 void CAlpDVSMPAlgorithm::local_maxima_1d(std::vector<uint32_t>& RawData, uint32_t nLens, std::vector<uint32_t>& midpoints, std::vector<uint32_t>& left_edges, std::vector<uint32_t>& right_edges)
 {
-	int i = 1;
-	int i_max = nLens - 1;
-	int m = 0;
+    // 一维局部极大值检测, 在数据序列中找到所有峰值点及其左右边界
+	int i = 1; // 从索引1开始, 跳过边界
+	int i_max = nLens - 1; // 结束于倒数第二个元素, 跳过边界
+	int m = 0; // 峰值计数器
+    // 预分配空间, 最多 n/2个峰
 	left_edges.resize(nLens / 2, 0);
 	right_edges.resize(nLens / 2, 0);
 	midpoints.resize(nLens / 2, 0);
 	while (i < i_max)
 	{
+	    // 条件1: 检测上升沿
 		if (RawData[i - 1] < RawData[i])
 		{
+	        // 条件2: 处理平台区域, 平台区域被识别为单一峰值, 中点作为峰值位置
 			int i_ahead = i + 1;
 			while (i_ahead < i_max && RawData[i_ahead] == RawData[i])
 			{
 				i_ahead += 1;
 			}
+		    // 条件3: 检测下降沿
 			if (RawData[i_ahead] < RawData[i])
 			{
+			    // 找到峰值
+			    // 峰值左边界
 				left_edges[m] = i;
+			    // 峰值右边界
 				right_edges[m] = i_ahead - 1;
+			    // 峰值中点
 				midpoints[m] = (left_edges[m] + right_edges[m]) / 2;
 				m += 1;
+			    // 跳到下降沿后继续搜索
 				i = i_ahead;
 			}
 		}
 		i += 1;
 	}
+    // 去除未使用的预分配空间
 	left_edges.resize(m);
 	right_edges.resize(m);
 	midpoints.resize(m);
@@ -1405,31 +1476,42 @@ void CAlpDVSMPAlgorithm::local_maxima_1d(std::vector<uint32_t>& RawData, uint32_
 
 void CAlpDVSMPAlgorithm::select_by_peak_distance(std::vector<uint32_t>& peak, std::vector<uint32_t>& peak_height, uint32_t nDistance, std::vector<uint32_t>& keep)
 {
+    // 当多个峰值距离过近时, 只保留其中高度最大的峰值, 抑制其邻近的较小峰值
+    // 初始化峰保留标志, 默认全部保留
 	keep.resize(peak_height.size(), 1);
+    // 构建: **索引, 高度** key-value
 	std::vector<PeakAndHeight> priority_to_position;
 	for (uint32_t i = 0; i < peak_height.size(); i++)
 	{
 		priority_to_position.push_back({i, peak_height[i]});
 	}
+    // 按高度排序, 从低到高. **排序后高度最大的峰值在vector末尾**
 	std::sort(priority_to_position.begin(), priority_to_position.end(), comparePeakAndHeight);
 
+    // 从高度最大的峰值开始处理, 保证保留区域内最显著的峰值
 	for (int i = priority_to_position.size() - 1; i >= 0; i--)
 	{
-		int j = priority_to_position[i].peak;
+		int j = priority_to_position[i].peak; // 当前峰值的原始索引
+	    // 如果当前峰值已被抑制, 跳过
 		if (keep[j] == 0)
 		{
 			continue;
 		}
+
+	    // 局部抑制: 只影响nDistance内的峰值, 不会误删远处峰值
+	    // 向左抑制距离过近的峰值
 		int k = j - 1;
 		while (0 <= k && ((peak[j] - peak[k]) < nDistance))
 		{
-			keep[k] = 0;
+			keep[k] = 0; // 抑制左侧邻近峰值
 			k -= 1;
 		}
+
+	    // 向右抑制距离过近的峰值
 		k = j + 1;
 		while (k < peak.size() && ((peak[k] - peak[j]) < nDistance))
 		{
-			keep[k] = 0;
+			keep[k] = 0; // 抑制右侧邻近峰值
 			k += 1;
 		}
 	}

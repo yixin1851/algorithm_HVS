@@ -2934,6 +2934,7 @@ void CAlpAPSMPAlgorithm::SubFrameBadPixel(uint32_t nIndexStart, uint32_t nNumber
 			if (nRows < nRow && nCols < nCol)
 			{
 				double dValue = 0;
+			    // 对 nNumber 帧求平均, 降低噪声影响
 				for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
 				{
 					dValue += m_RawDataContainer[nChannelIndex][nIndexStart + nIndex].m_RawData[nRows + RealRoi.Up][nCols + RealRoi.Left];
