@@ -59,8 +59,8 @@ int calcDL3()
 		check_ret(__func__, ImportRawDataAPS(handle, rawDataBuf + rawDataBufLen * nIndex, nWidth * nHeight * 2, nIndex, 1));
 
 	uint32_t nIndexStart = 0;
-	APSBadpixelType BadPixelRes;
-	if (check_ret(__func__, BadPixelAPS(handle, nIndexStart, nNumber, nullptr, &BadPixelRes)))
+	APSBadpixelTypeC BadPixelRes;
+	if (check_ret(__func__, BadPixelTypeCAPS(handle, nIndexStart, nNumber, nullptr, &BadPixelRes)))
 	{
 		setResult("BadPixelNum_Total_DL3", (double)BadPixelRes.BadPixelNum);
 		setResult("BadPixelNum_Gb_DL3", (double)BadPixelRes.SubFrameBadpixelData[0].BadPixelNum);
@@ -93,8 +93,7 @@ int calcDL3()
 		setResult("BadPixel_DefectColNum_R_DL3", (double)BadPixelRes.SubFrameBadpixelData[2].DefectColNum);
 		setResult("BadPixel_DefectColNum_Gr_DL3", (double)BadPixelRes.SubFrameBadpixelData[3].DefectColNum);
 	}
-	else
-		return -1;
+    BadPixelTypeCAPS_Free(&BadPixelRes);
 
 	APSDataMeanType DataMean;
 	if (check_ret(__func__, DataMeanAPS(handle, 0, nNumber, nullptr, &DataMean)))

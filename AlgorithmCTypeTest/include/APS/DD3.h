@@ -61,8 +61,8 @@ int calcDD3()
 	}
 
 	int nIndexStart = 0;
-	APSBadpixelType HotPixelRes;
-	if(check_ret(__func__, HotPixelAPS(handle, nIndexStart, nNumber, nullptr, &HotPixelRes)))
+	APSBadpixelTypeC HotPixelRes;
+	if(check_ret(__func__, HotPixelTypeCAPS(handle, nIndexStart, nNumber, nullptr, &HotPixelRes)))
 	{
 		setResult("HotPixelNum_Total_DD3", (double)HotPixelRes.BadPixelNum);
 		setResult("HotPixelNum_Gb_DD3", (double)HotPixelRes.SubFrameBadpixelData[0].BadPixelNum);
@@ -95,8 +95,7 @@ int calcDD3()
 		setResult("HotPixel_DefectColNum_R_DD3", (double)HotPixelRes.SubFrameBadpixelData[2].DefectColNum);
 		setResult("HotPixel_DefectColNum_Gr_DD3", (double)HotPixelRes.SubFrameBadpixelData[3].DefectColNum);
 	}
-	else
-		return -1;
+	HotPixelTypeCAPS_Free(&HotPixelRes);
 
 
 	//ROIArea area_mean;

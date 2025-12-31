@@ -77,20 +77,20 @@ int calcPL16()
 
     int ImageCalRes = 0;
     uint32_t nEvsSaveNum = UseFrameN; //100
-    DVSBadpixelType BadpixelRes;
+    DVSBadpixelTypeC BadpixelRes;
     uint32_t nPeakNum = 3;
     DVSPeakInfo PeakInfoRes;
-    check_ret(__func__, FindPeakDVS(handle, 0, nEvsSaveNum, 6, &PeakInfoRes, On_OffEvents));
+    check_ret(__func__, FindPeakDVS(handle, 0, nEvsSaveNum, 4, &PeakInfoRes, On_OffEvents));
     int onNum = PeakInfoRes.nOnEventsPeakNumber;
     int offNum = PeakInfoRes.nOffEventsPeakNumber;
 
-    if (check_ret(__func__, BadPixelDVS(handle, 0, nEvsSaveNum, &PeakInfoRes, nPeakNum, On_OffEvents, &BadpixelRes))) {
+    if (check_ret(__func__, BadPixelTypeCDVS(handle, 0, nEvsSaveNum, &PeakInfoRes, nPeakNum, On_OffEvents, &BadpixelRes))) {
         setResult("BadpixelRes_nOffEventsDeadPixelNum_PL16", (double) BadpixelRes.nOffEventsDeadPixelNum);
         setResult("BadpixelRes_nOffEventsClusterNum_PL16", (double) BadpixelRes.nOffEventsClusterNum);
         setResult("BadpixelRes_nOnEventsDeadPixelNum_PL16", (double) BadpixelRes.nOnEventsDeadPixelNum);
         setResult("BadpixelRes_nOnEventsClusterNum_PL16", (double) BadpixelRes.nOnEventsClusterNum);
-    } else
-        return -1;
+    }
+    BadPixelTypeCDVS_Free(&BadpixelRes);
 
 
     DeleteHandleDVS(handle);

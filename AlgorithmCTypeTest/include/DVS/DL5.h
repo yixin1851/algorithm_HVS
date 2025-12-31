@@ -101,8 +101,7 @@ int calcDL5() {
             setResult("OffEvents_EventsRatio_R_Gb_DL5", (double) ImageContrastSensitivityRes.R_Gb_OffEventsRatio);
             setResult("OffEvents_EventsRatio_B_Gb_DL5", (double) ImageContrastSensitivityRes.B_Gb_OffEventsRatio);
             setResult("OffEvents_EventsRatio_Gr_Gb_DL5", (double) ImageContrastSensitivityRes.Gr_Gb_OffEventsRatio);
-        } else
-            return -1;
+        }
     }
     DVSStationaryNoiseType StationaryNoiseRes;
     if (check_ret(__func__, StationaryNoiseDVS(handle, 0, UseFrameN, &StationaryNoiseRes))) {
@@ -116,8 +115,7 @@ int calcDL5() {
         setResult("StationaryNoise_DL5_ColNoise", (double) StationaryNoiseRes.dStationaryColTNoise);
         setResult("StationaryNoise_DL5_nFlashFrameNum", (double) StationaryNoiseRes.nFlashFrameNumber);
         setResult("StationaryNoise_DL5_dMaxNoise", (double) StationaryNoiseRes.dMaxStationaryNoise);
-    } else
-        return -1;
+    }
 
     DVSStationaryUniformityType UniformityRes;
     if (check_ret(__func__, StationaryUniformityDVS(handle, 0, UseFrameN, &UniformityRes))) {
@@ -147,11 +145,10 @@ int calcDL5() {
         setResult("UniformityBlockData_DL5_4_3", (double) UniformityRes.UniformityBlockData[4][3]);
         setResult("UniformityBlockData_DL5_4_4", (double) UniformityRes.UniformityBlockData[4][4]);
         setResult("UniformityRatio_DL5", (double) UniformityRes.UniformityRatio);
-    } else
-        return -1;
+    }
 
-    DVSHotpixelType HotpixelRes;
-    if (check_ret(__func__, HotPixelDVS(handle, 0, UseFrameN, &HotpixelRes))) {
+    DVSHotpixelTypeC HotpixelRes;
+    if (check_ret(__func__, HotPixelTypeCDVS(handle, 0, UseFrameN, &HotpixelRes))) {
         setResult("HotPixel_HotPixelNum_DL5", (double) HotpixelRes.HotPixelNum);
         setResult("HotPixel_HotLineNum_DL5", (double) HotpixelRes.HotLineNum);
         setResult("HotPixel_SingletNum_DL5", (double) HotpixelRes.SingletNum);
@@ -159,8 +156,8 @@ int calcDL5() {
         setResult("HotPixel_TripletNum_DL5", (double) HotpixelRes.TripletNum);
         setResult("HotPixel_FourConnectedNum_DL5", (double) HotpixelRes.FourConnectedNum);
         setResult("HotPixel_ClusterNum_DL5", (double) HotpixelRes.ClusterNum);
-    } else
-        return -1;
+    }
+    HotPixelTypeCDVS_Free(&HotpixelRes);
 
     delete [] rawDataBuf;
     rawDataBuf = NULL;

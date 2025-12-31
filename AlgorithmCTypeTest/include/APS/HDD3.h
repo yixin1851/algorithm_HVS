@@ -56,8 +56,8 @@ int calcHDD3()
 
 	//调用接口
 	uint32_t nIndexStart = 0;
-	APSBadpixelType HotpixelRes = { 0 };
-	if (check_ret(__func__, HotPixelAPS(handle, nIndexStart, nNumber, nullptr, &HotpixelRes)))
+	APSBadpixelTypeC HotpixelRes = { 0 };
+	if (check_ret(__func__, HotPixelTypeCAPS(handle, nIndexStart, nNumber, nullptr, &HotpixelRes)))
 	{
 		setResult("HotPixelNum_Total_HDD3_DPC", (double)HotpixelRes.BadPixelNum);
 		setResult("HotPixelNum_Gb_HDD3_DPC", (double)HotpixelRes.SubFrameBadpixelData[0].BadPixelNum);
@@ -90,8 +90,7 @@ int calcHDD3()
 		setResult("HotPixel_DefectColNum_R_HDD3_DPC", (double)HotpixelRes.SubFrameBadpixelData[2].DefectColNum);
 		setResult("HotPixel_DefectColNum_Gr_HDD3_DPC", (double)HotpixelRes.SubFrameBadpixelData[3].DefectColNum);
 	}
-	else
-		return -1;
+    HotPixelTypeCAPS_Free(&HotpixelRes);
 
 	APSDataMeanType DataMean;
 	if (check_ret(__func__, DataMeanAPS(handle, 0, nNumber, nullptr, &DataMean)))
