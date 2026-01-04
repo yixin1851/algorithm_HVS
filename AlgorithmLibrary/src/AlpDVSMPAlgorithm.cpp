@@ -128,6 +128,80 @@ bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumbe
 	return true;
 }
 
+// bool CAlpDVSMPAlgorithm::EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes)
+// {
+//     if (0 == nNumber || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
+//     {
+//         std::string strErr = "EventsNumberCount: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+//         WriteLog(strErr);
+//         m_nErrCode = DATA_INDEX_ERROR;
+//         return false;
+//     }
+//
+//     EventsNumberCountRes.nDataNumber = 0;
+//
+//     // 预分配内存
+//     for (uint32_t i = 0; i <= SubFrameIndex::All; i++)
+//     {
+//         EventsNumberCountRes.NoEventsNum[i].resize(nNumber);
+//         EventsNumberCountRes.OnEventsNum[i].resize(nNumber);
+//         EventsNumberCountRes.OffEventsNum[i].resize(nNumber);
+//         EventsNumberCountRes.AllEventsNum[i].resize(nNumber);
+//     }
+//
+//     if (m_bMultiThreadEnable)
+//     {
+//         // 使用 vector 管理线程，RAII 自动管理生命周期
+//         std::vector<std::thread> threads;
+//         threads.reserve(DVS_MaxThreadNum);
+//
+//         uint32_t BlockNum = nNumber / DVS_MaxThreadNum;
+//
+//         // 创建线程
+//         for (uint32_t nIndex = 0; nIndex < DVS_MaxThreadNum; nIndex++)
+//         {
+//             uint32_t nNumStart = nIndex * BlockNum;
+//             uint32_t nNumEnd = (nIndex != DVS_MaxThreadNum - 1) ? (nIndex + 1) * BlockNum : nNumber;
+//
+//             threads.emplace_back(&CAlpDVSMPAlgorithm::ThreadEventsNumberCount,
+//                                 this,
+//                                 nIndexStart,
+//                                 nNumStart,
+//                                 nNumEnd,
+//                                 std::ref(EventsNumberCountRes));
+//         }
+//
+//         // 等待所有线程完成
+//         for (auto& t : threads)
+//         {
+//             if (t.joinable())
+//             {
+//                 t.join();
+//             }
+//         }
+//         // threads 离开作用域时自动析构，无需手动释放
+//     }
+//     else
+//     {
+//         // 单线程处理
+//         for (uint32_t nIndex = 0; nIndex < nNumber; nIndex++)
+//         {
+//             m_RawDataContainer[nIndexStart + nIndex].CountEvents(m_ActiveArea);
+//
+//             for (uint32_t i = 0; i <= SubFrameIndex::All; i++)
+//             {
+//                 EventsNumberCountRes.NoEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_NoEventsNum[i];
+//                 EventsNumberCountRes.OnEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_OnEventsNum[i];
+//                 EventsNumberCountRes.OffEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_OffEventsNum[i];
+//                 EventsNumberCountRes.AllEventsNum[i][nIndex] = m_RawDataContainer[nIndexStart + nIndex].m_AllEventsNum[i];
+//             }
+//         }
+//     }
+//
+//     EventsNumberCountRes.nDataNumber = nNumber;
+//     return true;
+// }
+
 bool CAlpDVSMPAlgorithm::StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes)
 {
     // 计算DVS传感器静态噪声特征
@@ -431,8 +505,10 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32
 
 	Peak.nOffEventsPeakNumber = 0;
 	Peak.OffEventsPeakPos.clear();
+	Peak.OffEventsPeakPos.shrink_to_fit();
 	Peak.nOnEventsPeakNumber = 0;
 	Peak.OnEventsPeakPos.clear();
+    Peak.OnEventsPeakPos.shrink_to_fit();
 
 	uint32_t nCycle = m_AlgorithmThre.nPeakCycle;
 
@@ -1432,6 +1508,14 @@ void CAlpDVSMPAlgorithm::GetChannel(uint32_t nRows, uint32_t nCols, SubFrameInde
 
 void CAlpDVSMPAlgorithm::local_maxima_1d(std::vector<uint32_t>& RawData, uint32_t nLens, std::vector<uint32_t>& midpoints, std::vector<uint32_t>& left_edges, std::vector<uint32_t>& right_edges)
 {
+    // 清空并释放旧内存
+    left_edges.clear();
+    left_edges.shrink_to_fit();
+    right_edges.clear();
+    right_edges.shrink_to_fit();
+    midpoints.clear();
+    midpoints.shrink_to_fit();
+
     // 一维局部极大值检测, 在数据序列中找到所有峰值点及其左右边界
 	int i = 1; // 从索引1开始, 跳过边界
 	int i_max = nLens - 1; // 结束于倒数第二个元素, 跳过边界
@@ -1468,14 +1552,20 @@ void CAlpDVSMPAlgorithm::local_maxima_1d(std::vector<uint32_t>& RawData, uint32_
 		}
 		i += 1;
 	}
-    // 去除未使用的预分配空间
-	left_edges.resize(m);
-	right_edges.resize(m);
-	midpoints.resize(m);
+    // 调整 size 并释放多余容量
+    left_edges.resize(m);
+    left_edges.shrink_to_fit();
+    right_edges.resize(m);
+    right_edges.shrink_to_fit();
+    midpoints.resize(m);
+    midpoints.shrink_to_fit();
 }
 
 void CAlpDVSMPAlgorithm::select_by_peak_distance(std::vector<uint32_t>& peak, std::vector<uint32_t>& peak_height, uint32_t nDistance, std::vector<uint32_t>& keep)
 {
+    // 清空并释放旧内存
+    keep.clear();
+    keep.shrink_to_fit();
     // 当多个峰值距离过近时, 只保留其中高度最大的峰值, 抑制其邻近的较小峰值
     // 初始化峰保留标志, 默认全部保留
 	keep.resize(peak_height.size(), 1);
@@ -1515,6 +1605,9 @@ void CAlpDVSMPAlgorithm::select_by_peak_distance(std::vector<uint32_t>& peak, st
 			k += 1;
 		}
 	}
+    // 释放 priority_to_position 的内存
+    priority_to_position.clear();
+    priority_to_position.shrink_to_fit();
 }
 
 double CAlpDVSMPAlgorithm::Mean(std::vector<double>& RawData, uint32_t nLens)
