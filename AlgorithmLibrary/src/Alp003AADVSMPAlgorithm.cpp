@@ -47,6 +47,11 @@ bool CAlp003AADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	return true;
 }
 
+bool CAlp003AADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t *pBinData, uint64_t nLens, uint32_t nIndexStart,
+    uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) {
+    return true;
+}
+
 bool CAlp003AADVSMPAlgorithm::Decoder(uint8_t* pucBinData, uint8_t* pucRawData, size_t nRow, size_t nCol, size_t* pnPos, size_t nBinLens)
 {
     uint8_t ucHead[] = { 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xFD };

@@ -79,6 +79,11 @@ bool CAlp003CADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	return true;
 }
 
+bool CAlp003CADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t *pBinData, uint64_t nLens, uint32_t nIndexStart,
+                                                         uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) {
+    return true;
+}
+
 bool CAlp003CADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t& nTimeStamp)
 {
 	size_t nCurIndex = *pnPos;
@@ -183,10 +188,12 @@ bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 			return false;
 		}
 
+	    // 每次处理一行数据 8 * 4 = 32个Pixel. 每个Pixel = 4*2 bit = 1Byte , 共32Bytes
 		for (uint32_t n = 0; n < 8; n++)
 		{
 			EventGroup = (Alp003CAFormatEventGroup*)(pucBinData + nCurIndex);
 
+		    // 处理4个Pixel
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix0);
 			nCol += nStep;
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix1);
@@ -196,7 +203,7 @@ bool CAlp003CADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 			SetData(DVSData, nRow, nCol, nSubFrameIndex, EventGroup->Pix3);
 			nCol += nStep;
 
-			nCurIndex++;
+			nCurIndex++; // 移动到下一个EventGroup
 
 			if (nCol == nColStop)
 			{

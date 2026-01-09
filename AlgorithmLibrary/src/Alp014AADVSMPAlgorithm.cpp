@@ -62,6 +62,11 @@ bool CAlp014AADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 	return true;
 }
 
+bool CAlp014AADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t *pBinData, uint64_t nLens, uint32_t nIndexStart,
+    uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) {
+    return true;
+}
+
 bool CAlp014AADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRow, uint32_t nCol, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex, uint64_t& nTimeStamp)
 {
 	size_t nCurIndex = *pnPos;

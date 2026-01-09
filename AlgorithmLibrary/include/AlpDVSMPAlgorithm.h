@@ -5,6 +5,16 @@
 #include <mutex>
 
 typedef std::vector<CDVSDataContainer> DVSRawDataContainer;
+enum EVS_SUBSAMEPLE_MODE {
+    EM_EVS_ONLY_FULL_SIZE_MODE = 0,
+    EM_EVS_ONLY_1_2_SUB_MODE = 1,
+    EM_EVS_ONLY_1_4_SUB_MODE = 2,
+    EM_EVS_ONLY_1_8_SUB_MODE = 3,
+    EM_EVS_HVS_FULL_SIZE_MODE = 4,
+    EM_EVS_HVS_1_2_SUB_MODE = 5,
+    EM_EVS_HVS_1_4_SUB_MODE = 6,
+    EM_EVS_HVS_1_8_SUB_MODE = 7,
+};
 
 class CAlpDVSMPAlgorithm : public CAlpDVSMPAlgoInterface
 {
@@ -13,6 +23,7 @@ public:
 	CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLogDir, uint32_t nSiteNum, PixelFormatType Pixelformat, int code);
 	virtual ~CAlpDVSMPAlgorithm();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
+	virtual bool ImportRawData_DropSubFrame(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) = 0;
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes);
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes);
 	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes);

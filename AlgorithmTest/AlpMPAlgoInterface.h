@@ -25,6 +25,19 @@
 #define DVS_DEAD_PIXEL_FLAG 0x01
 #define DVS_HOT_PIXEL_FLAG 0x04
 
+#ifdef API_C_TYPE_INTERFACE
+#include "AlpMPAlgoCTypeInterface.h"
+#else
+// =======[ Public Type ]=====
+typedef enum
+{
+	Gb,
+	B,
+	R,
+	Gr,
+	All,
+}SubFrameIndex;
+
 typedef enum
 {
 	ALP_003AA,
@@ -38,24 +51,6 @@ typedef enum
 
 typedef enum
 {
-	RAW8,
-	RAW10,
-	RAW12,
-	UNPACK10,
-	UNPACK12,
-}APSRawType;
-
-typedef enum
-{
-	Gb,
-	B,
-	R,
-	Gr,
-	All,
-}SubFrameIndex;
-
-typedef enum
-{
 	BayerGBRG,
 	BayerBGGR,
 	BayerRGGB,
@@ -65,6 +60,30 @@ typedef enum
 	QuadBayerRGGB,
 	QuadBayerGRBG,
 }PixelFormatType;
+
+typedef enum
+{
+	OffEventsOnly = 1,
+	OnEventsOnly,
+	On_OffEvents,
+}DVSLightTrigerType;
+
+typedef struct
+{
+	uint32_t Up;
+	uint32_t Down;
+	uint32_t Left;
+	uint32_t Right;
+}ROIArea;
+
+typedef enum
+{
+	RAW8,
+	RAW10,
+	RAW12,
+	UNPACK10,
+	UNPACK12,
+}APSRawType;
 
 typedef enum
 {
@@ -82,13 +101,7 @@ typedef enum
 typedef std::vector<std::vector<uint8_t>> ImgType;
 typedef std::vector<std::vector<double>> APSType;
 
-typedef struct
-{
-	uint32_t Up;
-	uint32_t Down;
-	uint32_t Left;
-	uint32_t Right;
-}ROIArea;
+
 
 typedef struct
 {
@@ -369,13 +382,6 @@ typedef struct
 	std::vector<uint32_t> OffEventsPeakPos;
 }DVSPeakInfo;
 
-typedef enum
-{
-	OffEventsOnly = 1,
-	OnEventsOnly,
-	On_OffEvents,
-}DVSLightTrigerType;
-
 typedef struct
 {
 	std::vector<std::vector<double>> UniformityBlockData;
@@ -430,7 +436,8 @@ typedef enum
 	BEYOND_MAX_RES_NUM = 0x8000000A,
 	EVENTS_EQU_ZERO = 0x8000000B,
 }DvsErrCode;
-
+// =================================
+#endif
 class ALP_ALGO_DLL_API CAlpAPSMPAlgoInterface
 {
 public:
@@ -486,6 +493,7 @@ public:
 	static CAlpDVSMPAlgoInterface * CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG, int code = 0);
 	virtual ~CAlpDVSMPAlgoInterface();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
+	virtual bool ImportRawData_DropSubFrame(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) = 0;
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes) = 0;
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes) = 0;
 	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes) = 0;

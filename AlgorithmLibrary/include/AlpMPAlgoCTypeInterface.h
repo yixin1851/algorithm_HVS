@@ -457,6 +457,7 @@ typedef enum {
     EVENTS_EQU_ZERO = 0x8000000B,
     INVALID_PARAMETER_ERROR = 0x8000000C,
     MEMORY_ALLOCATION_ERROR = 0x8000000D,
+    EVS_SUB_SAMPLE_ERROR = 0x8000000E,
 } ErrCode;
 
 // =================================
