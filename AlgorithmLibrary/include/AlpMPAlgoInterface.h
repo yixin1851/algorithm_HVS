@@ -404,11 +404,13 @@ typedef struct
 	uint32_t nOffEventsDeadLineNum;
 	uint32_t nOffEventsClusterNum;
 	BadPixelMaskType OffEventsBadPixelMask;
+    uint32_t nOffEventsMaxClusterSize;
 
 	uint32_t nOnEventsDeadPixelNum;
 	uint32_t nOnEventsDeadLineNum;
 	uint32_t nOnEventsClusterNum;
 	BadPixelMaskType OnEventsBadPixelMask;
+    uint32_t nOnEventsMaxClusterSize;
 }DVSBadpixelType;
 
 typedef struct
@@ -420,6 +422,7 @@ typedef struct
 	uint32_t TripletNum;
 	uint32_t FourConnectedNum;
 	uint32_t ClusterNum;
+    uint32_t MaxClusterSize;
 	BadPixelMaskType HotPixelMask;
 }DVSHotpixelType;
 
