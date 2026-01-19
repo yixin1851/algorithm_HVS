@@ -2,6 +2,7 @@
 #include <QFiledialog>
 #include <qvalidator.h>
 #include <fstream>
+#include <iostream>
 
 CDialogDVSBadPixel::CDialogDVSBadPixel(QDialog* parent, CAlpAPSMPAlgoInterface* pAPSAlgoInterface, CAlpDVSMPAlgoInterface* pDVSAlgoInterface)
 	: QDialog(parent), m_pAPSAlgoInterface(pAPSAlgoInterface), m_pDVSAlgoInterface(pDVSAlgoInterface)
@@ -59,7 +60,7 @@ void CDialogDVSBadPixel::BadPixel()
 		ui.label_Res->setText(res);
 
 		QStringList RowName, ColName;
-		ColName << "DeadPixelNum" << "ClusterNum" << "DeadLine";
+        ColName << "DeadPixelNum" << "ClusterNum" << "DeadLine" << "MaxClusterSize";
 
 		std::vector<std::vector<double>> Data;
 
@@ -76,6 +77,7 @@ void CDialogDVSBadPixel::BadPixel()
 			OffData.push_back(m_Data.nOffEventsDeadPixelNum);
 			OffData.push_back(m_Data.nOffEventsClusterNum);
 			OffData.push_back(m_Data.nOffEventsDeadLineNum);
+			OffData.push_back(m_Data.nOffEventsMaxClusterSize);
 			Data.push_back(OffData);
 
 			uint8_t* pImage = new uint8_t[nRow * nCol];
@@ -98,6 +100,7 @@ void CDialogDVSBadPixel::BadPixel()
 			OnData.push_back(m_Data.nOnEventsDeadPixelNum);
 			OnData.push_back(m_Data.nOnEventsClusterNum);
 			OnData.push_back(m_Data.nOnEventsDeadLineNum);
+			OnData.push_back(m_Data.nOnEventsMaxClusterSize);
 			Data.push_back(OnData);
 
 			uint8_t* pImage = new uint8_t[nRow * nCol];
@@ -131,11 +134,19 @@ void CDialogDVSBadPixel::Export()
 		outfile.open(strFile, std::ios::trunc);
 		if (!outfile.fail())
 		{
-			outfile << "DeadPixelNum," << "ClusterNum," << "DeadLine" << std::endl;
-			outfile << std::to_string(m_Data.nOffEventsDeadPixelNum) << "," << std::to_string(m_Data.nOffEventsClusterNum) << "," << std::to_string(m_Data.nOffEventsDeadLineNum) << std::endl;
-			outfile << std::to_string(m_Data.nOnEventsDeadPixelNum) << "," << std::to_string(m_Data.nOnEventsClusterNum) << "," << std::to_string(m_Data.nOnEventsDeadLineNum) << std::endl;
+            outfile << "DeadPixelNum," << "ClusterNum," << "DeadLine" << "MaxClusterSize" << std::endl;
+            outfile << std::to_string(m_Data.nOffEventsDeadPixelNum) << ","
+                    << std::to_string(m_Data.nOffEventsClusterNum) << ","
+                    << std::to_string(m_Data.nOffEventsDeadLineNum) << ","
+                    << std::to_string(m_Data.nOffEventsMaxClusterSize)
+                    << std::endl;
+            outfile << std::to_string(m_Data.nOnEventsDeadPixelNum) << ","
+                    << std::to_string(m_Data.nOnEventsClusterNum) << ","
+                    << std::to_string(m_Data.nOnEventsDeadLineNum) << ","
+                    << std::to_string(m_Data.nOnEventsMaxClusterSize)
+                    << std::endl;
 
-			outfile << "BadPixelMask" << std::endl;
+            outfile << "BadPixelMask" << std::endl;
 
 			for (uint32_t nIndex = 0; nIndex < m_Data.OffEventsBadPixelMask.BadPixelNum; nIndex++)
 			{
