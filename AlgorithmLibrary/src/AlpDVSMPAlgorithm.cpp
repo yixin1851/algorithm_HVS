@@ -374,6 +374,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 	HotpixelRes.TripletNum = 0;
 	HotpixelRes.FourConnectedNum = 0;
 	HotpixelRes.HotLineNum = 0;
+    HotpixelRes.MaxClusterSize = 0;
 
 	std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 	for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -474,6 +475,10 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 				{
 					HotpixelRes.ClusterNum++;
 				}
+			    if (AreaSize > HotpixelRes.MaxClusterSize)
+			    {
+			        HotpixelRes.MaxClusterSize = AreaSize;
+			    }
 				ConnectedAreaFlag--;
 			}
 		}
@@ -1071,7 +1076,14 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 {
 	if (nNumber < m_AlgorithmThre.nPeakCycle || nIndexStart >= m_RawDataContainer.size() || (nIndexStart + nNumber) > m_RawDataContainer.size())
 	{
-		std::string strErr = "BadPixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+        std::string strErr = "BadPixel: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " +
+                             std::to_string(nNumber) + "\n";;
+        strErr += "nNumber: " + std::to_string(nNumber) + ", m_AlgorithmThre.nPeakCycle: " + std::to_string(
+            m_AlgorithmThre.nPeakCycle) + "\n";
+        strErr += "nIndexStart: " + std::to_string(nIndexStart) + ", m_RawDataContainer.size():" + std::to_string(
+            m_RawDataContainer.size()) + "\n";
+        strErr += "(nIndexStart + nNumber): " + std::to_string(nIndexStart + nNumber) + ", m_RawDataContainer.size(): "
+                + std::to_string(m_RawDataContainer.size()) + "\n";
 		WriteLog(strErr);
 		m_nErrCode = DATA_INDEX_ERROR;
 		return false;
@@ -1115,6 +1127,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.nOffEventsClusterNum = 0;
 		BadpixelRes.nOffEventsDeadPixelNum = 0;
 		BadpixelRes.nOffEventsDeadLineNum = 0;
+	    BadpixelRes.nOffEventsMaxClusterSize = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1202,6 +1215,10 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					{
 						BadpixelRes.nOffEventsClusterNum++;
 					}
+				    if (AreaSize > BadpixelRes.nOffEventsMaxClusterSize)
+				    {
+				        BadpixelRes.nOffEventsMaxClusterSize = AreaSize;
+				    }
 					ConnectedAreaFlag--;
 				}
 			}
@@ -1226,6 +1243,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.nOnEventsClusterNum = 0;
 		BadpixelRes.nOnEventsDeadPixelNum = 0;
 		BadpixelRes.nOnEventsDeadLineNum = 0;
+	    BadpixelRes.nOnEventsMaxClusterSize = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1287,12 +1305,12 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 				{
 					uint32_t AreaSize = 0;
 					std::stack<Local> Search;
+					BadPixelMask[nRows][nCols] = ConnectedAreaFlag;
 					Search.push({ nRows, nCols });
 					while (!Search.empty())
 					{
 						Local temp = Search.top();
 						Search.pop();
-						BadPixelMask[temp.x][temp.y] = ConnectedAreaFlag;
 						AreaSize++;
 						for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
 						{
@@ -1302,6 +1320,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 								{
 									if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 									{
+										BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
 										Search.push({ nTempRows , nTempCols });
 									}
 								}
@@ -1312,6 +1331,10 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 					{
 						BadpixelRes.nOnEventsClusterNum++;
 					}
+				    if (AreaSize > BadpixelRes.nOnEventsMaxClusterSize)
+				    {
+				        BadpixelRes.nOnEventsMaxClusterSize = AreaSize;
+				    }
 					ConnectedAreaFlag--;
 				}
 			}

@@ -400,11 +400,13 @@ typedef struct {
     uint32_t nOffEventsDeadLineNum;
     uint32_t nOffEventsClusterNum;
     BadPixelMaskType OffEventsBadPixelMask;
+    uint32_t nOffEventsMaxClusterSize;
 
     uint32_t nOnEventsDeadPixelNum;
     uint32_t nOnEventsDeadLineNum;
     uint32_t nOnEventsClusterNum;
     BadPixelMaskType OnEventsBadPixelMask;
+    uint32_t nOnEventsMaxClusterSize;
 } DVSBadpixelType;
 
 typedef struct {
@@ -412,11 +414,13 @@ typedef struct {
     uint32_t nOffEventsDeadLineNum;
     uint32_t nOffEventsClusterNum;
     BadPixelMaskTypeC OffEventsBadPixelMask;
+    uint32_t nOffEventsMaxClusterSize;
 
     uint32_t nOnEventsDeadPixelNum;
     uint32_t nOnEventsDeadLineNum;
     uint32_t nOnEventsClusterNum;
     BadPixelMaskTypeC OnEventsBadPixelMask;
+    uint32_t nOnEventsMaxClusterSize;
 } DVSBadpixelTypeC;
 
 typedef struct {
@@ -428,6 +432,7 @@ typedef struct {
     uint32_t FourConnectedNum;
     uint32_t ClusterNum;
     BadPixelMaskType HotPixelMask;
+    uint32_t MaxClusterSize;
 } DVSHotpixelType;
 
 typedef struct {
@@ -439,6 +444,7 @@ typedef struct {
     uint32_t FourConnectedNum;
     uint32_t ClusterNum;
     BadPixelMaskTypeC HotPixelMask;
+    uint32_t MaxClusterSize;
 } DVSHotpixelTypeC;
 
 typedef enum {
