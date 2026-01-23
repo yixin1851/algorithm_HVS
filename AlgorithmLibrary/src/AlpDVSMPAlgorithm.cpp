@@ -1596,41 +1596,156 @@ void CAlpDVSMPAlgorithm::select_by_peak_distance(std::vector<uint32_t>& peak, st
 	std::vector<PeakAndHeight> priority_to_position;
 	for (uint32_t i = 0; i < peak_height.size(); i++)
 	{
-		priority_to_position.push_back({i, peak_height[i]});
-	}
+        priority_to_position.push_back({i, peak_height[i]});
+    }
     // 按高度排序, 从低到高. **排序后高度最大的峰值在vector末尾**
-	std::sort(priority_to_position.begin(), priority_to_position.end(), comparePeakAndHeight);
+    std::sort(priority_to_position.begin(), priority_to_position.end(), comparePeakAndHeight);
 
     // 从高度最大的峰值开始处理, 保证保留区域内最显著的峰值
-	for (int i = priority_to_position.size() - 1; i >= 0; i--)
-	{
-		int j = priority_to_position[i].peak; // 当前峰值的原始索引
-	    // 如果当前峰值已被抑制, 跳过
-		if (keep[j] == 0)
-		{
-			continue;
-		}
+    for (int i = priority_to_position.size() - 1; i >= 0; i--) {
+        int j = priority_to_position[i].peak; // 当前峰值的原始索引
+        // 如果当前峰值已被抑制, 跳过
+        if (keep[j] == 0) {
+            continue;
+        }
 
-	    // 局部抑制: 只影响nDistance内的峰值, 不会误删远处峰值
-	    // 向左抑制距离过近的峰值
-		int k = j - 1;
-		while (0 <= k && ((peak[j] - peak[k]) < nDistance))
-		{
-			keep[k] = 0; // 抑制左侧邻近峰值
-			k -= 1;
-		}
+        // 局部抑制: 只影响nDistance内的峰值, 不会误删远处峰值
+        // 向左抑制距离过近的峰值
+        int k = j - 1;
+        while (0 <= k && ((peak[j] - peak[k]) < nDistance)) {
+            keep[k] = 0; // 抑制左侧邻近峰值
+            k -= 1;
+        }
 
-	    // 向右抑制距离过近的峰值
-		k = j + 1;
-		while (k < peak.size() && ((peak[k] - peak[j]) < nDistance))
-		{
-			keep[k] = 0; // 抑制右侧邻近峰值
-			k += 1;
-		}
-	}
+        // 向右抑制距离过近的峰值
+        k = j + 1;
+        while (k < peak.size() && ((peak[k] - peak[j]) < nDistance)) {
+            keep[k] = 0; // 抑制右侧邻近峰值
+            k += 1;
+        }
+    }
     // 释放 priority_to_position 的内存
     priority_to_position.clear();
     priority_to_position.shrink_to_fit();
+}
+
+bool CAlpDVSMPAlgorithm::quadratic_fit(const std::vector<std::pair<double, double> > &points, double &a, double &b,
+                                       double &c) {
+    // 二次多项式拟合：y = a*x? + b*x + c
+    // 返回值：是否拟合成功；参数a、b、c为输出的系数
+    const int n = points.size();
+    if (n < 3) {
+        std::string strErr("quadratic_fit requires at least 3 points.");
+        WriteLog(strErr);
+        return false;
+    }
+
+    // 计算求和项
+    double sum_x = 0.0, sum_x2 = 0.0, sum_x3 = 0.0, sum_x4 = 0.0;
+    double sum_y = 0.0, sum_xy = 0.0, sum_x2y = 0.0;
+
+    for (const auto &p: points) {
+        double x = p.first;
+        double y = p.second;
+        double x2 = x * x;
+        double x3 = x2 * x;
+        double x4 = x3 * x;
+
+        sum_x += x;
+        sum_x2 += x2;
+        sum_x3 += x3;
+        sum_x4 += x4;
+        sum_y += y;
+        sum_xy += x * y;
+        sum_x2y += x2 * y;
+    }
+
+    // 构建方程组：
+    // m00*a + m01*b + m02*c = m03
+    // m10*a + m11*b + m12*c = m13
+    // m20*a + m21*b + m22*c = m23
+    double m00 = sum_x4;
+    double m01 = sum_x3;
+    double m02 = sum_x2;
+    double m03 = sum_x2y;
+
+    double m10 = sum_x3;
+    double m11 = sum_x2;
+    double m12 = sum_x;
+    double m13 = sum_xy;
+
+    double m20 = sum_x2;
+    double m21 = sum_x;
+    double m22 = n;
+    double m23 = sum_y;
+
+    // 高斯消元法求解三元一次方程组
+    // 第一步：消去第二、三行的a（第一列）
+    double factor1 = m10 / m00;
+    m11 -= factor1 * m01;
+    m12 -= factor1 * m02;
+    m13 -= factor1 * m03;
+
+    double factor2 = m20 / m00;
+    m21 -= factor2 * m01;
+    m22 -= factor2 * m02;
+    m23 -= factor2 * m03;
+
+    // 第二步：消去第三行的b（第二列）
+    if (fabs(m11) < 1e-12) {
+        return false; // 矩阵奇异，无法求解
+    }
+    double factor3 = m21 / m11;
+    m22 -= factor3 * m12;
+    m23 -= factor3 * m13;
+
+    // 第三步：回代求解c、b、a
+    if (fabs(m22) < 1e-12) {
+        return false; // 矩阵奇异，无法求解
+    }
+    c = m23 / m22;
+    b = (m13 - m12 * c) / m11;
+    a = (m03 - m01 * b - m02 * c) / m00;
+
+    return true;
+}
+
+std::vector<double> CAlpDVSMPAlgorithm::solve_quadratic_equation(double a, double b, double c) {
+    // 求解二次方程 ax? + bx + c = 0 的实根
+    std::vector<double> roots;
+    const double eps = 1e-9;
+
+    // 特殊情况：a接近0，视为一次方程
+    if (fabs(a) < eps) {
+        if (fabs(b) < eps) {
+            return roots; // 无解（0x + 0 = 0 视为无解，除非c=0但无意义）
+        }
+        roots.push_back(-c / b);
+        return roots;
+    }
+
+    // 标准二次方程求解
+    double discriminant = b * b - 4 * a * c;
+    if (discriminant < -eps) {
+        return roots; // 无实根
+    }
+    if (fabs(discriminant) < eps) {
+        roots.push_back(-b / (2 * a)); // 唯一实根
+        return roots;
+    }
+
+    // 两个实根
+    double sqrtD = sqrt(discriminant);
+    roots.push_back((-b + sqrtD) / (2 * a));
+    roots.push_back((-b - sqrtD) / (2 * a));
+    return roots;
+}
+
+std::vector<double> CAlpDVSMPAlgorithm::get_quadratic_x_value_from_y_value(double y_target, double a, double b,
+                                                                           double c) {
+    // 根据目标y值和拟合系数, 计算对应的x值
+    // ax? + bx + (c - y_target) = 0
+    return solve_quadratic_equation(a, b, c - y_target);
 }
 
 double CAlpDVSMPAlgorithm::Mean(std::vector<double>& RawData, uint32_t nLens)
@@ -1960,4 +2075,91 @@ int CAlpDVSMPAlgorithm::GetCode()
 uint32_t CAlpDVSMPAlgorithm::GetErrCode()
 {
 	return m_nErrCode;
+}
+
+bool CAlpDVSMPAlgorithm::CalcLightIntensity(double onEventPercent, double offEventPercent,
+                                            std::vector<double> vecOnEvent, std::vector<double> vecOffEvent,
+                                            std::vector<std::pair<double, double> > vecLightWave,
+                                            double &onTargetLightWave, double &offTargetLightWave) {
+    if (vecOnEvent.size() != vecOffEvent.size() ||
+        vecOnEvent.size() != vecLightWave.size() ||
+        vecOffEvent.size() != vecLightWave.size()) {
+        std::string str = "vecOnEvent/vecOffEvent/vecLightWave size error.";
+        WriteLog(str);
+        return false;
+    }
+    //计算目标事件量的光强跳变点
+    onTargetLightWave = 0;
+    offTargetLightWave = 0;
+
+    std::vector<std::pair<double, double> > points_on; //一系列用于计算的光源跳变比例和对应的事件量
+    std::vector<std::pair<double, double> > points_off; //一系列用于计算的光源跳变比例和对应的事件量
+
+    // std::vector<std::pair<double, double>> vecLightWave = { {100,105}, {100,130}, {100,135}, {100,140}, {100,145}, {100,150}, {100,155}, {100,160}, {100,165}, {100,170}, {100,235} };   //光强跳变点
+
+    for (int var = 1; var < vecLightWave.size() - 1; ++var) {
+        points_on.push_back({
+            (vecLightWave[var].second - vecLightWave[var].first) / vecLightWave[var].first * 100, vecOnEvent[var]
+        });
+        points_off.push_back({
+            (vecLightWave[var].second - vecLightWave[var].first) / vecLightWave[var].first * 100, vecOffEvent[var]
+        });
+    }
+
+    //使用二次多项式拟合，根据目标y，寻找x
+    std::vector<double> x_roots_on;
+    int nRet = 0;
+    onTargetLightWave = -999;
+    nRet = FindQuadraticXValueFromYValue(points_on, onEventPercent, x_roots_on);
+    if (nRet) {
+        for (double x: x_roots_on) {
+            if (x >= 0) {
+                // 找到第一个点
+                onTargetLightWave = x;
+                break;
+            }
+        }
+    }
+
+    std::vector<double> x_roots_off;
+    onTargetLightWave = -999;
+    nRet = FindQuadraticXValueFromYValue(points_off, offEventPercent, x_roots_off);
+    if (nRet) {
+        for (double x: x_roots_off) {
+            // 找到第一个点
+            if (x >= 0) {
+                onTargetLightWave = x;
+                break;
+            }
+        }
+    }
+    return true;
+}
+
+int CAlpDVSMPAlgorithm::FindQuadraticXValueFromYValue(const std::vector<std::pair<double, double> > &points,
+                                                      double &y_target, std::vector<double> &x_roots) {
+    //使用二次多项式拟合，根据目标Y，寻找X
+    // 示例2：带噪声的二次曲线 y = 2x? + 3x + 1（添加±0.2噪声）
+    int nRet{0};
+    double a, b, c;
+    try {
+        if (quadratic_fit(points, a, b, c)) {
+            // double y_target = 50.0;
+            // 理论上2x?+3x+1=38 → 2x?+3x-37=0 → 根≈3.5和-5
+            x_roots = get_quadratic_x_value_from_y_value(y_target, a, b, c);
+            if (x_roots.empty()) {
+                nRet = -1;
+                std::string str = "Y_target has no real roots.";
+                WriteLog(str);
+            }
+        } else {
+            nRet = -2;
+            std::string str = "Quadratic Fitting Error.";
+            WriteLog(str);
+        }
+    } catch (const std::exception &e) {
+        std::string str = "FindQuadraticXValueFromYValue error.";
+        WriteLog(str);
+    }
+    return nRet;
 }

@@ -36,6 +36,20 @@ public:
 	virtual std::string GetVersion();
 	virtual int GetCode();
 	virtual uint32_t GetErrCode();
+
+    /**
+     * @brief Input Target_Evevt([%]), output the corresponding light intensity transition points.
+     * @param onEventPercent
+     * @param offEventPercent
+     * @param vecOnEvent
+     * @param vecOffEvent
+     * @param vecLightWave
+     * @param onTargetLightWave output value, if return value < 0, error.
+     * @param offTargetLightWave output value, if return value < 0, error.
+     * @return true, calculate done.
+     * @return false, calculate error.
+     */
+    virtual bool CalcLightIntensity(double onEventPercent, double offEventPercent, std::vector<double> vecOnEvent, std::vector<double> vecOffEvent, std::vector<std::pair<double, double>> vecLightWave, double& onTargetLightWave, double& offTargetLightWave); //Light intensity
 protected:
 	virtual void ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, DVSEventsNumberCountType& EventsNumberCountRes);
 	virtual double Mean(std::vector<double>& RawData, uint32_t nLens);
@@ -53,6 +67,10 @@ protected:
 	virtual void GetChannel(uint32_t nRow, uint32_t nCol, SubFrameIndex& nChannel);
 	virtual void local_maxima_1d(std::vector<uint32_t>& RawData, uint32_t nLens, std::vector<uint32_t>& midpoints, std::vector<uint32_t>& left_edges, std::vector<uint32_t>& right_edges);
 	virtual void select_by_peak_distance(std::vector<uint32_t>& peak, std::vector<uint32_t>& peak_height, uint32_t nDistance, std::vector<uint32_t>& keep);
+    virtual bool quadratic_fit(const std::vector<std::pair<double, double>>& points, double& a, double& b, double& c);
+    virtual std::vector<double> solve_quadratic_equation(double a, double b, double c);
+    virtual std::vector<double> get_quadratic_x_value_from_y_value(double y_target, double a, double b, double c);
+    virtual int FindQuadraticXValueFromYValue(const std::vector<std::pair<double, double>>& points, double& y_target, std::vector<double>& x_roots);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;
