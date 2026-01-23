@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(AlgorithmCTypeTest VERSION 1.0.0 LANGUAGES CXX)
+set(ALGO_VERSION "AlgorithmLibrary1.0.0.10")
 # 强制固定在VS2012环境之下
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,7 +23,7 @@ add_executable(${PROJECT_NAME}
         ${HEADERS}
         ${SRC}
 )
-set(THIRD_PARTY_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_lib/ReleaseAlgorithmLibrary/CTypeInterface/${CURRENT_PLATFORM}/bin")
+set(THIRD_PARTY_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_lib/${ALGO_VERSION}/CTypeInterface/${CURRENT_PLATFORM}/Release/bin")
 # 将头文件添加到target
 target_sources(${PROJECT_NAME} PRIVATE ${THIRD_PARTY_HEADERS})
 
@@ -31,14 +32,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_lib/ReleaseAlgorithmLibrary/CTypeInterface/${CURRENT_PLATFORM}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_lib/${ALGO_VERSION}/CTypeInterface/${CURRENT_PLATFORM}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include/DVS
         ${CMAKE_CURRENT_SOURCE_DIR}/include/APS
 )
 
 target_link_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_lib/ReleaseAlgorithmLibrary/CTypeInterface/${CURRENT_PLATFORM}/bin
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_lib/${ALGO_VERSION}/CTypeInterface/${CURRENT_PLATFORM}/Release/bin
 )
 
 # Windows特定设置

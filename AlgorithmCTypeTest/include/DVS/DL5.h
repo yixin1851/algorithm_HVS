@@ -156,6 +156,7 @@ int calcDL5() {
         setResult("HotPixel_TripletNum_DL5", (double) HotpixelRes.TripletNum);
         setResult("HotPixel_FourConnectedNum_DL5", (double) HotpixelRes.FourConnectedNum);
         setResult("HotPixel_ClusterNum_DL5", (double) HotpixelRes.ClusterNum);
+        setResult("HotPixel_MaxClusterSize_DL5", (double) HotpixelRes.MaxClusterSize);
     }
     HotPixelTypeCDVS_Free(&HotpixelRes);
 

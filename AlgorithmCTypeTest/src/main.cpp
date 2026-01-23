@@ -16,12 +16,15 @@
 #include "HDD3.h"
 #include "HDL3.h"
 
-#define LOOP_TEST
+// #define LOOP_TEST
+// #define APS_TEST
+#define DVS_TEST
 
 int main() {
 #ifdef LOOP_TEST
     while (true) {
 #endif
+#ifdef APS_TEST
         // APS
         calcDD1();
         calcDD2();
@@ -34,10 +37,15 @@ int main() {
         calcDL4();
         calcHDD3();
         calcHDL3();
+#endif
+
+#ifdef DVS_TEST
         // DVS
         calcDL5();
         calcPL11();
         calcPL16();
+#endif
+
 #ifdef LOOP_TEST
         Sleep(50);
     }

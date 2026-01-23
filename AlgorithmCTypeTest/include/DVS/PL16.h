@@ -87,8 +87,10 @@ int calcPL16()
     if (check_ret(__func__, BadPixelTypeCDVS(handle, 0, nEvsSaveNum, &PeakInfoRes, nPeakNum, On_OffEvents, &BadpixelRes))) {
         setResult("BadpixelRes_nOffEventsDeadPixelNum_PL16", (double) BadpixelRes.nOffEventsDeadPixelNum);
         setResult("BadpixelRes_nOffEventsClusterNum_PL16", (double) BadpixelRes.nOffEventsClusterNum);
+        setResult("BadpixelRes_nOffEventsMaxClusterSize_PL16", (double) BadpixelRes.nOffEventsMaxClusterSize);
         setResult("BadpixelRes_nOnEventsDeadPixelNum_PL16", (double) BadpixelRes.nOnEventsDeadPixelNum);
         setResult("BadpixelRes_nOnEventsClusterNum_PL16", (double) BadpixelRes.nOnEventsClusterNum);
+        setResult("BadpixelRes_nOnEventsMaxClusterSize_PL16", (double) BadpixelRes.nOnEventsMaxClusterSize);
     }
     BadPixelTypeCDVS_Free(&BadpixelRes);
 
