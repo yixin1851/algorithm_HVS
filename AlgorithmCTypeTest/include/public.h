@@ -47,14 +47,41 @@ int ImageCapture_capture(std::string path, unsigned char rawDataBuf[], unsigned 
     }
 }
 
+int ImportData(std::string strFileName, uint32_t nIndexStart, uint32_t nNumber, uint8_t *&pRawData, uint64_t &length) {
+    std::ifstream infile;
+    infile.open(strFileName, std::ios::binary | std::ios::in);
+    if (!infile.fail())
+    {
+        infile.seekg(0, std::ios::end);
+        length = infile.tellg();
+        infile.seekg(0, std::ios::beg);
+        pRawData = new uint8_t[length];
+        infile.read((char *)pRawData, length);
+        infile.close();
+        // bRet = m_pDVSAlgoInterface->ImportRawData(pRawData, length, nIndexStart, nNumber);
+        // delete[] pRawData;
+        return 0;
+    }else {
+        return -1;
+    }
+}
+
 void setResult(std::string param, double value) {
     //函数目的，将参数以及值存到寄存器中，这里只是打印值
     std::cout << param << ": " << value << std::endl;
 }
 
 bool check_ret(std::string func, int func_ret) {
-    if (func_ret != 0) {
-        std::cout << func << " error ret:" << func_ret << std::endl;
+    if (func_ret != TEST_NO_ERROR) {
+        if (func_ret == FUNCTION_ERROR) {
+            std::cout << func << " FUNCTION_ERROR" << std::endl;
+        } else if (func_ret == UNKNOWN_ERROR) {
+            std::cout << func << " UNKNOWN_ERROR" << std::endl;
+        } else if (func_ret == ALGO_HANDLE_ERROR) {
+            std::cout << func << " ALGO_HANDLE_ERROR" << std::endl;
+        } else {
+            std::cout << func << " error ret:" << func_ret << std::endl;
+        }
         return false;
     }
     return true;

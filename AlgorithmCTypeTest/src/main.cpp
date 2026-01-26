@@ -4,6 +4,7 @@
 #include "PL16.h"
 #include <windows.h>
 
+#include "CalcLightIntensity.h"
 #include "DD1.h"
 #include "DD2.h"
 #include "DD3.h"
@@ -44,6 +45,7 @@ int main() {
         calcDL5();
         calcPL11();
         calcPL16();
+        CalcLightIntensity();
 #endif
 
 #ifdef LOOP_TEST
