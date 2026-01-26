@@ -521,6 +521,17 @@ public:
 	virtual std::string GetVersion() = 0;
 	virtual int GetCode() = 0;
 	virtual uint32_t GetErrCode() = 0;
+
+    /**
+     * @brief Input Target_Evevt([%]), output the corresponding light intensity transition points.
+     * @param eventRatioPercent, input Target_EventRatio[%]. eg: eventRatioPercent = 50, representing 50% Events Ratio.
+     * @param vecEvent, On/Off Events vector.
+     * @param vecLightIntensity, On/Off Light Intensity jump points vector.
+     * @param targetLightIntensity output value, if return value < 0.
+     * @return true, calculate done.
+     * @return false, calculate error.
+     */
+    virtual bool CalcLightIntensity(double eventRatioPercent, std::vector<double> vecEvent, std::vector<std::pair<double, double>> vecLightIntensity, double& targetLightIntensity) = 0;
 private:
 	static uint32_t m_nSiteNumber;
 };

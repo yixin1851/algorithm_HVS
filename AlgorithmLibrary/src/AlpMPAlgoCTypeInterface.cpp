@@ -629,6 +629,24 @@ uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint32_t nLen) {
     }
 }
 
+uint32_t CalcLightIntensityDVS(HANDLE h, double eventPercent,
+                               std::vector<double> vecEvent,
+                               std::vector<std::pair<double, double> > vecLightInsensity,
+                               double &targetLightInsensity) {
+    if (h) {
+        double tTargetLightWave{0.0};
+        bool ret = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->CalcLightIntensity(
+            eventPercent, vecEvent, vecLightInsensity, tTargetLightWave);
+        if (ret) {
+            targetLightInsensity = tTargetLightWave;
+        } else {
+            return FUNCTION_ERROR;
+        }
+    } else {
+        return ALGO_HANDLE_ERROR;
+    }
+}
+
 // | ============= APS =============================================================================================== |
 HANDLE __stdcall InitHandleAPS(SensorType Sensortype, APSRawType APSRawtype, char *strLogDir, PixelFormatType Pixelformat, int code) {
     CAlpAPSMPAlgoInterface *pInterface = CreateAPSAlgoInterface(Sensortype, APSRawtype, strLogDir, Pixelformat, code);

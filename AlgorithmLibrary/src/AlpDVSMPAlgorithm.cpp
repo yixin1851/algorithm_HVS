@@ -1635,7 +1635,8 @@ bool CAlpDVSMPAlgorithm::quadratic_fit(const std::vector<std::pair<double, doubl
     // 返回值：是否拟合成功；参数a、b、c为输出的系数
     const int n = points.size();
     if (n < 3) {
-        std::string strErr("quadratic_fit requires at least 3 points.");
+        std::string strErr("Quadratic_fit requires at least 3 points, now just has ");
+        strErr = strErr + std::to_string(n)+" points.";
         WriteLog(strErr);
         return false;
     }
@@ -2077,61 +2078,45 @@ uint32_t CAlpDVSMPAlgorithm::GetErrCode()
 	return m_nErrCode;
 }
 
-bool CAlpDVSMPAlgorithm::CalcLightIntensity(double onEventPercent, double offEventPercent,
-                                            std::vector<double> vecOnEvent, std::vector<double> vecOffEvent,
-                                            std::vector<std::pair<double, double> > vecLightWave,
-                                            double &onTargetLightWave, double &offTargetLightWave) {
-    if (vecOnEvent.size() != vecOffEvent.size() ||
-        vecOnEvent.size() != vecLightWave.size() ||
-        vecOffEvent.size() != vecLightWave.size()) {
-        std::string str = "vecOnEvent/vecOffEvent/vecLightWave size error.";
+bool CAlpDVSMPAlgorithm::CalcLightIntensity(double eventRatioPercent, std::vector<double> vecEvent,
+                                            std::vector<std::pair<double, double> > vecLightIntensity,
+                                            double &targetLightIntensity) {
+    if (vecEvent.size() != vecLightIntensity.size()) {
+        std::string str = "vecEvent, vecLightWave size error.";
+        str += "\n vecEvent.size: " + std::to_string(vecEvent.size());
+        str += "\n vecLightWave.size: " + std::to_string(vecLightIntensity.size());
         WriteLog(str);
         return false;
     }
     //计算目标事件量的光强跳变点
-    onTargetLightWave = 0;
-    offTargetLightWave = 0;
+    targetLightIntensity = 0.0;
 
     std::vector<std::pair<double, double> > points_on; //一系列用于计算的光源跳变比例和对应的事件量
     std::vector<std::pair<double, double> > points_off; //一系列用于计算的光源跳变比例和对应的事件量
 
     // std::vector<std::pair<double, double>> vecLightWave = { {100,105}, {100,130}, {100,135}, {100,140}, {100,145}, {100,150}, {100,155}, {100,160}, {100,165}, {100,170}, {100,235} };   //光强跳变点
 
-    for (int var = 1; var < vecLightWave.size() - 1; ++var) {
-        points_on.push_back({
-            (vecLightWave[var].second - vecLightWave[var].first) / vecLightWave[var].first * 100, vecOnEvent[var]
-        });
-        points_off.push_back({
-            (vecLightWave[var].second - vecLightWave[var].first) / vecLightWave[var].first * 100, vecOffEvent[var]
-        });
+    for (int var = 0; var < vecLightIntensity.size(); ++var) {
+        double tmp = (vecLightIntensity[var].second - vecLightIntensity[var].first) / vecLightIntensity[var].first * 100;
+        points_on.push_back({tmp, vecEvent[var]});
     }
 
     //使用二次多项式拟合，根据目标y，寻找x
-    std::vector<double> x_roots_on;
+    std::vector<double> x_roots;
     int nRet = 0;
-    onTargetLightWave = -999;
-    nRet = FindQuadraticXValueFromYValue(points_on, onEventPercent, x_roots_on);
+    targetLightIntensity = -999;
+    nRet = FindQuadraticXValueFromYValue(points_on, eventRatioPercent, x_roots);
     if (nRet) {
-        for (double x: x_roots_on) {
+        for (double x: x_roots) {
             if (x >= 0) {
                 // 找到第一个点
-                onTargetLightWave = x;
+                targetLightIntensity = x;
                 break;
             }
         }
-    }
-
-    std::vector<double> x_roots_off;
-    onTargetLightWave = -999;
-    nRet = FindQuadraticXValueFromYValue(points_off, offEventPercent, x_roots_off);
-    if (nRet) {
-        for (double x: x_roots_off) {
-            // 找到第一个点
-            if (x >= 0) {
-                onTargetLightWave = x;
-                break;
-            }
-        }
+    } else {
+        std::string str = "Find Quadratic X-Value From Y-Value Failed";
+        WriteLog(str);
     }
     return true;
 }
@@ -2140,7 +2125,7 @@ int CAlpDVSMPAlgorithm::FindQuadraticXValueFromYValue(const std::vector<std::pai
                                                       double &y_target, std::vector<double> &x_roots) {
     //使用二次多项式拟合，根据目标Y，寻找X
     // 示例2：带噪声的二次曲线 y = 2x? + 3x + 1（添加±0.2噪声）
-    int nRet{0};
+    int nRet{1};
     double a, b, c;
     try {
         if (quadratic_fit(points, a, b, c)) {

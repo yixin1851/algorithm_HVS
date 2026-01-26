@@ -463,6 +463,7 @@ typedef enum {
     EVENTS_EQU_ZERO = 0x8000000B,
     INVALID_PARAMETER_ERROR = 0x8000000C,
     MEMORY_ALLOCATION_ERROR = 0x8000000D,
+    FUNCTION_ERROR = 0x8000000E,
 } ErrCode;
 
 // =================================
@@ -635,6 +636,21 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall SetActiveAreaDVS(ROIArea ROI);
 ALP_ALGO_DLL_API_C uint32_t __stdcall GetRawDataSizeDVS(HANDLE h, uint32_t *nRow, uint32_t *nCol);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint32_t nLen);
+
+/**
+* @brief Input Target_Evevt([%]), output the corresponding light intensity transition points.
+* @param h, handle.
+* @param eventRatioPercent, input Target_EventRatio[%]. eg: eventRatioPercent = 50, representing 50% Events Ratio.
+* @param vecEvent, On/Off Events vector.
+* @param vecLightIntensity, On/Off Light Intensity jump points vector.
+* @param targetLightIntensity output value, if return value < 0.
+* @return true, calculate done.
+* @return false, calculate error.
+*/
+ALP_ALGO_DLL_API_C uint32_t __stdcall CalcLightIntensityDVS(HANDLE h, double eventRatioPercent,
+                                                            std::vector<double> vecEvent,
+                                                            std::vector<std::pair<double, double> > vecLightIntensity,
+                                                            double &targetLightIntensity);
 
 // | ================================================================================================================= |
 

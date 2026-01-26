@@ -39,17 +39,14 @@ public:
 
     /**
      * @brief Input Target_Evevt([%]), output the corresponding light intensity transition points.
-     * @param onEventPercent
-     * @param offEventPercent
-     * @param vecOnEvent
-     * @param vecOffEvent
-     * @param vecLightWave
-     * @param onTargetLightWave output value, if return value < 0, error.
-     * @param offTargetLightWave output value, if return value < 0, error.
+     * @param eventRatioPercent
+     * @param vecEvent
+     * @param vecLightIntensity, On/Off Light Intensity jump points vector.
+     * @param targetLightIntensity output value, if return value < 0, error.
      * @return true, calculate done.
      * @return false, calculate error.
      */
-    virtual bool CalcLightIntensity(double onEventPercent, double offEventPercent, std::vector<double> vecOnEvent, std::vector<double> vecOffEvent, std::vector<std::pair<double, double>> vecLightWave, double& onTargetLightWave, double& offTargetLightWave); //Light intensity
+    virtual bool CalcLightIntensity(double eventRatioPercent, std::vector<double> vecEvent, std::vector<std::pair<double, double>> vecLightIntensity, double& targetLightIntensity);
 protected:
 	virtual void ThreadEventsNumberCount(uint32_t nIndexStart, uint32_t nNumberStart, uint32_t nNumberEnd, DVSEventsNumberCountType& EventsNumberCountRes);
 	virtual double Mean(std::vector<double>& RawData, uint32_t nLens);
