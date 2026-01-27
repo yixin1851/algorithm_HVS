@@ -634,14 +634,14 @@ uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint32_t nLen) {
 
 uint32_t CalcLightIntensityDVS(HANDLE h, double eventPercent,
                                std::vector<double> vecEvent,
-                               std::vector<std::pair<double, double> > vecLightInsensity,
-                               double &targetLightInsensity) {
+                               std::vector<std::pair<double, double> > vecLightIntensity,
+                               double &targetLightIntensity) {
     if (h) {
-        double tTargetLightWave{0.0};
+        double tTargetLightIntensity{0.0};
         bool ret = reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->CalcLightIntensity(
-            eventPercent, vecEvent, vecLightInsensity, tTargetLightWave);
+            eventPercent, vecEvent, vecLightIntensity, tTargetLightIntensity);
         if (ret) {
-            targetLightInsensity = tTargetLightWave;
+            targetLightIntensity = tTargetLightIntensity;
         } else {
             return FUNCTION_ERROR;
         }
