@@ -16,10 +16,11 @@
 #include "DL4.h"
 #include "HDD3.h"
 #include "HDL3.h"
-
+#include <thread>
 // #define LOOP_TEST
 // #define APS_TEST
 #define DVS_TEST
+#define LOOP_TEST
 
 int main() {
 #ifdef LOOP_TEST
@@ -42,10 +43,20 @@ int main() {
 
 #ifdef DVS_TEST
         // DVS
-        calcDL5();
-        calcPL11();
-        calcPL16();
-        CalcLightIntensity();
+        const int thread_count = 16;
+        std::thread threads[thread_count];
+
+        for (int i = 0; i < thread_count; ++i) {
+            threads[i] = std::thread([i]() {
+                calcDL5();
+                calcPL11();
+                calcPL16();
+                CalcLightIntensity();
+            });
+        }
+
+        for (auto &t : threads) t.join();
+        Sleep(1000);
 #endif
 
 #ifdef LOOP_TEST

@@ -19,7 +19,7 @@ int CalcLightIntensity() {
         // 1. Inupt EVS RawData
         int ret = ImportData(rawDataPath, 0, useFrameNum, rawDataBuf, rawDataRealLen);
         if (ret != 0 || rawDataBuf == nullptr) {
-            return -1;
+            return false;
         }
 
         // 2. Init Handle
@@ -50,7 +50,7 @@ int CalcLightIntensity() {
         return true;
     };
 
-    // 1. Inport EVS RawData
+    // 1. Import EVS RawData
     std::string F1 =
             "D:/Work/Tmp/APX014BA/EVS/CalcLightInsentity/FrameID001458__EVS_W1288_H256_Fx30_50000_50_500_500_7__20260114-18-18-09_d1.raw";
     std::string F2 =
