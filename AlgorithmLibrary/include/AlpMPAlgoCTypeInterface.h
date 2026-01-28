@@ -464,6 +464,7 @@ typedef enum {
     INVALID_PARAMETER_ERROR = 0x8000000C,
     MEMORY_ALLOCATION_ERROR = 0x8000000D,
     FUNCTION_ERROR = 0x8000000E,
+    EVS_SUB_SAMPLE_ERROR = 0x8000000F,
 } ErrCode;
 
 // =================================
