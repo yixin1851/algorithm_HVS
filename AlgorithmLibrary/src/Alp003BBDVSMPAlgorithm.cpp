@@ -14,6 +14,6 @@ CAlp003BBDVSMPAlgorithm::~CAlp003BBDVSMPAlgorithm()
 }
 
 bool CAlp003BBDVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t *pBinData, uint64_t nLens, uint32_t nIndexStart,
-    uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) {
+    uint32_t nNumber, uint32_t &nDropSubFrameNum) {
     return false;
 }

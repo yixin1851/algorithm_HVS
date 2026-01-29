@@ -260,7 +260,7 @@ bool CAlp014BADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t* pBinData, uint
 }
 #endif
 
-bool CAlp014BADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t* pBinData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) {
+bool CAlp014BADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t* pBinData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t &nDropSubFrameNum) {
     size_t pos = 0;
     if (m_RawDataContainer.size() < nIndexStart + nNumber)
     {
@@ -543,7 +543,7 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
     size_t nBinLens,
     uint8_t& nSubFrameIndex,
     uint64_t& nTimeStamp,
-    size_t& nDropSubFrameNum)
+    uint32_t& nDropSubFrameNum)
 {
     WriteLog("Decode_DropSubFrame");
     size_t nCurIndex = *pnPos;

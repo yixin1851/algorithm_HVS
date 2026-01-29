@@ -79,6 +79,8 @@ typedef enum {
     DVS_Code_1_4_Bining = 1,
     DVS_Code_HVS = 2,
     DVS_Code_1_2_Subsample = 4,
+    DVS_Code_1_4_Subsample = 8,
+    DVS_Code_1_8_Subsample = 16,
 } DVSCodeType;
 
 typedef std::vector<std::vector<uint8_t> > ImgType;

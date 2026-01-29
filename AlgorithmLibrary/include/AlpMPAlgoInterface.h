@@ -500,7 +500,7 @@ public:
 	static CAlpDVSMPAlgoInterface * CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG, int code = 0);
 	virtual ~CAlpDVSMPAlgoInterface();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
-	virtual bool ImportRawData_DropSubFrame(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) = 0;
+	virtual bool ImportRawData_DropSubFrame(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t &nDropSubFrameNum) = 0;
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes) = 0;
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes) = 0;
 	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes) = 0;

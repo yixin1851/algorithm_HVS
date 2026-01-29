@@ -80,7 +80,7 @@ bool CAlp003CADVSMPAlgorithm::ImportRawData(uint8_t* pBinData, uint64_t nLens, u
 }
 
 bool CAlp003CADVSMPAlgorithm::ImportRawData_DropSubFrame(uint8_t *pBinData, uint64_t nLens, uint32_t nIndexStart,
-                                                         uint32_t nNumber, uint32_t nMode, size_t &nDropSubFrameNum) {
+                                                         uint32_t nNumber, uint32_t &nDropSubFrameNum) {
     return false;
 }
 

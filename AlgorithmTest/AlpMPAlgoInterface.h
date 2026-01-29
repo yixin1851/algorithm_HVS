@@ -96,6 +96,8 @@ typedef enum
 	DVS_Code_1_4_Bining = 1,
 	DVS_Code_HVS = 2,
 	DVS_Code_1_2_Subsample = 4,
+	DVS_Code_1_4_Subsample = 8,
+	DVS_Code_1_8_Subsample = 16,
 }DVSCodeType;
 
 typedef std::vector<std::vector<uint8_t>> ImgType;
@@ -498,6 +500,7 @@ public:
 	static CAlpDVSMPAlgoInterface * CreateDVSAlgoInterface(SensorType Sensortype, std::string strLogDir, PixelFormatType Pixelformat = PixelFormatType::BayerGBRG, int code = 0);
 	virtual ~CAlpDVSMPAlgoInterface();
 	virtual bool ImportRawData(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber) = 0;
+	virtual bool ImportRawData_DropSubFrame(uint8_t* pRawData, uint64_t nLens, uint32_t nIndexStart, uint32_t nNumber, uint32_t &nDropSubFrameNum) = 0;
 	virtual bool EventsNumberCount(uint32_t nIndexStart, uint32_t nNumber, DVSEventsNumberCountType& EventsNumberCountRes) = 0;
 	virtual bool StationaryNoise(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryNoiseType& StationaryNoiseRes) = 0;
 	virtual bool StationaryUniformity(uint32_t nIndexStart, uint32_t nNumber, DVSStationaryUniformityType& UniformityRes) = 0;
@@ -521,6 +524,17 @@ public:
 	virtual std::string GetVersion() = 0;
 	virtual int GetCode() = 0;
 	virtual uint32_t GetErrCode() = 0;
+
+    /**
+     * @brief Input Target_Evevt([%]), output the corresponding light intensity transition points.
+     * @param eventRatioPercent, input Target_EventRatio[%]. eg: eventRatioPercent = 50, representing 50% Events Ratio.
+     * @param vecEvent, On/Off Events vector.
+     * @param vecLightIntensity, On/Off Light Intensity jump points vector.
+     * @param targetLightIntensity output value, if return value < 0.
+     * @return true, calculate done.
+     * @return false, calculate error.
+     */
+    virtual bool CalcLightIntensity(double eventRatioPercent, std::vector<double> vecEvent, std::vector<std::pair<double, double>> vecLightIntensity, double& targetLightIntensity) = 0;
 private:
 	static uint32_t m_nSiteNumber;
 };
