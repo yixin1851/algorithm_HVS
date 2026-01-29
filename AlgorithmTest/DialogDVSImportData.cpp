@@ -35,6 +35,7 @@ void CDialogDVSImportData::ImportData()
 	ui.label_Res->setText(tr(" "));
 	ui.pushButtonStart->setEnabled(false);
 	clock_t time = 0;
+    uint32_t dropSubFrameNumber = 0;
 	std::ifstream infile;
 	infile.open(strFileName, std::ios::binary | std::ios::in);
 	if (!infile.fail())
@@ -59,7 +60,9 @@ void CDialogDVSImportData::ImportData()
 	if (bRet)
 	{
 		ui.label_Res->setStyleSheet("color:green;");
-		QString res = QString::number(time);
+	    QString res = "use time: " + QString::number(time) + " ms";
+        // QString res = "use time: " + QString::number(time) + " ms, " +
+                      // "drop sub frame num: " + QString::number(dropSubFrameNumber);
 		ui.label_Res->setText(res);
 	}
 	else
