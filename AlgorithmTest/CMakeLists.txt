@@ -213,7 +213,7 @@ target_link_directories(${PROJECT_NAME} PRIVATE
 if(WIN32)
     # 设置为Windows应用程序
     set_target_properties(${PROJECT_NAME} PROPERTIES
-        WIN32_EXECUTABLE OFF    # ON为不显示控制台
+        WIN32_EXECUTABLE ON    # ON为不显示控制台
     )
 
     # 编译选项

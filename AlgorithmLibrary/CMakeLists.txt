@@ -1,4 +1,4 @@
-project(AlgorithmLibrary VERSION 1.0.0.10)
+project(AlgorithmLibrary VERSION 1.0.0.11)
 # 使用的`CONFIGURE_DEPENDS` 选项(会自动检测文件变化, (CMake 3.12+ 支持)), 这样可以在添加/删除文件时自动Reload CMake Project.
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 # 添加一个选项来控制接口类型
