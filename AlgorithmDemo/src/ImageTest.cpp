@@ -1,10 +1,10 @@
-#include "../ImageTest.h"
+#include "ImageTest.h"
 #include <string>
 #include <vector>
 #include <io.h>
 #include <fstream>
 #include <iostream>
-#include "../AlpMPAlgoInterface.h"
+#include "AlpMPAlgoInterface.h"
 
 static CAlpDVSMPAlgoInterface* gDVSInterface = nullptr;
 static CAlpAPSMPAlgoInterface* gAPSInterface = nullptr;
@@ -42,6 +42,10 @@ void FindFiles(std::string strPath, std::vector<std::string>& FileQuene)
 	} while (!_findnext(handle, &file_info));
 	_findclose(handle);
 	return;
+}
+
+void test() {
+
 }
 
 void GetCenterImageSensitivityData(std::string datapath, std::string outpath)
@@ -936,8 +940,8 @@ void GetStationaryNoise(std::string datapath, std::string outpath, uint32_t nInd
 				imageData << Sdata.dStationaryNoiseStdAll << ",";
 				imageData << Sdata.dStationaryNoiseStdOn << ",";
 				imageData << Sdata.dStationaryNoiseStdOff << ",";
-				imageData << Sdata.dStationaryRowSNoise << ",";
-				imageData << Sdata.dStationaryColSNoise << ",";
+				// imageData << Sdata.dStationaryRowSNoise << ",";
+				// imageData << Sdata.dStationaryColSNoise << ",";
 
 				imageData << SUdata.UniformityRatio << ",";
 
@@ -1030,8 +1034,8 @@ void GetStationaryNoise2(std::string datapath, std::string outpath, uint32_t nIn
 					imageData << Sdata.dStationaryNoiseStdAll << ",";
 					imageData << Sdata.dStationaryNoiseStdOn << ",";
 					imageData << Sdata.dStationaryNoiseStdOff << ",";
-					imageData << Sdata.dStationaryRowSNoise << ",";
-					imageData << Sdata.dStationaryColSNoise << ",";
+					// imageData << Sdata.dStationaryRowSNoise << ",";
+					// imageData << Sdata.dStationaryColSNoise << ",";
 
 					imageData << SUdata.UniformityRatio << ",";
 
@@ -1060,4 +1064,90 @@ void GetStationaryNoise2(std::string datapath, std::string outpath, uint32_t nIn
 	}
 	delete gDVSInterface;
 	imageData.close();
+}
+
+// 将一维vector保存为2D CSV
+void saveVectorToCSV(const std::vector<double> &data, int cols, const std::string &filename) {
+    std::ofstream file(filename);
+
+    if (!file.is_open()) {
+        std::cerr << "cannot open file: " << filename << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < data.size(); ++i) {
+        file << data[i];
+
+        // 每cols个元素换行，否则添加逗号
+        if ((i + 1) % cols == 0) {
+            file << "\n";
+        } else {
+            file << ",";
+        }
+    }
+
+    file.close();
+    std::cout << "csv save path: " << filename << std::endl;
+}
+
+void CalcHotPixel() {
+
+    std::string str_path = "D:/Work/Tmp/APX014BA/EVS/CalcHotPixel";
+
+    printf("str_path:%s\r\n", str_path.c_str());
+    std::vector<std::string> FileQuene;
+
+    CAlpDVSMPAlgoInterface *gDVSInterface = CreateDVSAlgoInterface(ALP_014BA, "D:/", BayerGBRG, 0);
+    gDVSInterface->SetMultiThreadEnable(true);
+    gDVSInterface->SetLogEnable(true);
+
+    DVSHotpixelType hotpixel;
+
+    bool bRet = false;
+
+    FindFiles(str_path, FileQuene);
+
+    for (uint32_t nIndex = 0; nIndex < FileQuene.size(); nIndex++) {
+        std::ifstream infile;
+        infile.open(FileQuene[nIndex], std::ios::binary | std::ios::in);
+        if (!infile.fail()) {
+            infile.seekg(0, std::ios::end);
+            uint64_t length = infile.tellg();
+            infile.seekg(0, std::ios::beg);
+            uint8_t *pRawData = new uint8_t[length];
+            infile.read((char *) pRawData, length);
+            infile.close();
+
+            uint32_t dropSubFrameNum{0};
+            bRet = gDVSInterface->ImportRawData(pRawData, length, nIndex, 150);
+            // bRet = gDVSInterface->ImportRawData_DropSubFrame(pRawData, length, 0, 1, dropSubFrameNum);
+            printf("gDVSInterface->ImportRawData_DropSubFrame ret:%d\r\n", bRet);
+            delete[] pRawData;
+        } else {
+            bRet = false;
+            break;
+        }
+    }
+
+    if (bRet) {
+        std::vector<double> MeanData;
+        if (gDVSInterface->HotPixel(0, 150, hotpixel)) {
+            std::cout << "Singlets:" << hotpixel.SingletNum << std::endl;
+            std::cout << "Couplets:" << hotpixel.CoupletNum << std::endl;
+            std::cout << "Clusters:" << hotpixel.ClusterNum << std::endl;
+            // MeanData = hotpixel.HotPixelMask.MeanData;
+        } else {
+            std::cout << "gAPSInterface->HotPixel Failed.\n";
+            return;
+        }
+
+        printf("FileQuene.size:%d\r\n", FileQuene.size());
+        // for (uint32_t nIndex = 0; nIndex < FileQuene.size(); nIndex++) {
+        //     saveVectorToCSV(hotpixel.HotPixelMask.MeanData, 1280, (FileQuene[nIndex]+".csv").c_str());
+        // }
+    } else {
+        std::cout << "ImportData fail " << std::endl;
+    }
+
+    FileQuene.clear();
 }

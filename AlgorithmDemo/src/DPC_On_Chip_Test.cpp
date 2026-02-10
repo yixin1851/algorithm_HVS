@@ -1,10 +1,10 @@
-#include "../ImageTest.h"
+#include "ImageTest.h"
 #include <string>
 #include <vector>
 #include <io.h>
 #include <fstream>
 #include <iostream>
-#include "../AlpMPAlgoInterface.h"
+#include "AlpMPAlgoInterface.h"
 
 void DPC_On_ChipTest()
 {

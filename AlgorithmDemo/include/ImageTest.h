@@ -35,3 +35,7 @@ void GetDefectPixelsLight(std::string datapath);
 void DPC_On_ChipTest();
 
 void FindFiles(std::string strPath, std::vector<std::string>& FileQuene);
+
+void saveVectorToCSV(const std::vector<double>& data, int cols, const std::string& filename);
+
+void CalcHotPixel();
