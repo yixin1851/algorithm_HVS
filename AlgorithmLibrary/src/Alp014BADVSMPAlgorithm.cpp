@@ -395,13 +395,11 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 		}
 		else
 		{
-		    WriteLog("Find Header");
 			break; // 找到有效Header
 		}
 	}
 	if (nBinLens <= nCurIndex + sizeof(Alp014BAFormatHeader))
 	{
-	    WriteLog("nBinLens <= nCurIndex + sizeof(Alp014BAFormatHeader)");
 		return false;
 	}
 
@@ -422,7 +420,6 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 	}
 	else
 	{
-	    WriteLog("nCurIndex + sizeof(Alp014BAFormatStatic) >= nBinLens");
 		return false;
 	}
 
@@ -439,16 +436,9 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 			break;
 		}
 	}
-    std::string tstr = "Static->Roi_row_stop: " + std::to_string(Static->Roi_row_stop);
-    tstr += "Static->Roi_row_start: " + std::to_string(Static->Roi_row_start);
-    tstr += "Static->Roi_col_stop:" + std::to_string(Static->Roi_col_stop);
-    tstr += "Static->Roi_col_start:" + std::to_string(Static->Roi_col_start);
-    tstr += "nRow:" + std::to_string(nRow);
-    tstr += "nCol:" + std::to_string(nCol);
-    WriteLog(tstr);
+
 	if ((Static->Roi_row_stop - Static->Roi_row_start + 1) > nRow || (Static->Roi_col_stop - Static->Roi_col_start + 1) > nCol)
 	{
-	    WriteLog("((Static->Roi_row_stop - Static->Roi_row_start + 1) > nRow || (Static->Roi_col_stop - Static->Roi_col_start + 1) > nCol)");
 		return false;
 	}
 
@@ -456,12 +446,10 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 
 	if (Static->frame_mode == 0)
 	{
-	    WriteLog("CAlp014BADVSMPAlgorithm::Decode EventModeDecode");
 		bRet = EventModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameInPixelArray);
 	}
 	else
 	{
-	    WriteLog("CAlp014BADVSMPAlgorithm::Decode FrameModeDecode");
 		bRet = FrameModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameInPixelArray);
 	}
 	if (bRet)
@@ -469,14 +457,11 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 	    // 验证尾部和对齐
 		if (nCurIndex % 8 != 0)
 		{
-			nCurIndex = (nCurIndex / 8 + 1) * 8; // 8字节对齐
+			nCurIndex = (nCurIndex / 8 + 1) * 8;
 		}
 
 		Alp014BAFormatFooter* Footer = (Alp014BAFormatFooter*)(pucBinData + nCurIndex);
 
-	    std::string tStr = "Footer->Footer_vec == DVS_FOOTER_014BA :"+std::to_string(Footer->Footer_vec == DVS_FOOTER_014BA);
-	    tStr += "Footer->Dropflag == 0?:" + std::to_string(Footer->Dropflag==0);
-	    WriteLog(tStr);
 	    // 验证Footer和DropFlag
 	    // Dropflag == 0: 确保这一帧数据完整, 未丢失
 		if (Footer->Footer_vec == DVS_FOOTER_014BA && Footer->Dropflag == 0)
@@ -486,7 +471,6 @@ bool CAlp014BADVSMPAlgorithm::Decode(uint8_t* pucBinData, CDVSDataContainer* DVS
 			return true;
 		}
 	}
-    WriteLog("CAlp014BADVSMPAlgorithm::Decode End Error");
 	return false;
 }
 
@@ -756,13 +740,10 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
 
 bool CAlp014BADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataContainer* DVSData, uint32_t nRowStart, uint32_t nRowStop, uint32_t nColStart, uint32_t nColStop, size_t* pnPos, size_t nBinLens, uint8_t& nSubFrameIndex)
 {
-    WriteLog("CAlp014BADVSMPAlgorithm::FrameModeDecode");
 	bool bRet = false;
 
 	uint32_t nRowStep = 16;
 	uint32_t nColStep = 4;
-    std::string tStr = "m_subsample_num:" + std::to_string(m_subsample_num);
-    WriteLog(tStr);
 	if (m_subsample_num == 16 || m_subsample_num == 32)
 	{
 		nRowStep = 8;
@@ -799,11 +780,6 @@ bool CAlp014BADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 
 		if (Footer->Footer_vec == DVS_FOOTER_014BA || Footer->Footer_vec == DVS_FOOTER_DROP_014BA)
 		{
-		    std::string str = "Footer->Footer_vec == DVS_FOOTER_014BA?:" + std::to_string(
-                                  Footer->Footer_vec == DVS_FOOTER_014BA);
-		    str += "Footer->Footer_vec == DVS_FOOTER_DROP_014BA?:" + std::to_string(
-                Footer->Footer_vec == DVS_FOOTER_DROP_014BA);
-	        WriteLog(str);
 			return false;
 		}
 
@@ -829,7 +805,6 @@ bool CAlp014BADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 			}
 			else if (nCol > nColStop)
 			{
-			    WriteLog("nCol > nColStop");
 				return false;
 			}
 
@@ -839,12 +814,10 @@ bool CAlp014BADVSMPAlgorithm::FrameModeDecode(uint8_t* pucBinData, CDVSDataConta
 			}
 			else if (nRow > nRowStop)
 			{
-			    WriteLog("nRow > nRowStop");
 				return false;
 			}
 		}
 	}
-    WriteLog("CAlp014BADVSMPAlgorithm::FrameModeDecode End Error");
 	return false;
 }
 
