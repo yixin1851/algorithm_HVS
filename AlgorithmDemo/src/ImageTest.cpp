@@ -1150,4 +1150,5 @@ void CalcHotPixel() {
     }
 
     FileQuene.clear();
+	delete gDVSInterface;
 }

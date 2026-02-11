@@ -632,7 +632,7 @@ uint32_t __stdcall AlpGetVersionDVS(HANDLE h, char *ver, uint32_t nLen) {
     }
 }
 
-uint32_t CalcLightIntensityDVS(HANDLE h, double eventPercent,
+uint32_t __stdcall CalcLightIntensityDVS(HANDLE h, double eventPercent,
                                std::vector<double> vecEvent,
                                std::vector<std::pair<double, double> > vecLightIntensity,
                                double &targetLightIntensity) {
