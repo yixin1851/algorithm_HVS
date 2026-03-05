@@ -1795,7 +1795,6 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, uint32_t n
     {
 		// 1. 计算平均信号值
 		SubFrameDataMean(nIndexStart + nIndex, nNumberInOneStep, &RealRoi, nChannelIndex, OETCRes.DataMean[nIndex / nNumberInOneStep], bRes, DataContainer);
-		SubFrameDataMean(nIndexStart + nIndex, 2, &RealRoi, nChannelIndex, OETCRes.DataMean[nIndex / 2], bRes, DataContainer);
         if (!bRes)
         {
             return false;
