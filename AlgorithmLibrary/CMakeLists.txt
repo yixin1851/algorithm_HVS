@@ -1,4 +1,4 @@
-project(AlgorithmLibrary VERSION 1.10.0.11)
+project(AlgorithmLibrary VERSION 1.10.0.13)
 # 使用的`CONFIGURE_DEPENDS` 选项(会自动检测文件变化, (CMake 3.12+ 支持)), 这样可以在添加/删除文件时自动Reload CMake Project.
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 # 添加一个选项来控制接口类型
@@ -37,8 +37,9 @@ set(OUTPUT_BASE_DIR "${CMAKE_SOURCE_DIR}/AlgorithmLibrary${str_version}/${INTERF
 # 设置输出名称和版本信息
 set(OUTPUT_DEBUG_DIR "${OUTPUT_BASE_DIR}/Debug/bin")
 set(OUTPUT_RELEASE_DIR "${OUTPUT_BASE_DIR}/Release/bin")
-set_target_properties(AlgorithmLibrary PROPERTIES
-        OUTPUT_NAME "AlgorithmLibrary"
+set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_NAME ${PROJECT_NAME}
+        DEBUG_POSTFIX "d"
         VERSION "${FILE_VERSION}"
         RUNTIME_OUTPUT_DIRECTORY_DEBUG "${OUTPUT_DEBUG_DIR}"
         RUNTIME_OUTPUT_DIRECTORY_RELEASE "${OUTPUT_RELEASE_DIR}"
