@@ -241,8 +241,9 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 # 安装规则
 install(TARGETS ${PROJECT_NAME}
-    BUNDLE DESTINATION .
-    RUNTIME DESTINATION bin
+        BUNDLE DESTINATION .
+        LIBRARY DESTINATION bin
+        RUNTIME DESTINATION bin
 )
 
 # Qt部署, 用于自动复制Qt DLL
