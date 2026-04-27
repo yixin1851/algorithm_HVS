@@ -75,7 +75,7 @@ int calcDD2() {
         setResult("DataMean_B_OB2_DD2", (double) DataMeanDark2_OB2.SubFrameDataMean[1]);
         setResult("DataMean_R_OB2_DD2", (double) DataMeanDark2_OB2.SubFrameDataMean[2]);
         setResult("DataMean_Gr_OB2_DD2", (double) DataMeanDark2_OB2.SubFrameDataMean[3]);
-        Get_RegisterData("DD1_OB2_DataMeanDark", 0, DataMeanDark1_OB2);
+        if (!Get_RegisterData("DD1_OB2_DataMeanDark", 0, DataMeanDark1_OB2)) return -1;
         APSDataMeanType DataMean_OB2[2] = {DataMeanDark1_OB2, DataMeanDark2_OB2};
         if (check_ret(__func__, DarkCurrentDataMeanAPS(handle, DataMean_OB2, 2, expTimeData, 2, &DarkCurrent_OB2))){
             setResult("DarkCurrent_Total_OB2_DD2",
@@ -99,7 +99,7 @@ int calcDD2() {
         setResult("DataMean_B_OB3_DD2", (double) DataMeanDark2_OB3.SubFrameDataMean[1]);
         setResult("DataMean_R_OB3_DD2", (double) DataMeanDark2_OB3.SubFrameDataMean[2]);
         setResult("DataMean_Gr_OB3_DD2", (double) DataMeanDark2_OB3.SubFrameDataMean[3]);
-        Get_RegisterData("DD1_OB3_DataMeanDark", 0, DataMeanDark1_OB3);
+        if (!Get_RegisterData("DD1_OB3_DataMeanDark", 0, DataMeanDark1_OB3)) return -1;
         APSDataMeanType DataMean_OB3[2] = {DataMeanDark1_OB3, DataMeanDark2_OB3};
         if (check_ret(__func__, DarkCurrentDataMeanAPS(handle, DataMean_OB3, 2, expTimeData, 2, &DarkCurrent_OB3))) {
             setResult("DarkCurrent_Total_OB3_DD2",
@@ -123,7 +123,7 @@ int calcDD2() {
         setResult("DataMean_B_DD2", (double) DataMeanDark2_AA.SubFrameDataMean[1]);
         setResult("DataMean_R_DD2", (double) DataMeanDark2_AA.SubFrameDataMean[2]);
         setResult("DataMean_Gr_DD2", (double) DataMeanDark2_AA.SubFrameDataMean[3]);
-        Get_RegisterData("DD1_AA_DataMeanDark", 0, DataMeanDark1_AA);
+        if (!Get_RegisterData("DD1_AA_DataMeanDark", 0, DataMeanDark1_AA)) return -1;
         APSDataMeanType DataMean_AA[2] = {DataMeanDark1_AA, DataMeanDark2_AA};
         if (check_ret(__func__, DarkCurrentDataMeanAPS(handle, DataMean_AA, 2, expTimeData, 2, &DarkCurrent_AA))) {
             setResult("DarkCurrent_Total_DD2",

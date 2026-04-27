@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(AlgorithmCTypeTest VERSION 1.0.0 LANGUAGES CXX)
-set(ALGO_VERSION "AlgorithmLibrary1.0.0.10")
+set(ALGO_VERSION "AlgorithmLibrary1.10.0.13")
 # 强制固定在VS2012环境之下
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

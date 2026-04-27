@@ -88,8 +88,10 @@ int CalcLightIntensity() {
     check_ret(__func__, CalcLightIntensityDVS(handle, offEventPercent, vecOffEvent, vecLightIntensity,
                                               offTargetLightIntensity));
 
-    std::cout << "onTargetLightIntensity = " << onTargetLightIntensity << std::endl;
-    std::cout << "offTargetLightIntensity = " << offTargetLightIntensity << std::endl;
+    // std::cout << "onTargetLightIntensity = " << onTargetLightIntensity << std::endl;
+    // std::cout << "offTargetLightIntensity = " << offTargetLightIntensity << std::endl;
+    setResult("onTargetLightIntensity", (double) onTargetLightIntensity);
+    setResult("offTargetLightIntensity", (double) offTargetLightIntensity);
 
     // 5. Delete handle
     DeleteHandleDVS(handle);

@@ -102,7 +102,7 @@ endfunction()
 # 子目录
 add_subdirectory(AlgorithmLibrary)
 add_subdirectory(AlgorithmTest)
-#add_subdirectory(AlgorithmCTypeTest)
+add_subdirectory(AlgorithmCTypeTest)
 add_subdirectory(AlgorithmDemo)
 
 

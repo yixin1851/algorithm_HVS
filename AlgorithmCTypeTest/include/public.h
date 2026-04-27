@@ -10,6 +10,8 @@
 #include <fstream>
 #include <map>
 #include "AlpMPAlgoCTypeInterface.h"
+#include <mutex>
+#include <shared_mutex>
 
 struct d_003ca_point3
 {
@@ -27,6 +29,8 @@ namespace {
     std::map<std::string, APSBadpixelType*> APSBadPixelDataPtr;
     std::map<std::string, std::vector<Local>> DPSBadPixelArray;
     std::map<std::string, std::vector<d_003ca_point3>> DPS3DPointArray;
+    std::shared_mutex RegisterDataMutex;
+    std::mutex mutex;
 }
 
 int ImageCapture_capture(std::string path, unsigned char rawDataBuf[], unsigned long rawDataBufLen,
@@ -67,6 +71,7 @@ int ImportData(std::string strFileName, uint32_t nIndexStart, uint32_t nNumber, 
 }
 
 void setResult(std::string param, double value) {
+    std::lock_guard<std::mutex> lock(mutex);
     //函数目的，将参数以及值存到寄存器中，这里只是打印值
     std::cout << param << ": " << value << std::endl;
 }
@@ -89,6 +94,7 @@ bool check_ret(std::string func, int func_ret) {
 
 bool Set_RegisterData(std::string stKey, int iduts, APSDataMeanType& dblValue)
 {
+    std::unique_lock<std::shared_mutex> lock(RegisterDataMutex);
     std::string regName;
     regName = stKey + "_" + std::to_string(iduts);
 
@@ -102,8 +108,10 @@ bool Set_RegisterData(std::string stKey, int iduts, APSDataMeanType& dblValue)
 
 bool Get_RegisterData(std::string stKey, int iduts, APSDataMeanType& dblValue)
 {
+    std::shared_lock<std::shared_mutex> lock(RegisterDataMutex);
     std::string regName;
     regName = stKey + "_" + std::to_string(iduts);
+    if (RegisterData.empty()) return false;
 
     if (RegisterData.find(regName) == RegisterData.end())
         return false;
@@ -121,6 +129,7 @@ bool Get_RegisterData(std::string stKey, int iduts, APSDataMeanType& dblValue)
 
 void Reset_RegisterData(void)
 {
-    RegisterData.clear();
+    std::unique_lock<std::shared_mutex> lock(RegisterDataMutex);
+    if (RegisterData.size() == 4) RegisterData.clear();
 }
 #endif //ALGORITHMLIBRARY_PUBLIC_H
