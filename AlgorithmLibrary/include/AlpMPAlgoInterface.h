@@ -327,6 +327,10 @@ typedef struct
 	uint32_t nSpatialResponseUniformityRowBlockNum;
 	uint32_t nSpatialResponseUniformityColBlockNum;
 	double dFlashRatioThre;
+    uint32_t m_nHotPixelSlidingWindowWidth;
+    uint32_t m_nHotPixelSlidingWindowHeight;
+    uint32_t m_nBadPixelSlidingWindowWidth;
+    uint32_t m_nBadPixelSlidingWindowHeight;
 }DVSAlgorithmThre;
 
 typedef struct
@@ -407,12 +411,14 @@ typedef struct
 	uint32_t nOffEventsClusterNum;
 	BadPixelMaskType OffEventsBadPixelMask;
     uint32_t nOffEventsMaxClusterSize;
+    uint32_t nOffEventsSlidingWindowMaxDeadPixelNum;
 
 	uint32_t nOnEventsDeadPixelNum;
 	uint32_t nOnEventsDeadLineNum;
 	uint32_t nOnEventsClusterNum;
 	BadPixelMaskType OnEventsBadPixelMask;
     uint32_t nOnEventsMaxClusterSize;
+    uint32_t nOnEventsSlidingWindowMaxDeadPixelNum;
 }DVSBadpixelType;
 
 typedef struct
@@ -426,6 +432,7 @@ typedef struct
 	uint32_t ClusterNum;
     uint32_t MaxClusterSize;
 	BadPixelMaskType HotPixelMask;
+    uint32_t SlidingWindowMaxHotPixelNum;
 }DVSHotpixelType;
 
 typedef enum

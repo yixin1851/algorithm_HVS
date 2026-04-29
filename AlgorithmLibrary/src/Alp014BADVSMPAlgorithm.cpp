@@ -529,7 +529,6 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
     uint64_t& nTimeStamp,
     uint32_t& nDropSubFrameNum)
 {
-    WriteLog("Decode_DropSubFrame");
     size_t nCurIndex = *pnPos;
     Alp014BAFormatHeader* HeaderCode;
 
@@ -556,7 +555,7 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
             }
             else
             {
-                WriteLog("HeaderCode->Header_vec == DVS_HEADER_014BA, Find HEADER");
+                // WriteLog("HeaderCode->Header_vec == DVS_HEADER_014BA, Find HEADER");
                 break;
             }
         }
@@ -587,7 +586,6 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
         {
             // 找到目标子帧!
             bFoundTargetSubframe = true;
-            WriteLog("bFoundTargetSubframe = true");
 
             // 将指针重置到这个数据包的头部
             nCurIndex = nHeaderPos;
@@ -598,7 +596,6 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
         }
         else
         {
-            WriteLog("bFoundTargetSubframe = false");
             // 这不是期望的子帧,需要丢弃
             nDropSubFrameNum++;
 
@@ -637,7 +634,7 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
         }
         else
         {
-            WriteLog("HeaderCode->Header_vec == DVS_HEADER_014BA");
+            // WriteLog("HeaderCode->Header_vec == DVS_HEADER_014BA");
             break;
         }
     }
@@ -685,13 +682,13 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
         }
     }
 
-    std::string tstr = "Static->Roi_row_stop: " + std::to_string(Static->Roi_row_stop);
-    tstr += "Static->Roi_row_start: " + std::to_string(Static->Roi_row_start);
-    tstr += "Static->Roi_col_stop:" + std::to_string(Static->Roi_col_stop);
-    tstr += "Static->Roi_col_start:" + std::to_string(Static->Roi_col_start);
-    tstr += "nRow:" + std::to_string(nRow);
-    tstr += "nCol:" + std::to_string(nCol);
-    WriteLog(tstr);
+    // std::string tstr = "Static->Roi_row_stop: " + std::to_string(Static->Roi_row_stop);
+    // tstr += "Static->Roi_row_start: " + std::to_string(Static->Roi_row_start);
+    // tstr += "Static->Roi_col_stop:" + std::to_string(Static->Roi_col_stop);
+    // tstr += "Static->Roi_col_start:" + std::to_string(Static->Roi_col_start);
+    // tstr += "nRow:" + std::to_string(nRow);
+    // tstr += "nCol:" + std::to_string(nCol);
+    // WriteLog(tstr);
     if ((Static->Roi_row_stop - Static->Roi_row_start + 1) > nRow ||
         (Static->Roi_col_stop - Static->Roi_col_start + 1) > nCol)
     {
@@ -704,14 +701,10 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
     if (Static->frame_mode == 0)
     {
         bRet = EventModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameInPixelArray);
-        std::string str = "EventModeDecode"+ std::to_string(bRet);
-        WriteLog(str);
     }
     else
     {
         bRet = FrameModeDecode(pucBinData, DVSData, 0, nRow, 0, nCol, &nCurIndex, nBinLens, nSubFrameInPixelArray);
-        std::string str = "FrameModeDecode"+ std::to_string(bRet);
-        WriteLog(str);
     }
 
     if (bRet)
@@ -723,9 +716,9 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
 
         Alp014BAFormatFooter* Footer = (Alp014BAFormatFooter*)(pucBinData + nCurIndex);
 
-        std::string str ="Footer->Footer_vec == DVS_FOOTER_014BA ?:"+std::to_string(Footer->Footer_vec == DVS_FOOTER_014BA);
-        str += "Footer->Dropflag == 0?:" +std::to_string(Footer->Dropflag == 0);
-        WriteLog(str);
+        // std::string str ="Footer->Footer_vec == DVS_FOOTER_014BA ?:"+std::to_string(Footer->Footer_vec == DVS_FOOTER_014BA);
+        // str += "Footer->Dropflag == 0?:" +std::to_string(Footer->Dropflag == 0);
+        // WriteLog(str);
         if (Footer->Footer_vec == DVS_FOOTER_014BA && Footer->Dropflag == 0)
         {
             nCurIndex += sizeof(Alp014BAFormatFooter);
@@ -734,7 +727,7 @@ bool CAlp014BADVSMPAlgorithm::Decode_DropSubFrame(
         }
     }
 
-    WriteLog("End Error");
+    WriteLog("APX014BA EVS Decode_DropSubFrame Error");
     return false;
 }
 

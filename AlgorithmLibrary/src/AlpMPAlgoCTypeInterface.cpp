@@ -151,6 +151,7 @@ uint32_t __stdcall HotPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
         HotpixelRes->ClusterNum = res.ClusterNum;
         HotpixelRes->HotPixelMask.BadPixelNum = res.HotPixelMask.BadPixelNum;
         HotpixelRes->MaxClusterSize = res.MaxClusterSize;
+        HotpixelRes->SlidingWindowMaxHotPixelNum = res.SlidingWindowMaxHotPixelNum;
 
         // LocalData
         HotpixelRes->HotPixelMask.LocalDataSize = res.HotPixelMask.LocalData.size();
@@ -350,6 +351,7 @@ uint32_t __stdcall BadPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
         BadpixelRes->nOffEventsDeadLineNum = res.nOffEventsDeadLineNum;
         BadpixelRes->OffEventsBadPixelMask.BadPixelNum = res.OffEventsBadPixelMask.BadPixelNum;
         BadpixelRes->nOffEventsMaxClusterSize = res.nOffEventsMaxClusterSize;
+        BadpixelRes->nOffEventsSlidingWindowMaxDeadPixelNum = res.nOffEventsSlidingWindowMaxDeadPixelNum;
 
         // LocalData
         BadpixelRes->OffEventsBadPixelMask.LocalDataSize = res.OffEventsBadPixelMask.LocalData.size();
@@ -393,6 +395,7 @@ uint32_t __stdcall BadPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
         BadpixelRes->nOnEventsDeadLineNum = res.nOnEventsDeadLineNum;
         BadpixelRes->OnEventsBadPixelMask.BadPixelNum = res.OnEventsBadPixelMask.BadPixelNum;
         BadpixelRes->nOnEventsMaxClusterSize = res.nOnEventsMaxClusterSize;
+        BadpixelRes->nOnEventsSlidingWindowMaxDeadPixelNum = res.nOnEventsSlidingWindowMaxDeadPixelNum;
 
         // LocalData
         BadpixelRes->OnEventsBadPixelMask.LocalDataSize = res.OnEventsBadPixelMask.LocalData.size();

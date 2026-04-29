@@ -1,5 +1,5 @@
 #pragma once
 
 //#define APS_MP_ALGORITHM_VERSION "01.00.00.00"
-#define MP_ALGORITHM_VERSION "01.10.00.11"
+#define MP_ALGORITHM_VERSION "02.00.00.00"
 

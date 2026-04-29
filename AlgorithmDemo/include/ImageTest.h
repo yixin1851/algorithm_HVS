@@ -39,3 +39,5 @@ void FindFiles(std::string strPath, std::vector<std::string>& FileQuene);
 void saveVectorToCSV(const std::vector<double>& data, int cols, const std::string& filename);
 
 void CalcHotPixel();
+
+void CalcBadpixelEVS();

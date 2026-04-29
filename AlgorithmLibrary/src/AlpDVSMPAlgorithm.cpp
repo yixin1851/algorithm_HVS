@@ -40,6 +40,10 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
 	m_AlgorithmThre.nHotPixelClusterSizeThre = 16;
 	m_AlgorithmThre.nDeadPixelClusterSizeThre = 16;
 	m_PixelFormat = Pixelformat;
+    m_AlgorithmThre.m_nBadPixelSlidingWindowWidth = 14;
+    m_AlgorithmThre.m_nBadPixelSlidingWindowHeight = 38;
+    m_AlgorithmThre.m_nHotPixelSlidingWindowWidth = 24;
+    m_AlgorithmThre.m_nHotPixelSlidingWindowHeight = 96;
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
 
@@ -375,6 +379,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 	HotpixelRes.FourConnectedNum = 0;
 	HotpixelRes.HotLineNum = 0;
     HotpixelRes.MaxClusterSize = 0;
+    HotpixelRes.SlidingWindowMaxHotPixelNum = 0;
 
 	std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 	for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -407,6 +412,15 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 			}
 		}
 	}
+
+    uint32_t nSlidingWindowHotPixelNum{0};
+    if (CalcSlidingWindowBadPixel(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nHotPixelSlidingWindowWidth,m_AlgorithmThre.m_nHotPixelSlidingWindowHeight,nSlidingWindowHotPixelNum)) {
+        HotpixelRes.SlidingWindowMaxHotPixelNum = nSlidingWindowHotPixelNum;
+    } else {
+			std::string strErr = "EVS HotPixel: CalcSlidingWindowBadPixel error";
+			WriteLog(strErr);
+	        return false;
+    }
 
 	for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 	{
@@ -1128,6 +1142,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.nOffEventsDeadPixelNum = 0;
 		BadpixelRes.nOffEventsDeadLineNum = 0;
 	    BadpixelRes.nOffEventsMaxClusterSize = 0;
+	    BadpixelRes.nOffEventsSlidingWindowMaxDeadPixelNum = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1163,6 +1178,15 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 				}
 			}
 		}
+
+	    uint32_t nSlidingWindowOffEventsDeadPixelNum{0};
+	    if (CalcSlidingWindowBadPixel(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nBadPixelSlidingWindowWidth,m_AlgorithmThre.m_nBadPixelSlidingWindowHeight,nSlidingWindowOffEventsDeadPixelNum)) {
+	        BadpixelRes.nOffEventsSlidingWindowMaxDeadPixelNum = nSlidingWindowOffEventsDeadPixelNum;
+	    } else {
+			std::string strErr = "EVS BadPixel: CalcSlidingWindowBadPixel error";
+			WriteLog(strErr);
+	        return false;
+	    }
 
 		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 		{
@@ -1244,6 +1268,7 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 		BadpixelRes.nOnEventsDeadPixelNum = 0;
 		BadpixelRes.nOnEventsDeadLineNum = 0;
 	    BadpixelRes.nOnEventsMaxClusterSize = 0;
+	    BadpixelRes.nOnEventsSlidingWindowMaxDeadPixelNum  = 0;
 
 		std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 		for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -1279,6 +1304,15 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 				}
 			}
 		}
+
+	    uint32_t nSlidingWindowOnEventsDeadPixelNum{0};
+	    if (CalcSlidingWindowBadPixel(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nBadPixelSlidingWindowWidth,m_AlgorithmThre.m_nBadPixelSlidingWindowHeight,nSlidingWindowOnEventsDeadPixelNum)) {
+	        BadpixelRes.nOnEventsSlidingWindowMaxDeadPixelNum = nSlidingWindowOnEventsDeadPixelNum;
+	    } else {
+			std::string strErr = "EVS BadPixel: CalcSlidingWindowBadPixel error";
+			WriteLog(strErr);
+	        return false;
+	    }
 
 		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 		{
@@ -2148,3 +2182,60 @@ int CAlpDVSMPAlgorithm::FindQuadraticXValueFromYValue(const std::vector<std::pai
     }
     return nRet;
 }
+
+bool CAlpDVSMPAlgorithm::CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num) {
+    if (width <= 0 || height <= 0 || sliding_window_width <= 0 || sliding_window_height <= 0) {
+        WriteLog("EVS CalcSlidingWindowBadPixel SlidingWindowSize Error");
+        return false;
+    }
+
+    if (width < sliding_window_width || height < sliding_window_height) {
+        WriteLog("EVS CalcSlidingWindowBadPixel SlidingWindowSize Overflow");
+        return false;
+    }
+
+    if (static_cast<int>(BadPixelMask.size()) < height) {
+        WriteLog("EVS CalcSlidingWindowBadPixel BadPixelMaskHeight Overflow");
+        return false;
+    }
+    for (int r = 0; r < height; ++r) {
+        if (static_cast<int>(BadPixelMask[r].size()) < width) {
+            WriteLog("EVS CalcSlidingWindowBadPixel BadPixelMaskWidth Overflow");
+            return false;
+        }
+    }
+
+    std::vector<std::vector<uint64_t> > prefix(height + 1, std::vector<uint64_t>(width + 1, 0));
+    for (int r = 0; r < height; ++r) {
+        for (int c = 0; c < width; ++c) {
+            uint64_t pixel = (BadPixelMask[r][c] != 0) ? 1u : 0u;
+            prefix[r + 1][c + 1] = pixel
+                                   + prefix[r][c + 1]
+                                   + prefix[r + 1][c]
+                                   - prefix[r][c];
+        }
+    }
+
+    // 遍历所有滑动窗口
+    uint64_t max_bad_pixel_num = 0;
+
+    const int row_end = height - sliding_window_height; // 左上角行最大索引
+    const int col_end = width - sliding_window_width; // 左上角列最大索引
+
+    for (int r = 0; r <= row_end; ++r) {
+        for (int c = 0; c <= col_end; ++c) {
+            uint64_t bad_pixel_num = prefix[r + sliding_window_height][c + sliding_window_width]
+                                     - prefix[r][c + sliding_window_width]
+                                     - prefix[r + sliding_window_height][c]
+                                     + prefix[r][c];
+
+            if (bad_pixel_num > max_bad_pixel_num) {
+                max_bad_pixel_num = bad_pixel_num;
+            }
+        }
+    }
+
+    sliding_window_badpixel_num = static_cast<uint32_t>(max_bad_pixel_num);
+    return true;
+}
+

@@ -1093,6 +1093,70 @@ void saveVectorToCSV(const std::vector<double> &data, int cols, const std::strin
 void CalcHotPixel() {
 
     std::string str_path = "D:/Work/Tmp/APX014BA/EVS/CalcHotPixel";
+    // std::string str_path = "D:/Work/Tmp/APX014BA/LumiX/hot_pixel_simulation/RawData";
+
+
+    printf("str_path:%s\r\n", str_path.c_str());
+    std::vector<std::string> FileQuene;
+
+    CAlpDVSMPAlgoInterface *gDVSInterface = CreateDVSAlgoInterface(ALP_014BA, "./", BayerGBRG, 0);
+    gDVSInterface->SetMultiThreadEnable(true);
+    gDVSInterface->SetLogEnable(true);
+
+    DVSHotpixelType hotpixel;
+
+    bool bRet = false;
+
+    FindFiles(str_path, FileQuene);
+
+    for (uint32_t nIndex = 0; nIndex < FileQuene.size(); nIndex++) {
+        std::ifstream infile;
+        infile.open(FileQuene[nIndex], std::ios::binary | std::ios::in);
+        if (!infile.fail()) {
+            infile.seekg(0, std::ios::end);
+            uint64_t length = infile.tellg();
+            infile.seekg(0, std::ios::beg);
+            uint8_t *pRawData = new uint8_t[length];
+            infile.read((char *) pRawData, length);
+            infile.close();
+
+            uint32_t dropSubFrameNum{0};
+            // bRet = gDVSInterface->ImportRawData(pRawData, length, nIndex, 64);
+            bRet = gDVSInterface->ImportRawData_DropSubFrame(pRawData, length, 0, 150, dropSubFrameNum);
+            printf("gDVSInterface->ImportRawData_DropSubFrame ret:%d\r\n", bRet);
+            delete[] pRawData;
+        } else {
+            bRet = false;
+            break;
+        }
+    }
+
+    if (bRet) {
+        std::vector<double> MeanData;
+        if (gDVSInterface->HotPixel(0, 150, hotpixel)) {
+            std::cout << "Singlets:" << hotpixel.SingletNum << std::endl;
+            std::cout << "Couplets:" << hotpixel.CoupletNum << std::endl;
+            std::cout << "Clusters:" << hotpixel.ClusterNum << std::endl;
+            std::cout << "SlidingWindowMaxHotPixelNum:" << hotpixel.SlidingWindowMaxHotPixelNum << std::endl;
+        } else {
+            std::cout << "gAPSInterface->HotPixel Failed.\n";
+            return;
+        }
+
+        printf("FileQuene.size:%d\r\n", FileQuene.size());
+        // for (uint32_t nIndex = 0; nIndex < FileQuene.size(); nIndex++) {
+        //     saveVectorToCSV(hotpixel.HotPixelMask.MeanData, 1280, (FileQuene[nIndex]+".csv").c_str());
+        // }
+    } else {
+        std::cout << "ImportData fail " << std::endl;
+    }
+
+    FileQuene.clear();
+	delete gDVSInterface;
+}
+
+void CalcBadpixelEVS() {
+        std::string str_path = "D:/Work/Tmp/APX014BA/EVS/CalcHotPixel";
 
     printf("str_path:%s\r\n", str_path.c_str());
     std::vector<std::string> FileQuene;
@@ -1101,7 +1165,7 @@ void CalcHotPixel() {
     gDVSInterface->SetMultiThreadEnable(true);
     gDVSInterface->SetLogEnable(true);
 
-    DVSHotpixelType hotpixel;
+    DVSBadpixelType badpixel;
 
     bool bRet = false;
 
@@ -1131,13 +1195,22 @@ void CalcHotPixel() {
 
     if (bRet) {
         std::vector<double> MeanData;
-        if (gDVSInterface->HotPixel(0, 150, hotpixel)) {
-            std::cout << "Singlets:" << hotpixel.SingletNum << std::endl;
-            std::cout << "Couplets:" << hotpixel.CoupletNum << std::endl;
-            std::cout << "Clusters:" << hotpixel.ClusterNum << std::endl;
-            // MeanData = hotpixel.HotPixelMask.MeanData;
+
+        uint32_t nPeakNum = 3;
+        DVSPeakInfo PeakInfoRes;
+        gDVSInterface->FindPeak(0, 150, 4, PeakInfoRes, On_OffEvents);
+        if (gDVSInterface->BadPixel(0, 150,&PeakInfoRes,nPeakNum, On_OffEvents,badpixel)) {
+            std::cout << "nOffEventsClusterNum:" << badpixel.nOffEventsClusterNum << std::endl;
+            std::cout << "nOffEventsDeadLineNum:" << badpixel.nOffEventsDeadLineNum << std::endl;
+            std::cout<<"nOffEventsDeadPixelNum:"<<badpixel.nOffEventsDeadPixelNum << std::endl;
+            std::cout<<"nOffEventsMaxClusterSize:"<<badpixel.nOffEventsMaxClusterSize<<std::endl;
+            std::cout<<"nOffEventsSlidingWindowMaxDeadPixelNum:"<<badpixel.nOffEventsSlidingWindowMaxDeadPixelNum<<std::endl;
+
+            std::cout<<"nOnEventsClusterNum:"<<badpixel.nOnEventsClusterNum << std::endl;
+            std::cout<<"nOffEventsSlidingWindowMaxDeadPixelNum:"<<badpixel.nOffEventsSlidingWindowMaxDeadPixelNum << std::endl;
+
         } else {
-            std::cout << "gAPSInterface->HotPixel Failed.\n";
+            std::cout << "gAPSInterface->BadPixel Failed.\n";
             return;
         }
 

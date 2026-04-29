@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(AlgorithmDemo VERSION 1.0.0 LANGUAGES CXX)
 
-set(ALGO_VERSION "AlgorithmLibrary1.10.0.11")
+set(ALGO_VERSION "AlgorithmLibrary2.0.0.0")
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

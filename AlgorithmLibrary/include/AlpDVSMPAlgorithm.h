@@ -79,6 +79,7 @@ protected:
     virtual std::vector<double> solve_quadratic_equation(double a, double b, double c);
     virtual std::vector<double> get_quadratic_x_value_from_y_value(double y_target, double a, double b, double c);
     virtual int FindQuadraticXValueFromYValue(const std::vector<std::pair<double, double>>& points, double& y_target, std::vector<double>& x_roots);
+    bool CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;

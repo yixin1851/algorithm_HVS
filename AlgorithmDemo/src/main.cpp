@@ -6,7 +6,6 @@
 #include <windows.h>
 
 
-//ATE��ͼ�ӿ�
 #define LOOP_TEST
 
 int main()
@@ -95,6 +94,7 @@ int main()
     for (int i = 0; i < thread_count; ++i) {
         threads[i] = std::thread([i]() {
             CalcHotPixel();
+            // CalcBadpixelEVS();
         });
     }
 
