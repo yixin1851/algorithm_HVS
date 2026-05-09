@@ -288,6 +288,42 @@ typedef struct
 
 typedef struct
 {
+    std::vector<std::vector<double>> RIGbChannelBlockData;
+    std::vector<std::vector<double>> RIBChannelBlockData;
+    std::vector<std::vector<double>> RIRChannelBlockData;
+    std::vector<std::vector<double>> RIGrChannelBlockData;
+    double RIGbChannelBlockMax;
+    double RIGbChannelBlockMin;
+    double RIBChannelBlockMax;
+    double RIBChannelBlockMin;
+    double RIRChannelBlockMax;
+    double RIRChannelBlockMin;
+    double RIGrChannelBlockMax;
+    double RIGrChannelBlockMin;
+    double RIGbChannel;
+    double RIBChannel;
+    double RIRChannel;
+    double RIGrChannel;
+}APSRIType;
+
+typedef struct
+{
+    std::vector<std::vector<double>> RUGbBlockData;
+    double RUGbBlockDataMax;
+    double RUGbBlockDataMin;
+    std::vector<std::vector<double>> RUBBlockData;
+    double RUBBlockDataMax;
+    double RUBBlockDataMin;
+    std::vector<std::vector<double>> RURBlockData;
+    double RURBlockDataMax;
+    double RURBlockDataMin;
+    std::vector<std::vector<double>> RUGrBlockData;
+    double RUGrBlockDataMax;
+    double RUGrBlockDataMin;
+}APSRUType;
+
+typedef struct
+{
 	double dHotPixelThre;
 	double dHotLineThre;
 	double dBadPixelThre;
@@ -311,6 +347,12 @@ typedef struct
 	uint32_t nBadPixelLocalColOffset;
 	uint32_t nLinearityRadius;
 	uint32_t nOETCRadius;
+    uint32_t nSFRRowBlockNum;
+    uint32_t nSFRColBlockNum;
+    uint32_t nRIRowBlockNum;
+    uint32_t nRIColBlockNum;
+    uint32_t nRURowBlockNum;
+    uint32_t nRUColBlockNum;
 }APSAlgorithmThre;
 
 typedef struct
@@ -481,7 +523,10 @@ public:
 	virtual bool Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSaturationType& SaturationRes) = 0;
 	virtual bool OETC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nNumberInOneStep, ROIArea* ROI, SubFrameIndex nChannelIndex, APSOETCType& OETCRes) = 0;
 	virtual bool Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSSNRType& SSNRRes) = 0;
-	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData) = 0;
+    virtual bool SpatialFrequencyResponse(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t BlackLevelValue, APSColorShadingType& ShadingRes) = 0;
+    virtual bool RelativeIllumination(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t BlackLevelValue, APSRIType& RIRes) = 0;
+    virtual bool RelativeUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t BlackLevelValue, APSRUType &RURes) = 0;
+    virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData) = 0;
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData) = 0;
 	virtual bool Show(uint32_t nIndex, uint16_t * RawData) = 0;
 	virtual void SetMultiThreadEnable(bool bEnable = true) = 0;

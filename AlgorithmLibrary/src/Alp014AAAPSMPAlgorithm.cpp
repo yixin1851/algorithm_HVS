@@ -38,7 +38,11 @@ CAlp014AAAPSMPAlgorithm::CAlp014AAAPSMPAlgorithm(SensorType Sensortype, APSRawTy
 		m_AlgorithmThre.nPedestalVariationColBlockSize = 160;
 	}
 
-	m_AlgorithmThre.nOETCRadius = 128;
+    m_AlgorithmThre.nRIRowBlockNum = 24;
+    m_AlgorithmThre.nRIColBlockNum = 32;
+    m_AlgorithmThre.nRURowBlockNum = 32;
+    m_AlgorithmThre.nRUColBlockNum = 40;
+    m_AlgorithmThre.nOETCRadius = 128;
 	m_AlgorithmThre.nLinearityRadius = 32;
 
 	m_nMaxSubFramesNum = 1;
@@ -1552,6 +1556,163 @@ bool CAlp014AAAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, 
 	}
 
 	return true;
+}
+
+bool CAlp014AAAPSMPAlgorithm::SpatialFrequencyResponse(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, uint32_t BlackLevelValue, APSColorShadingType &ShadingRes) {
+    // TODO:SpatialFrequencyResponse
+    return false;
+}
+
+bool CAlp014AAAPSMPAlgorithm::RelativeIllumination(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, uint32_t BlackLevelValue, APSRIType &RIRes) {
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < m_nMaxSubFramesNum; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "RelativeIllumination: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "RelativeIllumination: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, m_nMaxSubFramesNum);
+		return false;
+	}
+    RIRes.RIGbChannelBlockMax = 0;
+    RIRes.RIGbChannelBlockMin = 0;
+    RIRes.RIBChannelBlockMax = 0;
+    RIRes.RIBChannelBlockMin = 0;
+    RIRes.RIRChannelBlockMax = 0;
+    RIRes.RIRChannelBlockMin = 0;
+    RIRes.RIGrChannelBlockMax = 0;
+    RIRes.RIGrChannelBlockMin = 0;
+    RIRes.RIGbChannel = 0;
+    RIRes.RIBChannel = 0;
+    RIRes.RIRChannel = 0;
+    RIRes.RIGrChannel = 0;
+
+	uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+	std::vector<CAPSDataContainer>BlockData(m_nMaxSubFramesNum);
+
+	// 分块均值计算
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nRIRowBlockNum, m_AlgorithmThre.nRIColBlockNum, BlockData))
+	{
+		std::string strErr = "RelativeIllumination: GetBlockMean error";
+		WriteLog(strErr, m_nMaxSubFramesNum);
+		return false;
+	}
+
+    double GbChannelBlockMax{0};
+    double GbChannelBlockMin{1023};
+    RIRes.RIGbChannelBlockData.resize(m_AlgorithmThre.nRIRowBlockNum);
+    for (int r = 0; r < m_AlgorithmThre.nRIRowBlockNum; r++) {
+        RIRes.RIGbChannelBlockData[r].resize(m_AlgorithmThre.nRIColBlockNum);
+        for (int c = 0; c < m_AlgorithmThre.nRIColBlockNum; c++) {
+            RIRes.RIGbChannelBlockData[r][c] = BlockData[Gb].m_RawData[r][c];
+            if (GbChannelBlockMax < RIRes.RIGbChannelBlockData[r][c]) GbChannelBlockMax = RIRes.RIGbChannelBlockData[r][c];
+            if (GbChannelBlockMin > RIRes.RIGbChannelBlockData[r][c]) GbChannelBlockMin = RIRes.RIGbChannelBlockData[r][c];
+        }
+    }
+    RIRes.RIGbChannelBlockMax = (GbChannelBlockMax < BlackLevelValue) ? 0 : (GbChannelBlockMax - BlackLevelValue);
+    RIRes.RIGbChannelBlockMin = (GbChannelBlockMin < BlackLevelValue) ? 0 : (GbChannelBlockMin - BlackLevelValue);
+    RIRes.RIGbChannel = (RIRes.RIGbChannelBlockMax == 0) ? 0 : (RIRes.RIGbChannelBlockMin / RIRes.RIGbChannelBlockMax * 100);
+	return true;
+}
+
+bool CAlp014AAAPSMPAlgorithm::RelativeUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, uint32_t BlackLevelValue, APSRUType &RURes) {
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+
+
+    for (uint32_t nChannelIndex = 0; nChannelIndex < m_nMaxSubFramesNum; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "RelativeUniformity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "RelativeUniformity: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, m_nMaxSubFramesNum);
+		return false;
+	}
+
+    RURes.RUGbBlockDataMax = 0.0;
+    RURes.RUBBlockDataMax  = 0.0;
+    RURes.RURBlockDataMax  = 0.0;
+    RURes.RUGrBlockDataMax = 0.0;
+    RURes.RUGbBlockDataMin = 1023.0;
+    RURes.RUBBlockDataMin  = 1023.0;
+    RURes.RURBlockDataMin  = 1023.0;
+    RURes.RUGrBlockDataMin = 1023.0;
+
+    std::vector<CAPSDataContainer>BlockData(m_nMaxSubFramesNum);
+
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nRURowBlockNum, m_AlgorithmThre.nRUColBlockNum, BlockData))
+	{
+		std::string strErr = "RelativeUniformity: GetBlockMean error";
+		WriteLog(strErr, m_nMaxSubFramesNum);
+		return false;
+	}
+
+    for (int r = 0; r < m_AlgorithmThre.nRURowBlockNum; r++) {
+        RURes.RUGbBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+        for (int c = 0; c < m_AlgorithmThre.nRUColBlockNum; c++) {
+            RURes.RUGbBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+
+            double ui_gb = (BlockData[Gb].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[Gb].m_RawData[r][c]-BlackLevelValue);
+
+            double neighborSumGb = 0.0;
+            int neighborCountGb = 0;
+
+            int dRow[] = {-1, 1, 0, 0};
+            int dCol[] = {0, 0, -1, 1};
+
+            for (int k = 0; k < 4; ++k) {
+                int ni = r + dRow[k];
+                int nj = c + dCol[k];
+                if (ni >= 0 && ni < m_AlgorithmThre.nRURowBlockNum && nj >= 0 && nj < m_AlgorithmThre.nRUColBlockNum) {
+                    neighborSumGb += ((BlockData[Gb].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[Gb].m_RawData[ni][nj] - BlackLevelValue));
+                    neighborCountGb++;
+                }
+            }
+
+            if (neighborCountGb > 0 && std::abs(ui_gb) > 1e-9) {
+                double uk_gb = neighborSumGb / neighborCountGb;
+                double currentRU = std::abs((ui_gb - uk_gb) / ui_gb) * 100.0;
+
+                RURes.RUGbBlockData[r][c] = currentRU;
+                if (currentRU > RURes.RUGbBlockDataMax) RURes.RUGbBlockDataMax = currentRU;
+                if (currentRU < RURes.RUGbBlockDataMin) RURes.RUGbBlockDataMin = currentRU;
+            }
+
+        }
+    }
+
+    return true;
 }
 
 bool CAlp014AAAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData)

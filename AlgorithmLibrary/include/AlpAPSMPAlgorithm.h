@@ -38,6 +38,9 @@ public:
 	virtual bool Saturation(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSaturationType &SaturationRes);
 	virtual bool OETC(uint32_t nIndexStart, uint32_t nNumber, uint32_t nNumberInOneStep, ROIArea* ROI, SubFrameIndex nChannelIndex, APSOETCType& OETCRes);
 	virtual bool Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSSSNRType& SSNRRes);
+    virtual bool SpatialFrequencyResponse(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t BlackLevelValue, APSColorShadingType& ShadingRes);
+	virtual bool RelativeIllumination(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t BlackLevelValue, APSRIType& RIRes);
+	virtual bool RelativeUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, uint32_t BlackLevelValue, APSRUType &RURes);
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, bool bNormalize, ImgType& ImgData);
 	virtual bool Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* ROI, SubFrameIndex nChannelIndex, APSType& ImgData);
 	virtual bool Show(uint32_t nIndex, uint16_t* RawData);

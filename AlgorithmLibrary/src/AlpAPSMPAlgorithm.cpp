@@ -65,6 +65,12 @@ CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype
 	m_AlgorithmThre.nBadPixelLocalColOffset = 52;  // for 003CA
 	m_AlgorithmThre.nOETCRadius = 64;
 	m_AlgorithmThre.nLinearityRadius = 16;
+    m_AlgorithmThre.nSFRRowBlockNum = 24;
+    m_AlgorithmThre.nSFRColBlockNum = 32;
+    m_AlgorithmThre.nRIRowBlockNum = 24;
+    m_AlgorithmThre.nRIColBlockNum = 32;
+    m_AlgorithmThre.nRURowBlockNum = 64;
+    m_AlgorithmThre.nRUColBlockNum = 80;
 	m_nCode = code;
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
@@ -1994,6 +2000,238 @@ bool CAlpAPSMPAlgorithm::Linearity(uint32_t nIndexStart, uint32_t nNumber, ROIAr
 		SSNRRes.MaxSSNR = SSNRRes.SSNR[nMaxLocal];
 	}
 
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::SpatialFrequencyResponse(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, uint32_t BlackLevelValue, APSColorShadingType &ShadingRes) {
+    // TODO:SpatialFrequencyResponse
+	return false;
+}
+
+bool CAlpAPSMPAlgorithm::RelativeIllumination(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, uint32_t BlackLevelValue, APSRIType &RIRes) {
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "RelativeIllumination: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "RelativeIllumination: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+    RIRes.RIGbChannelBlockMax = 0;
+    RIRes.RIGbChannelBlockMin = 0;
+    RIRes.RIBChannelBlockMax = 0;
+    RIRes.RIBChannelBlockMin = 0;
+    RIRes.RIRChannelBlockMax = 0;
+    RIRes.RIRChannelBlockMin = 0;
+    RIRes.RIGrChannelBlockMax = 0;
+    RIRes.RIGrChannelBlockMin = 0;
+    RIRes.RIGbChannel = 0;
+    RIRes.RIBChannel = 0;
+    RIRes.RIRChannel = 0;
+    RIRes.RIGrChannel = 0;
+
+    uint32_t nRow = RealRoi.Down - RealRoi.Up + 1;
+	uint32_t nCol = RealRoi.Right - RealRoi.Left + 1;
+	std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
+
+	// 分块均值计算
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nRIRowBlockNum, m_AlgorithmThre.nRIColBlockNum, BlockData))
+	{
+		std::string strErr = "RelativeIllumination: GetBlockMean error";
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+    double BChannelBlockMax{0};
+    double GbChannelBlockMax{0};
+    double GrChannelBlockMax{0};
+    double RChannelBlockMax{0};
+
+    double BChannelBlockMin{1023};
+    double GbChannelBlockMin{1023};
+    double GrChannelBlockMin{1023};
+    double RChannelBlockMin{1023};
+    RIRes.RIGbChannelBlockData.resize(m_AlgorithmThre.nRIRowBlockNum);
+    RIRes.RIBChannelBlockData.resize(m_AlgorithmThre.nRIRowBlockNum);
+    RIRes.RIRChannelBlockData.resize(m_AlgorithmThre.nRIRowBlockNum);
+    RIRes.RIGrChannelBlockData.resize(m_AlgorithmThre.nRIRowBlockNum);
+    for (int r = 0; r < m_AlgorithmThre.nRIRowBlockNum; r++) {
+        RIRes.RIGbChannelBlockData[r].resize(m_AlgorithmThre.nRIColBlockNum);
+        RIRes.RIBChannelBlockData[r].resize(m_AlgorithmThre.nRIColBlockNum);
+        RIRes.RIRChannelBlockData[r].resize(m_AlgorithmThre.nRIColBlockNum);
+        RIRes.RIGrChannelBlockData[r].resize(m_AlgorithmThre.nRIColBlockNum);
+        for (int c = 0; c < m_AlgorithmThre.nRIColBlockNum; c++) {
+            RIRes.RIBChannelBlockData[r][c] = BlockData[B].m_RawData[r][c];
+            RIRes.RIGbChannelBlockData[r][c] = BlockData[Gb].m_RawData[r][c];
+            RIRes.RIGrChannelBlockData[r][c] = BlockData[Gr].m_RawData[r][c];
+            RIRes.RIRChannelBlockData[r][c] = BlockData[R].m_RawData[r][c];
+            if (BChannelBlockMax < RIRes.RIBChannelBlockData[r][c]) BChannelBlockMax = RIRes.RIBChannelBlockData[r][c];
+            if (GbChannelBlockMax < RIRes.RIGbChannelBlockData[r][c]) GbChannelBlockMax = RIRes.RIGbChannelBlockData[r][c];
+            if (GrChannelBlockMax < RIRes.RIGrChannelBlockData[r][c]) GrChannelBlockMax = RIRes.RIGrChannelBlockData[r][c];
+            if (RChannelBlockMax < RIRes.RIRChannelBlockData[r][c]) RChannelBlockMax = RIRes.RIRChannelBlockData[r][c];
+
+            if (BChannelBlockMin > RIRes.RIBChannelBlockData[r][c]) BChannelBlockMin = RIRes.RIBChannelBlockData[r][c];
+            if (GbChannelBlockMin > RIRes.RIGbChannelBlockData[r][c]) GbChannelBlockMin = RIRes.RIGbChannelBlockData[r][c];
+            if (GrChannelBlockMin > RIRes.RIGrChannelBlockData[r][c]) GrChannelBlockMin = RIRes.RIGrChannelBlockData[r][c];
+            if (RChannelBlockMin > RIRes.RIRChannelBlockData[r][c]) RChannelBlockMin = RIRes.RIRChannelBlockData[r][c];
+        }
+    }
+    RIRes.RIGbChannelBlockMax = (GbChannelBlockMax < BlackLevelValue) ? 0 : (GbChannelBlockMax - BlackLevelValue);
+    RIRes.RIGbChannelBlockMin = (GbChannelBlockMin < BlackLevelValue) ? 0 : (GbChannelBlockMin - BlackLevelValue);
+    RIRes.RIBChannelBlockMax = (BChannelBlockMax < BlackLevelValue) ? 0 : (BChannelBlockMax - BlackLevelValue);
+    RIRes.RIBChannelBlockMin = (BChannelBlockMin < BlackLevelValue) ? 0 : (BChannelBlockMin - BlackLevelValue);
+    RIRes.RIRChannelBlockMax = (RChannelBlockMax < BlackLevelValue) ? 0 : (RChannelBlockMax - BlackLevelValue);
+    RIRes.RIRChannelBlockMin = (RChannelBlockMin < BlackLevelValue) ? 0 : (RChannelBlockMin - BlackLevelValue);
+    RIRes.RIGrChannelBlockMax = (GrChannelBlockMax < BlackLevelValue) ? 0 : (GrChannelBlockMax - BlackLevelValue);
+    RIRes.RIGrChannelBlockMin = (GrChannelBlockMin < BlackLevelValue) ? 0 : (GrChannelBlockMin - BlackLevelValue);
+    RIRes.RIGbChannel = (RIRes.RIGbChannelBlockMax == 0) ? 0 : (RIRes.RIGbChannelBlockMin / RIRes.RIGbChannelBlockMax * 100);
+    RIRes.RIBChannel = (RIRes.RIBChannelBlockMax == 0) ? 0 : (RIRes.RIBChannelBlockMin / RIRes.RIBChannelBlockMax * 100);
+    RIRes.RIRChannel = (RIRes.RIRChannelBlockMax == 0) ? 0 : (RIRes.RIRChannelBlockMin / RIRes.RIRChannelBlockMax * 100);
+    RIRes.RIGrChannel = (RIRes.RIGrChannelBlockMax == 0) ? 0 : (RIRes.RIGrChannelBlockMin / RIRes.RIGrChannelBlockMax * 100);
+	return true;
+}
+
+bool CAlpAPSMPAlgorithm::RelativeUniformity(uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI, uint32_t BlackLevelValue, APSRUType &RURes) {
+	ROIArea RealRoi = { 0 };
+	if (ROI == nullptr)
+	{
+		RealRoi = m_ActiveArea;
+	}
+	else
+	{
+		RealRoi = *ROI;
+	}
+	for (uint32_t nChannelIndex = 0; nChannelIndex < SubFrameIndex::All; nChannelIndex++)
+	{
+		if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
+		{
+			std::string strErr = "RelativeUniformity: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+			WriteLog(strErr, nChannelIndex);
+			return false;
+		}
+	}
+
+	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
+	{
+		std::string strErr = "RelativeUniformity: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+    RURes.RUGbBlockDataMax = 0.0;
+    RURes.RUBBlockDataMax  = 0.0;
+    RURes.RURBlockDataMax  = 0.0;
+    RURes.RUGrBlockDataMax = 0.0;
+    RURes.RUGbBlockDataMin = 1023.0;
+    RURes.RUBBlockDataMin  = 1023.0;
+    RURes.RURBlockDataMin  = 1023.0;
+    RURes.RUGrBlockDataMin = 1023.0;
+
+    std::vector<CAPSDataContainer>BlockData(SubFrameIndex::All);
+
+	if (!GetBlockMean(nIndexStart, nNumber, &RealRoi, m_AlgorithmThre.nRURowBlockNum, m_AlgorithmThre.nRUColBlockNum, BlockData))
+	{
+		std::string strErr = "RelativeUniformity: GetBlockMean error";
+		WriteLog(strErr, SubFrameIndex::All);
+		return false;
+	}
+
+    for (int r = 0; r < m_AlgorithmThre.nRURowBlockNum; r++) {
+        RURes.RUGbBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+        RURes.RUBBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+        RURes.RURBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+        RURes.RUGrBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+        for (int c = 0; c < m_AlgorithmThre.nRUColBlockNum; c++) {
+            RURes.RUGbBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+            RURes.RUBBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+            RURes.RURBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+            RURes.RUGrBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+            double ui_gb = (BlockData[Gb].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[Gb].m_RawData[r][c]-BlackLevelValue);
+            double ui_b =(BlockData[B].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[B].m_RawData[r][c]-BlackLevelValue);
+            double ui_r =(BlockData[R].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[R].m_RawData[r][c]-BlackLevelValue);
+            double ui_gr = (BlockData[Gr].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[Gr].m_RawData[r][c]-BlackLevelValue);
+
+            double neighborSumGb = 0.0;
+            double neighborSumB = 0.0;
+            double neighborSumR = 0.0;
+            double neighborSumGr = 0.0;
+            int neighborCountGb = 0;
+            int neighborCountB = 0;
+            int neighborCountR = 0;
+            int neighborCountGr = 0;
+
+            int dRow[] = {-1, 1, 0, 0};
+            int dCol[] = {0, 0, -1, 1};
+
+            for (int k = 0; k < 4; ++k) {
+                int ni = r + dRow[k];
+                int nj = c + dCol[k];
+
+                if (ni >= 0 && ni < m_AlgorithmThre.nRUColBlockNum && nj >= 0 && nj < m_AlgorithmThre.nRUColBlockNum) {
+                    neighborSumGb += ((BlockData[Gb].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[Gb].m_RawData[ni][nj] - BlackLevelValue));
+                    neighborSumB += ((BlockData[B].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[B].m_RawData[ni][nj] - BlackLevelValue));
+                    neighborSumR += ((BlockData[R].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[R].m_RawData[ni][nj] - BlackLevelValue));
+                    neighborSumGr += ((BlockData[Gr].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[Gr].m_RawData[ni][nj] - BlackLevelValue));
+                    neighborCountGb++;
+                    neighborCountB++;
+                    neighborCountR++;
+                    neighborCountGr++;
+                }
+            }
+
+            if (neighborCountGb > 0 && std::abs(ui_gb) > 1e-9) {
+                double uk_gb = neighborSumGb / neighborCountGb;
+                double currentRU = std::abs((ui_gb - uk_gb) / ui_gb) * 100.0;
+
+                RURes.RUGbBlockData[r][c] = currentRU;
+                if (currentRU > RURes.RUGbBlockDataMax) RURes.RUGbBlockDataMax = currentRU;
+                if (currentRU < RURes.RUGbBlockDataMin) RURes.RUGbBlockDataMin = currentRU;
+            }
+
+            if (neighborCountB > 0 && std::abs(ui_b) > 1e-9) {
+                double uk_b = neighborSumB / neighborCountB;
+                double currentRU = std::abs((ui_b - uk_b) / ui_b) * 100.0;
+
+                if (currentRU > RURes.RUBBlockDataMax) RURes.RUBBlockDataMax = currentRU;
+                if (currentRU < RURes.RUBBlockDataMin) RURes.RUBBlockDataMin = currentRU;
+            }
+            if (neighborCountR > 0 && std::abs(ui_r) > 1e-9) {
+                double uk_r = neighborSumR / neighborCountR;
+
+                double currentRU = std::abs((ui_r - uk_r) / ui_r) * 100.0;
+
+                RURes.RUBBlockData[r][c] = currentRU;
+                if (currentRU > RURes.RUBBlockDataMax) RURes.RUBBlockDataMax = currentRU;
+                if (currentRU < RURes.RUBBlockDataMin) RURes.RUBBlockDataMin = currentRU;
+            }
+            if (neighborCountGr > 0 && std::abs(ui_gr) > 1e-9) {
+                double uk_gr = neighborSumGr / neighborCountGr;
+                double currentRU = std::abs((ui_gr - uk_gr) / ui_gr) * 100.0;
+
+                RURes.RUGrBlockData[r][c] = currentRU;
+                if (currentRU > RURes.RUGrBlockDataMax) RURes.RUGrBlockDataMax = currentRU;
+                if (currentRU < RURes.RUGrBlockDataMin) RURes.RUGrBlockDataMin = currentRU;
+            }
+        }
+    }
 	return true;
 }
 
