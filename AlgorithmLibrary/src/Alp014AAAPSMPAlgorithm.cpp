@@ -336,6 +336,7 @@ bool CAlp014AAAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, R
 	BadpixelRes.LadderNum = 0;
 	BadpixelRes.SingletNum = 0;
 	BadpixelRes.MaxClusterSize = 0;
+    BadpixelRes.nSlidingWindowMaxBadPixelNum = 0;
 	BadpixelRes.BadPixelMask.BadPixelNum = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
@@ -379,6 +380,25 @@ bool CAlp014AAAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, R
 			BadpixelRes.BadPixelMask = BadpixelRes.SubFrameBadpixelData[0].BadPixelMask;
 			BadpixelRes.MaxClusterSize = BadpixelRes.SubFrameBadpixelData[0].MaxClusterSize;
 			BadpixelRes.LadderNum = 0;
+	    // for (uint32_t nIndex = 0; nIndex < m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.BadPixelNum; nIndex++)
+	    // {
+	    //     pImage[m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
+	    // }
+
+	    std::vector<std::vector<uint32_t>> tmpBadPixelMask(m_nTotalRow,std::vector<uint32_t>(m_nTotalCol, 0));
+	    for (uint32_t nIndex = 0; nIndex < BadpixelRes.SubFrameBadpixelData[0].BadPixelMask.BadPixelNum; nIndex++)
+	    {
+	        // pImage[m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].x * nCol + m_BadPixel.SubFrameBadpixelData[nChannel].BadPixelMask.LocalData[nIndex].y] = 255;
+	        tmpBadPixelMask[BadpixelRes.SubFrameBadpixelData[0].BadPixelMask.LocalData[nIndex].x][BadpixelRes.SubFrameBadpixelData[0].BadPixelMask.LocalData[nIndex].y] = 255;
+	    }
+	    uint32_t nSlidingWindowBadPixelNum{0};
+	    if (CalcSlidingWindowBadPixel(tmpBadPixelMask,m_nTotalCol,m_nTotalRow,m_AlgorithmThre.m_nBadPixelSlidingWindowWidth,m_AlgorithmThre.m_nBadPixelSlidingWindowHeight,nSlidingWindowBadPixelNum)) {
+	        BadpixelRes.nSlidingWindowMaxBadPixelNum = nSlidingWindowBadPixelNum;
+	    } else {
+	        std::string strErr = "APS BadPixel: CalcSlidingWindowBadPixel error";
+	        WriteLog(strErr, SubFrameIndex::All);
+	        return false;
+	    }
 	}
 	return bRet;
 }

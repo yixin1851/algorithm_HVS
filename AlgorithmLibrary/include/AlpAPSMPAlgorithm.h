@@ -94,6 +94,8 @@ protected:
 	void SubFrameReadNoise(uint32_t nIndex1, uint32_t nIndex2, ROIArea* ROI, SubFrameIndex nChannelIndex, APSReadNoiseType& ReadNoiseRes, bool& bRes, RawDataContainer& DataContainer);
 
 	void ImportDataTo16SubFrame(uint32_t nIndexStart, uint32_t nNumber);
+
+    bool CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;

@@ -783,6 +783,7 @@ uint32_t __stdcall BadPixelTypeCAPS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
         BadpixelRes->LadderNum = res.LadderNum;
         BadpixelRes->ClusterNum = res.ClusterNum;
         BadpixelRes->MaxClusterSize = res.MaxClusterSize;
+        BadpixelRes->nSlidingWindowMaxBadPixelNum = res.nSlidingWindowMaxBadPixelNum;
 
         // BadPixelMask
         BadpixelRes->BadPixelMask.BadPixelNum = res.BadPixelMask.BadPixelNum;

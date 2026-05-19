@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 #include "AlpMPAlgoInterface.h"
+#include <chrono>
+#include <thread>
 
 static CAlpDVSMPAlgoInterface* gDVSInterface = nullptr;
 static CAlpAPSMPAlgoInterface* gAPSInterface = nullptr;
@@ -1224,4 +1226,74 @@ void CalcBadpixelEVS() {
 
     FileQuene.clear();
 	delete gDVSInterface;
+}
+
+void CalcBadpixelAPS() {
+    std::string str_path = "D:/Work/Tmp/APX014BA/OffLineTest/Q520060-02_60C_3PCS_DL1_DL3";
+
+    printf("str_path:%s\r\n", str_path.c_str());
+    std::vector<std::string> FileQuene;
+
+    CAlpAPSMPAlgoInterface *gAPSInterface = CreateAPSAlgoInterface(ALP_014BA, UNPACK10, "D:/", BayerGBRG, 0);
+    gAPSInterface->SetMultiThreadEnable(true);
+    gAPSInterface->SetLogEnable(true);
+
+    APSBadpixelType badpixel;
+
+    bool bRet = false;
+
+    FindFiles(str_path, FileQuene);
+    double sum_use_time{0.0};
+
+    for (uint32_t nIndex = 0; nIndex < FileQuene.size(); nIndex++) {
+        std::ifstream infile;
+        infile.open(FileQuene[nIndex], std::ios::binary | std::ios::in);
+        if (!infile.fail()) {
+            infile.seekg(0, std::ios::end);
+            uint64_t length = infile.tellg();
+            infile.seekg(0, std::ios::beg);
+            uint8_t *pRawData = new uint8_t[length];
+            infile.read((char *) pRawData, length);
+            infile.close();
+
+            uint32_t dropSubFrameNum{0};
+            bRet = gAPSInterface->ImportRawData(pRawData, length, 0, 1);
+            // bRet = gDVSInterface->ImportRawData_DropSubFrame(pRawData, length, 0, 1, dropSubFrameNum);
+            printf("gAPSInterface->ImportRawData ret:%d\r\n", bRet);
+
+            if (bRet) {
+                auto start = std::chrono::high_resolution_clock::now();
+                bRet = gAPSInterface->BadPixel(0, 1, nullptr, badpixel);
+                auto end = std::chrono::high_resolution_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                sum_use_time +=duration.count();
+                printf("================ gAPSInterface->BadPixel use time: %d ms.\r\n", duration.count());
+                if (bRet) {
+                    std::cout << "badpixel.BadPixelNum:" << badpixel.BadPixelNum << std::endl;
+                    std::cout << "badpixel.ClusterNum:" << badpixel.ClusterNum << std::endl;
+                    std::cout << "badpixel.SingletNum:" << badpixel.SingletNum << std::endl;
+                    std::cout << "badpixel.CoupletNum:" << badpixel.CoupletNum << std::endl;
+                    std::cout << "badpixel.LadderNum:" << badpixel.LadderNum << std::endl;
+                    std::cout << "badpixel.MaxClusterSize:" << badpixel.MaxClusterSize << std::endl;
+                    std::cout << "badpixel.nSlidingWindowMaxBadPixelNum:" << badpixel.nSlidingWindowMaxBadPixelNum << std::endl;
+                } else {
+                    std::cout << "gAPSInterface->BadPixel Failed.\n";
+                    return;
+                }
+
+                printf("File.size:%d\r\n", FileQuene.size());
+            } else {
+                std::cout << "ImportData fail " << std::endl;
+            }
+            delete[] pRawData;
+        } else {
+            bRet = false;
+            break;
+        }
+    }
+
+    printf("average_use_time: %f ms.\r\n", sum_use_time/FileQuene.size());
+
+    FileQuene.clear();
+    delete gAPSInterface;
 }

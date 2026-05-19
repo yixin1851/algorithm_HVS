@@ -134,6 +134,7 @@ typedef struct {
     uint32_t MaxClusterSize;
     BadPixelMaskType BadPixelMask;
     std::vector<APSSubFrameBadpixelType> SubFrameBadpixelData;
+    uint32_t nSlidingWindowMaxBadPixelNum;
 } APSBadpixelType;
 
 typedef struct {
@@ -157,6 +158,7 @@ typedef struct {
     BadPixelMaskTypeC BadPixelMask;
     size_t SubFrameBadpixelDataSize;
     APSSubFrameBadpixelTypeC *SubFrameBadpixelData;
+    uint32_t nSlidingWindowMaxBadPixelNum;
 } APSBadpixelTypeC;
 
 typedef struct {
@@ -308,6 +310,8 @@ typedef struct {
     uint32_t nBadPixelLocalColOffset;
     uint32_t nLinearityRadius;
     uint32_t nOETCRadius;
+    uint32_t m_nBadPixelSlidingWindowWidth;
+    uint32_t m_nBadPixelSlidingWindowHeight;
 } APSAlgorithmThre;
 
 typedef struct {

@@ -6,7 +6,7 @@
 #include <windows.h>
 
 
-#define LOOP_TEST
+// #define LOOP_TEST
 
 int main()
 {
@@ -88,13 +88,14 @@ int main()
 	//GetOETC(path);
 
 	//DPC_On_ChipTest();
-    const int thread_count = 16;
+    const int thread_count = 1;
     std::thread threads[thread_count];
 
     for (int i = 0; i < thread_count; ++i) {
         threads[i] = std::thread([i]() {
-            CalcHotPixel();
+            // CalcHotPixel();
             // CalcBadpixelEVS();
+            CalcBadpixelAPS();
         });
     }
 

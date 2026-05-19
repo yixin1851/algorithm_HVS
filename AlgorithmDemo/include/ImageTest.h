@@ -41,3 +41,5 @@ void saveVectorToCSV(const std::vector<double>& data, int cols, const std::strin
 void CalcHotPixel();
 
 void CalcBadpixelEVS();
+
+void CalcBadpixelAPS();

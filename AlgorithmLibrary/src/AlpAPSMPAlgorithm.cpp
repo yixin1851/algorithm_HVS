@@ -72,6 +72,8 @@ CAlpAPSMPAlgorithm::CAlpAPSMPAlgorithm(SensorType Sensortype, APSRawType Rawtype
     m_AlgorithmThre.nRURowBlockNum = 64;
     m_AlgorithmThre.nRUColBlockNum = 80;
 	m_nCode = code;
+    m_AlgorithmThre.m_nBadPixelSlidingWindowWidth = 32;
+    m_AlgorithmThre.m_nBadPixelSlidingWindowHeight = 32;
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
 
@@ -315,6 +317,7 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 	BadpixelRes.LadderNum = 0;
 	BadpixelRes.SingletNum = 0;
 	BadpixelRes.MaxClusterSize = 0;
+	BadpixelRes.nSlidingWindowMaxBadPixelNum = 0;
 	BadpixelRes.BadPixelMask.BadPixelNum = 0;
 	BadpixelRes.BadPixelMask.LocalData.clear();
 	BadpixelRes.BadPixelMask.Flag.clear();
@@ -412,6 +415,15 @@ bool CAlpAPSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, ROIAre
 			}
 			BadPixelMask[temp.x][temp.y] = BadpixelRes.BadPixelMask.Flag[n];
 		}
+	    uint32_t nSlidingWindowBadPixelNum{0};
+	    if (CalcSlidingWindowBadPixel(BadPixelMask,m_nTotalCol,m_nTotalRow,m_AlgorithmThre.m_nBadPixelSlidingWindowWidth,m_AlgorithmThre.m_nBadPixelSlidingWindowHeight,nSlidingWindowBadPixelNum)) {
+	        BadpixelRes.nSlidingWindowMaxBadPixelNum = nSlidingWindowBadPixelNum;
+	    } else {
+	        std::string strErr = "APS BadPixel: CalcSlidingWindowBadPixel error";
+	        WriteLog(strErr, SubFrameIndex::All);
+	        return false;
+	    }
+
 
 		for (uint32_t nRows = 0; nRows < m_nTotalRow; nRows++)
 		{
@@ -5895,4 +5907,60 @@ void CAlpAPSMPAlgorithm::ImportDataTo16SubFrame(uint32_t nIndexStart, uint32_t n
 			}
 		}
 	}
+}
+
+bool CAlpAPSMPAlgorithm::CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num) {
+    if (width <= 0 || height <= 0 || sliding_window_width <= 0 || sliding_window_height <= 0) {
+        WriteLog("APS CalcSlidingWindowBadPixel SlidingWindowSize Error", SubFrameIndex::All);
+        return false;
+    }
+
+    if (width < sliding_window_width || height < sliding_window_height) {
+        WriteLog("APS CalcSlidingWindowBadPixel SlidingWindowSize Overflow", SubFrameIndex::All);
+        return false;
+    }
+
+    if (static_cast<int>(BadPixelMask.size()) < height) {
+        WriteLog("APS CalcSlidingWindowBadPixel BadPixelMaskHeight Overflow", SubFrameIndex::All);
+        return false;
+    }
+    for (int r = 0; r < height; ++r) {
+        if (static_cast<int>(BadPixelMask[r].size()) < width) {
+            WriteLog("APS CalcSlidingWindowBadPixel BadPixelMaskWidth Overflow", SubFrameIndex::All);
+            return false;
+        }
+    }
+
+    std::vector<std::vector<uint64_t> > prefix(height + 1, std::vector<uint64_t>(width + 1, 0));
+    for (int r = 0; r < height; ++r) {
+        for (int c = 0; c < width; ++c) {
+            uint64_t pixel = (BadPixelMask[r][c] != 0) ? 1u : 0u;
+            prefix[r + 1][c + 1] = pixel
+                                   + prefix[r][c + 1]
+                                   + prefix[r + 1][c]
+                                   - prefix[r][c];
+        }
+    }
+
+    // 遍历所有滑动窗口
+    uint64_t max_bad_pixel_num = 0;
+
+    const int row_end = height - sliding_window_height; // 左上角行最大索引
+    const int col_end = width - sliding_window_width; // 左上角列最大索引
+
+    for (int r = 0; r <= row_end; ++r) {
+        for (int c = 0; c <= col_end; ++c) {
+            uint64_t bad_pixel_num = prefix[r + sliding_window_height][c + sliding_window_width]
+                                     - prefix[r][c + sliding_window_width]
+                                     - prefix[r + sliding_window_height][c]
+                                     + prefix[r][c];
+
+            if (bad_pixel_num > max_bad_pixel_num) {
+                max_bad_pixel_num = bad_pixel_num;
+            }
+        }
+    }
+
+    sliding_window_badpixel_num = static_cast<uint32_t>(max_bad_pixel_num);
+    return true;
 }
