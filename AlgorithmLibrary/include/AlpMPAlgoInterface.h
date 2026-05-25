@@ -376,6 +376,9 @@ typedef struct
     uint32_t m_nHotPixelSlidingWindowHeight;
     uint32_t m_nBadPixelSlidingWindowWidth;
     uint32_t m_nBadPixelSlidingWindowHeight;
+    uint32_t m_nHotPixelBlockRowNum;
+    uint32_t m_nHotPixelBlockColNum;
+    uint32_t m_nBlockConnectedHotPixelThd;
 }DVSAlgorithmThre;
 
 typedef struct
@@ -478,6 +481,7 @@ typedef struct
     uint32_t MaxClusterSize;
 	BadPixelMaskType HotPixelMask;
     uint32_t SlidingWindowMaxHotPixelNum;
+    uint32_t nMaxConnectedBadBlockNum;
 }DVSHotpixelType;
 
 typedef enum

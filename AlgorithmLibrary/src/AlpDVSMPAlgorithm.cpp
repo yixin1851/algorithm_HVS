@@ -44,6 +44,9 @@ CAlpDVSMPAlgorithm::CAlpDVSMPAlgorithm(SensorType Sensortype, std::string strLog
     m_AlgorithmThre.m_nBadPixelSlidingWindowHeight = 38;
     m_AlgorithmThre.m_nHotPixelSlidingWindowWidth = 24;
     m_AlgorithmThre.m_nHotPixelSlidingWindowHeight = 96;
+    m_AlgorithmThre.m_nHotPixelBlockRowNum = 64;
+    m_AlgorithmThre.m_nHotPixelBlockColNum = 320;
+    m_AlgorithmThre.m_nBlockConnectedHotPixelThd = 6;
 
 	m_RawDataContainer.resize(SubFrameIndex::All);
 
@@ -380,6 +383,7 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 	HotpixelRes.HotLineNum = 0;
     HotpixelRes.MaxClusterSize = 0;
     HotpixelRes.SlidingWindowMaxHotPixelNum = 0;
+    HotpixelRes.nMaxConnectedBadBlockNum = 0;
 
 	std::vector<std::vector<uint32_t>> BadPixelMask(m_nTotalRow);
 	for (uint32_t i = 0; i < m_nTotalRow; i++)
@@ -420,6 +424,16 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 			std::string strErr = "EVS HotPixel: CalcSlidingWindowBadPixel error";
 			WriteLog(strErr);
 	        return false;
+    }
+
+    uint32_t nMaxConnectedBadBlockNum{0};
+
+    if (CalcMaxConnectedBadBlock(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nHotPixelBlockRowNum,m_AlgorithmThre.m_nHotPixelBlockColNum,m_AlgorithmThre.m_nBlockConnectedHotPixelThd,nMaxConnectedBadBlockNum)) {
+        HotpixelRes.nMaxConnectedBadBlockNum = nMaxConnectedBadBlockNum;
+    } else {
+        std::string strErr = "EVS HotPixel: CalcMaxConnectedBadBlock error";
+        WriteLog(strErr);
+        return false;
     }
 
 	for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
@@ -2239,3 +2253,149 @@ bool CAlpDVSMPAlgorithm::CalcSlidingWindowBadPixel(const std::vector<std::vector
     return true;
 }
 
+bool CAlpDVSMPAlgorithm::CalcMaxConnectedBadBlock(const std::vector<std::vector<uint32_t> >& BadPixelMask, uint32_t width, uint32_t height, uint32_t BlockRowNum, uint32_t BlockColNum, uint32_t BlockBadPixelNumThd, uint32_t& MaxConnectedBadBlockNum){
+    if (width <= 0 || height <= 0) return false;
+    if (BlockRowNum == 0 || BlockColNum == 0) return false;
+
+    uint32_t blockH = height / BlockRowNum;
+    uint32_t blockW = width  / BlockColNum;
+
+    if (blockH == 0 || blockW == 0) return false;
+
+    // Éú³É BadBlockMask, BlockRowNum ¡Á BlockColNum
+    std::vector<std::vector<uint8_t> > BadBlockMask(BlockRowNum, std::vector<uint8_t>(BlockColNum, 0));
+
+    for (uint32_t br = 0; br < BlockRowNum; ++br)
+    {
+        uint32_t rowStart = br * blockH;
+        uint32_t rowEnd   = rowStart + blockH;
+
+        for (uint32_t bc = 0; bc < BlockColNum; ++bc)
+        {
+            uint32_t colStart = bc * blockW;
+            uint32_t colEnd   = colStart + blockW;
+
+            uint32_t blockConnectedBadPixelNum = 0;
+            {
+                uint32_t localH = rowEnd  - rowStart;
+                uint32_t localW = colEnd  - colStart;
+
+                std::vector<std::vector<bool> > visited(localH, std::vector<bool>(localW, false));
+
+                for (uint32_t r = rowStart; r < rowEnd; ++r)
+                {
+                    for (uint32_t c = colStart; c < colEnd; ++c)
+                    {
+                        uint32_t lr = r - rowStart;
+                        uint32_t lc = c - colStart;
+
+                        if (BadPixelMask[r][c] == 0 || visited[lr][lc])
+                            continue;
+
+                        uint32_t componentSize = 0;
+                        std::queue<std::pair<uint32_t, uint32_t> > q;
+
+                        q.push(std::make_pair(r, c));
+                        visited[lr][lc] = true;
+
+                        while (!q.empty())
+                        {
+                            std::pair<uint32_t, uint32_t> front = q.front();
+                            uint32_t cr = front.first;
+                            uint32_t cc = front.second;
+                            q.pop();
+                            ++componentSize;
+
+                            for (int dr = -1; dr <= 1; ++dr)
+                            {
+                                for (int dc = -1; dc <= 1; ++dc)
+                                {
+                                    if (dr == 0 && dc == 0) continue;
+
+                                    int nr = static_cast<int>(cr) + dr;
+                                    int nc = static_cast<int>(cc) + dc;
+
+                                    if (nr < static_cast<int>(rowStart) ||
+                                        nr >= static_cast<int>(rowEnd))   continue;
+                                    if (nc < static_cast<int>(colStart) ||
+                                        nc >= static_cast<int>(colEnd))   continue;
+
+                                    uint32_t nlr = static_cast<uint32_t>(nr) - rowStart;
+                                    uint32_t nlc = static_cast<uint32_t>(nc) - colStart;
+
+                                    if (BadPixelMask[static_cast<uint32_t>(nr)]
+                                                    [static_cast<uint32_t>(nc)] != 0
+                                        && !visited[nlr][nlc])
+                                    {
+                                        visited[nlr][nlc] = true;
+                                        q.push(std::make_pair(
+                                            static_cast<uint32_t>(nr),
+                                            static_cast<uint32_t>(nc)));
+                                    }
+                                }
+                            }
+                        }
+
+                        blockConnectedBadPixelNum = (blockConnectedBadPixelNum < componentSize) ? componentSize : blockConnectedBadPixelNum;
+                    }
+                }
+            }
+
+            BadBlockMask[br][bc] = (blockConnectedBadPixelNum > BlockBadPixelNumThd) ? 1u : 0u;
+        }
+    }
+
+    MaxConnectedBadBlockNum = 0;
+
+    std::vector<std::vector<bool> > blockVisited(
+        BlockRowNum, std::vector<bool>(BlockColNum, false));
+
+    for (uint32_t br = 0; br < BlockRowNum; ++br)
+    {
+        for (uint32_t bc = 0; bc < BlockColNum; ++bc)
+        {
+            if (BadBlockMask[br][bc] != 1 || blockVisited[br][bc])
+                continue;
+
+            uint32_t componentSize = 0;
+            std::queue<std::pair<uint32_t, uint32_t> > q;
+            q.push(std::make_pair(br, bc));
+            blockVisited[br][bc] = true;
+
+            while (!q.empty())
+            {
+                std::pair<uint32_t, uint32_t> front = q.front();
+                uint32_t cr = front.first;
+                uint32_t cc = front.second;
+                q.pop();
+                ++componentSize;
+
+                for (int dr = -1; dr <= 1; ++dr)
+                {
+                    for (int dc = -1; dc <= 1; ++dc)
+                    {
+                        if (dr == 0 && dc == 0) continue;
+
+                        int nr = static_cast<int>(cr) + dr;
+                        int nc = static_cast<int>(cc) + dc;
+
+                        if (nr < 0 || nr >= static_cast<int>(BlockRowNum)) continue;
+                        if (nc < 0 || nc >= static_cast<int>(BlockColNum)) continue;
+
+                        uint32_t unr = static_cast<uint32_t>(nr);
+                        uint32_t unc = static_cast<uint32_t>(nc);
+
+                        if (BadBlockMask[unr][unc] == 1 && !blockVisited[unr][unc])
+                        {
+                            blockVisited[unr][unc] = true;
+                            q.push(std::make_pair(unr, unc));
+                        }
+                    }
+                }
+            }
+
+            MaxConnectedBadBlockNum = (MaxConnectedBadBlockNum < componentSize) ? componentSize : MaxConnectedBadBlockNum;
+        }
+    }
+    return true;
+}

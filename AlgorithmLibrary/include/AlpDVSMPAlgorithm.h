@@ -3,6 +3,7 @@
 #include "DVSDataContainer.h"
 #include "APSDataContainer.h"
 #include <mutex>
+#include <queue>
 
 typedef std::vector<CDVSDataContainer> DVSRawDataContainer;
 enum EVS_SUBSAMEPLE_MODE {
@@ -80,6 +81,7 @@ protected:
     virtual std::vector<double> get_quadratic_x_value_from_y_value(double y_target, double a, double b, double c);
     virtual int FindQuadraticXValueFromYValue(const std::vector<std::pair<double, double>>& points, double& y_target, std::vector<double>& x_roots);
     bool CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num);
+    bool CalcMaxConnectedBadBlock(const std::vector<std::vector<uint32_t>>& BadPixelMask, uint32_t width, uint32_t height, uint32_t BlockRowNum, uint32_t BlockColNum, uint32_t BlockBadPixelNumThd, uint32_t& MaxConnectedBadBlockNum);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;
