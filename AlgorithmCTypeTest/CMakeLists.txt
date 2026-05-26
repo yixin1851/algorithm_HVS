@@ -23,7 +23,7 @@ add_executable(${PROJECT_NAME}
         ${HEADERS}
         ${SRC}
 )
-set(THIRD_PARTY_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_lib/${ALGO_VERSION}/CTypeInterface/${CURRENT_PLATFORM}/Release/bin")
+set(THIRD_PARTY_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_lib/${ALGO_VERSION}/CTypeInterface/${CURRENT_PLATFORM}")
 # 将头文件添加到target
 target_sources(${PROJECT_NAME} PRIVATE ${THIRD_PARTY_HEADERS})
 
@@ -75,14 +75,14 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${THIRD_PARTY_BIN_DIR}/AlgorithmLibrary.dll"
+        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#        "${THIRD_PARTY_LIB_DIR}/AlgorithmLibrary.lib"
-#        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#        "${THIRD_PARTY_LIB_DIR}/AlgorithmLibrary.exp"
-#        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${THIRD_PARTY_LIB_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<CONFIG:Debug>:d>.lib"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${THIRD_PARTY_LIB_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<CONFIG:Debug>:d>.exp"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMENT "Copying third-party library files"
 )
 add_version_info(${PROJECT_NAME})

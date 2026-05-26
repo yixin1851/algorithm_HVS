@@ -98,14 +98,16 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${THIRD_PARTY_BIN_DIR}/Release/bin/AlgorithmLibrary.dll"
+        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
 #        "${THIRD_PARTY_LIB_DIR}/AlgorithmLibrary.lib"
-#        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-#    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.lib"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
 #        "${THIRD_PARTY_LIB_DIR}/AlgorithmLibrary.exp"
-#        $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.exp"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMENT "Copying third-party library files"
 )
 add_version_info(${PROJECT_NAME})
