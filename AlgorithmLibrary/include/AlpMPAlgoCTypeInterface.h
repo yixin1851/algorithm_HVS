@@ -286,6 +286,42 @@ typedef struct {
     std::vector<double> SubFrameKValue;
 } APSDarkCurrentType;
 
+typedef struct
+{
+    std::vector<std::vector<double>> RIGbChannelBlockData;
+    std::vector<std::vector<double>> RIBChannelBlockData;
+    std::vector<std::vector<double>> RIRChannelBlockData;
+    std::vector<std::vector<double>> RIGrChannelBlockData;
+    double RIGbChannelBlockMax;
+    double RIGbChannelBlockMin;
+    double RIBChannelBlockMax;
+    double RIBChannelBlockMin;
+    double RIRChannelBlockMax;
+    double RIRChannelBlockMin;
+    double RIGrChannelBlockMax;
+    double RIGrChannelBlockMin;
+    double RIGbChannel;
+    double RIBChannel;
+    double RIRChannel;
+    double RIGrChannel;
+}APSRIType;
+
+typedef struct
+{
+    std::vector<std::vector<double>> RUGbBlockData;
+    double RUGbBlockDataMax;
+    double RUGbBlockDataMin;
+    std::vector<std::vector<double>> RUBBlockData;
+    double RUBBlockDataMax;
+    double RUBBlockDataMin;
+    std::vector<std::vector<double>> RURBlockData;
+    double RURBlockDataMax;
+    double RURBlockDataMin;
+    std::vector<std::vector<double>> RUGrBlockData;
+    double RUGrBlockDataMax;
+    double RUGrBlockDataMin;
+}APSRUType;
+
 typedef struct {
     double dHotPixelThre;
     double dHotLineThre;
@@ -312,6 +348,12 @@ typedef struct {
     uint32_t nOETCRadius;
     uint32_t m_nBadPixelSlidingWindowWidth;
     uint32_t m_nBadPixelSlidingWindowHeight;
+    uint32_t nSFRRowBlockNum;
+    uint32_t nSFRColBlockNum;
+    uint32_t nRIRowBlockNum;
+    uint32_t nRIColBlockNum;
+    uint32_t nRURowBlockNum;
+    uint32_t nRUColBlockNum;
 } APSAlgorithmThre;
 
 typedef struct {
@@ -333,7 +375,7 @@ typedef struct {
     uint32_t m_nBadPixelSlidingWindowHeight;
     uint32_t m_nHotPixelBlockRowNum;
     uint32_t m_nHotPixelBlockColNum;
-    uint32_t m_nBlockHotPixelThd;
+    uint32_t m_nBlockConnectedHotPixelThd;
 } DVSAlgorithmThre;
 
 typedef struct {

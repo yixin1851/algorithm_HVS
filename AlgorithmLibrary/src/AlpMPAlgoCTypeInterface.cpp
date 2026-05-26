@@ -534,6 +534,13 @@ uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre) {
         res.nSpatialResponseUniformityRowBlockNum = AlgoThre->nSpatialResponseUniformityRowBlockNum;
         res.nSpatialResponseUniformityColBlockNum = AlgoThre->nSpatialResponseUniformityColBlockNum;
         res.dFlashRatioThre = AlgoThre->dFlashRatioThre;
+        res.m_nHotPixelSlidingWindowWidth = AlgoThre->m_nHotPixelSlidingWindowWidth;
+        res.m_nHotPixelSlidingWindowHeight = AlgoThre->m_nHotPixelSlidingWindowHeight;
+        res.m_nBadPixelSlidingWindowWidth = AlgoThre->m_nBadPixelSlidingWindowWidth;
+        res.m_nBadPixelSlidingWindowHeight = AlgoThre->m_nBadPixelSlidingWindowHeight;
+        res.m_nHotPixelBlockRowNum      =  AlgoThre->m_nHotPixelBlockRowNum;
+        res.m_nHotPixelBlockColNum      =  AlgoThre->m_nHotPixelBlockColNum;
+        res.m_nBlockConnectedHotPixelThd = AlgoThre->m_nBlockConnectedHotPixelThd;
 
         reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->SetAlgorithmThre(res);
         return TEST_NO_ERROR;
@@ -558,7 +565,13 @@ uint32_t __stdcall GetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre) {
         AlgoThre->nSpatialResponseUniformityRowBlockNum = res.nSpatialResponseUniformityRowBlockNum;
         AlgoThre->nSpatialResponseUniformityColBlockNum = res.nSpatialResponseUniformityColBlockNum;
         AlgoThre->dFlashRatioThre = res.dFlashRatioThre;
-
+        AlgoThre->m_nHotPixelSlidingWindowWidth = res.m_nHotPixelSlidingWindowWidth;
+        AlgoThre->m_nHotPixelSlidingWindowHeight = res.m_nHotPixelSlidingWindowHeight;
+        AlgoThre->m_nBadPixelSlidingWindowWidth = res.m_nBadPixelSlidingWindowWidth;
+        AlgoThre->m_nBadPixelSlidingWindowHeight = res.m_nBadPixelSlidingWindowHeight;
+        AlgoThre->m_nHotPixelBlockRowNum = res.m_nHotPixelBlockRowNum;
+        AlgoThre->m_nHotPixelBlockColNum = res.m_nHotPixelBlockColNum;
+        AlgoThre->m_nBlockConnectedHotPixelThd = res.m_nBlockConnectedHotPixelThd;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
@@ -1576,6 +1589,8 @@ uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
         res.nBadPixelLocalColOffset = AlgoThre->nBadPixelLocalColOffset;
         res.nLinearityRadius = AlgoThre->nLinearityRadius;
         res.nOETCRadius = AlgoThre->nOETCRadius;
+        res.m_nBadPixelSlidingWindowWidth = AlgoThre->m_nBadPixelSlidingWindowWidth;
+        res.m_nBadPixelSlidingWindowHeight = AlgoThre->m_nBadPixelSlidingWindowHeight;
         reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SetAlgorithmThre(res);
         return TEST_NO_ERROR;
     } else {
@@ -1610,6 +1625,8 @@ uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
         AlgoThre->nBadPixelLocalColOffset = res.nBadPixelLocalColOffset;
         AlgoThre->nLinearityRadius = res.nLinearityRadius;
         AlgoThre->nOETCRadius = res.nOETCRadius;
+        AlgoThre->m_nBadPixelSlidingWindowWidth  = res.m_nBadPixelSlidingWindowWidth ;
+        AlgoThre->m_nBadPixelSlidingWindowHeight = res.m_nBadPixelSlidingWindowHeight;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
