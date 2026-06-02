@@ -79,8 +79,9 @@ if (WIN32)
 
     # Debug 配置链接 AlgorithmLibraryd.lib
     target_link_libraries(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:AlgorithmLibraryd>
-            $<$<CONFIG:Release>:AlgorithmLibrary>
+#            $<$<CONFIG:Debug>:AlgorithmLibraryd>
+#            $<$<CONFIG:Release>:AlgorithmLibrary>
+            AlgorithmLibrary$<$<CONFIG:Debug>:d>
     )
 endif ()
 

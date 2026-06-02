@@ -28,7 +28,7 @@ set(THIRD_PARTY_BIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_lib/${ALGO_VERSION}/C
 target_sources(${PROJECT_NAME} PRIVATE ${THIRD_PARTY_HEADERS})
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-        AlgorithmLibrary
+        AlgorithmLibrary$<$<CONFIG:Debug>:d>
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
