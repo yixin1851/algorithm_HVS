@@ -1092,11 +1092,10 @@ void saveVectorToCSV(const std::vector<double> &data, int cols, const std::strin
     std::cout << "csv save path: " << filename << std::endl;
 }
 
-void CalcHotPixel() {
-
-    std::string str_path = "D:/Work/Tmp/APX014BA/EVS/CalcHotPixel";
+void CalcHotPixelEVS() {
+    // std::string str_path = "D:/Work/Tmp/APX014BA/EVS/CalcHotPixel";
+    std::string str_path = "D:/Work/Tmp/APX014BA/EVS/Lumix_Hotpixel_BadBlock/CP_Rawdata/Block=3";
     // std::string str_path = "D:/Work/Tmp/APX014BA/LumiX/hot_pixel_simulation/RawData";
-
 
     printf("str_path:%s\r\n", str_path.c_str());
     std::vector<std::string> FileQuene;
@@ -1140,15 +1139,20 @@ void CalcHotPixel() {
             std::cout << "Couplets:" << hotpixel.CoupletNum << std::endl;
             std::cout << "Clusters:" << hotpixel.ClusterNum << std::endl;
             std::cout << "SlidingWindowMaxHotPixelNum:" << hotpixel.SlidingWindowMaxHotPixelNum << std::endl;
+            std::cout << "nMaxConnectedBadBlockNum:" << hotpixel.nMaxConnectedBadBlockNum << std::endl;
+            printf("BadBlockRes:\n");
+            for (int i = 0; i < 64; i++) {
+                for (int j = 0; j < 320; j++) {
+                    printf("[%d][%d]:%d ", i, j, hotpixel.BadBlockMask[i][j]);
+                }
+                printf("\n");
+            }
         } else {
             std::cout << "gAPSInterface->HotPixel Failed.\n";
             return;
         }
 
         printf("FileQuene.size:%d\r\n", FileQuene.size());
-        // for (uint32_t nIndex = 0; nIndex < FileQuene.size(); nIndex++) {
-        //     saveVectorToCSV(hotpixel.HotPixelMask.MeanData, 1280, (FileQuene[nIndex]+".csv").c_str());
-        // }
     } else {
         std::cout << "ImportData fail " << std::endl;
     }
