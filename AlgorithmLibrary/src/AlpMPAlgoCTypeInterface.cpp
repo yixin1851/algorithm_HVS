@@ -121,6 +121,12 @@ void __stdcall HotPixelTypeCDVS_Free(DVSHotpixelTypeC *HotpixelRes) {
             HotpixelRes->HotPixelMask.DiffData = nullptr;
             HotpixelRes->HotPixelMask.DiffDataSize = 0;
         }
+
+        if (HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData) {
+            delete[] HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData;
+            HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData = nullptr;
+            HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize = 0;
+        }
     }
 }
 
@@ -152,6 +158,7 @@ uint32_t __stdcall HotPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
         HotpixelRes->HotPixelMask.BadPixelNum = res.HotPixelMask.BadPixelNum;
         HotpixelRes->MaxClusterSize = res.MaxClusterSize;
         HotpixelRes->SlidingWindowMaxHotPixelNum = res.SlidingWindowMaxHotPixelNum;
+        HotpixelRes->nMaxConnectedBadBlockNum = res.nMaxConnectedBadBlockNum;
 
         // LocalData
         HotpixelRes->HotPixelMask.LocalDataSize = res.HotPixelMask.LocalData.size();
@@ -187,6 +194,22 @@ uint32_t __stdcall HotPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
                       HotpixelRes->HotPixelMask.DiffData);
         } else {
             HotpixelRes->HotPixelMask.DiffData = nullptr;
+        }
+
+        // HotPixelBadBlockMask
+        if (!res.BadBlockMask.empty()) {
+            HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize = res.BadBlockMask[0].size()*res.BadBlockMask.size();
+            if (HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize > 0) {
+                HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData =
+                        new uint32_t[HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize];
+                for (int i=0;i<res.BadBlockMask.size();i++) {
+                    for (int j=0;j<res.BadBlockMask[i].size();j++) {
+                        HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData[i*j+j] = res.BadBlockMask[i][j];
+                    }
+                }
+            } else {
+                HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData = nullptr;
+            }
         }
 
         return TEST_NO_ERROR;
@@ -538,8 +561,8 @@ uint32_t __stdcall SetAlgorithmThreDVS(HANDLE h, DVSAlgorithmThre *AlgoThre) {
         res.m_nHotPixelSlidingWindowHeight = AlgoThre->m_nHotPixelSlidingWindowHeight;
         res.m_nBadPixelSlidingWindowWidth = AlgoThre->m_nBadPixelSlidingWindowWidth;
         res.m_nBadPixelSlidingWindowHeight = AlgoThre->m_nBadPixelSlidingWindowHeight;
-        res.m_nHotPixelBlockRowNum      =  AlgoThre->m_nHotPixelBlockRowNum;
-        res.m_nHotPixelBlockColNum      =  AlgoThre->m_nHotPixelBlockColNum;
+        res.m_nHotPixelBlockRowNum = AlgoThre->m_nHotPixelBlockRowNum;
+        res.m_nHotPixelBlockColNum = AlgoThre->m_nHotPixelBlockColNum;
         res.m_nBlockConnectedHotPixelThd = AlgoThre->m_nBlockConnectedHotPixelThd;
 
         reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->SetAlgorithmThre(res);
@@ -1591,6 +1614,12 @@ uint32_t __stdcall SetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
         res.nOETCRadius = AlgoThre->nOETCRadius;
         res.m_nBadPixelSlidingWindowWidth = AlgoThre->m_nBadPixelSlidingWindowWidth;
         res.m_nBadPixelSlidingWindowHeight = AlgoThre->m_nBadPixelSlidingWindowHeight;
+        res.nSFRRowBlockNum = AlgoThre->nSFRRowBlockNum;
+        res.nSFRColBlockNum = AlgoThre->nSFRColBlockNum;
+        res.nRIRowBlockNum = AlgoThre->nRIRowBlockNum;
+        res.nRIColBlockNum = AlgoThre->nRIColBlockNum;
+        res.nRURowBlockNum = AlgoThre->nRURowBlockNum;
+        res.nRUColBlockNum = AlgoThre->nRUColBlockNum;
         reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SetAlgorithmThre(res);
         return TEST_NO_ERROR;
     } else {

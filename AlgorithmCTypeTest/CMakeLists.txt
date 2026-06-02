@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 project(AlgorithmCTypeTest VERSION 1.0.0 LANGUAGES CXX)
-set(ALGO_VERSION "AlgorithmLibrary1.10.0.13")
+set(ALGO_VERSION "AlgorithmLibrary2.0.1.0")
 # 强制固定在VS2012环境之下
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -78,10 +78,10 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.dll"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${THIRD_PARTY_LIB_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<CONFIG:Debug>:d>.lib"
+        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.lib"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${THIRD_PARTY_LIB_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<CONFIG:Debug>:d>.exp"
+        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.exp"
         $<TARGET_FILE_DIR:${PROJECT_NAME}>
     COMMENT "Copying third-party library files"
 )

@@ -157,6 +157,13 @@ int calcDL5() {
         setResult("HotPixel_FourConnectedNum_DL5", (double) HotpixelRes.FourConnectedNum);
         setResult("HotPixel_ClusterNum_DL5", (double) HotpixelRes.ClusterNum);
         setResult("HotPixel_MaxClusterSize_DL5", (double) HotpixelRes.MaxClusterSize);
+        setResult("HotPixel_nMaxConnectedBadBlockNum_DL5", (double) HotpixelRes.nMaxConnectedBadBlockNum);
+        for (int i = 0; i < 64; i++) {
+            for (int j = 0; j < 320; j++) {
+                std::string str = "Hotpixel_BadBlockMaskTypeC_BadBlockMaskData["+std::to_string(i)+"]["+std::to_string(j)+"]";
+                setResult(str, (double) HotpixelRes.BadBlockMaskTypeC.BadBlockMaskData[i*j+j]);
+            }
+        }
     }
     HotPixelTypeCDVS_Free(&HotpixelRes);
 

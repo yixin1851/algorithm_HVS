@@ -115,6 +115,11 @@ typedef struct {
 } BadPixelMaskTypeC;
 
 typedef struct {
+    size_t BadBlockMaskSize;
+    uint32_t *BadBlockMaskData;
+} HotPixelBadBlockMaskTypeC;
+
+typedef struct {
     uint32_t BadPixelNum;
     uint32_t SingletNum;
     uint32_t CoupletNum;
@@ -509,7 +514,7 @@ typedef struct {
     uint32_t MaxClusterSize;
     uint32_t SlidingWindowMaxHotPixelNum;
     uint32_t nMaxConnectedBadBlockNum;
-    std::vector<std::vector<uint8_t> > BadBlockMask;
+    HotPixelBadBlockMaskTypeC BadBlockMaskTypeC;
 } DVSHotpixelTypeC;
 
 typedef enum {
