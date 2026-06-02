@@ -417,20 +417,13 @@ bool CAlpDVSMPAlgorithm::HotPixel(uint32_t nIndexStart, uint32_t nNumber, DVSHot
 		}
 	}
 
-    uint32_t nSlidingWindowHotPixelNum{0};
-    if (CalcSlidingWindowBadPixel(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nHotPixelSlidingWindowWidth,m_AlgorithmThre.m_nHotPixelSlidingWindowHeight,nSlidingWindowHotPixelNum)) {
-        HotpixelRes.SlidingWindowMaxHotPixelNum = nSlidingWindowHotPixelNum;
-    } else {
-			std::string strErr = "EVS HotPixel: CalcSlidingWindowBadPixel error";
-			WriteLog(strErr);
-	        return false;
+    if (!CalcSlidingWindowBadPixel(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nHotPixelSlidingWindowWidth,m_AlgorithmThre.m_nHotPixelSlidingWindowHeight,HotpixelRes.SlidingWindowMaxHotPixelNum)) {
+        std::string strErr = "EVS HotPixel: CalcSlidingWindowBadPixel error";
+        WriteLog(strErr);
+        return false;
     }
 
-    uint32_t nMaxConnectedBadBlockNum{0};
-
-    if (CalcMaxConnectedBadBlock(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nHotPixelBlockRowNum,m_AlgorithmThre.m_nHotPixelBlockColNum,m_AlgorithmThre.m_nBlockConnectedHotPixelThd,nMaxConnectedBadBlockNum)) {
-        HotpixelRes.nMaxConnectedBadBlockNum = nMaxConnectedBadBlockNum;
-    } else {
+    if (!CalcMaxConnectedBadBlock(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nHotPixelBlockRowNum,m_AlgorithmThre.m_nHotPixelBlockColNum,m_AlgorithmThre.m_nBlockConnectedHotPixelThd,HotpixelRes.nMaxConnectedBadBlockNum,HotpixelRes.BadBlockMask )) {
         std::string strErr = "EVS HotPixel: CalcMaxConnectedBadBlock error";
         WriteLog(strErr);
         return false;
@@ -534,7 +527,10 @@ bool CAlpDVSMPAlgorithm::FindPeak(uint32_t nIndexStart, uint32_t nNumber, uint32
 	}
 
 	DVSEventsNumberCountType EventsNumberCountRes;
-	EventsNumberCount(nIndexStart, nNumber, EventsNumberCountRes);
+    if (!EventsNumberCount(nIndexStart, nNumber, EventsNumberCountRes)) {
+        WriteLog("FindPeak: EventsNumberCount error");
+        return false;
+    }
 
 	Peak.nOffEventsPeakNumber = 0;
 	Peak.OffEventsPeakPos.clear();
@@ -814,7 +810,14 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			m_nErrCode = PEAK_NUM_ERROR;
 			return false;
 		}
-
+	    if (Peak->nOffEventsPeakNumber < 2 &&
+	        Peak->OffEventsPeakPos[Peak->nOffEventsPeakNumber - 1] == nIndexStart + nNumber - 1)
+	    {
+	        std::string strErr = "AccompaniedPeakAndDelayedPeak: Not enough off-event-peaks after boundary check";
+	        WriteLog(strErr);
+	        m_nErrCode = PEAK_NUM_ERROR;
+	        return false;
+	    }
 	    // 起始峰值位置确定
 		uint32_t nPeakStartNum = 0;
 		if (Peak->OffEventsPeakPos[Peak->nOffEventsPeakNumber - 1] == nIndexStart + nNumber - 1)
@@ -835,11 +838,18 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			double NextOnEventsPeakNumber = 0;
 			for (uint32_t nIndex = 0; nIndex < nPeakNum && nPeakStartNum >= nIndex; nIndex++)
 			{
+			    uint32_t peakPos = Peak->OffEventsPeakPos[nPeakStartNum - nIndex];
+			    if (peakPos + 1 >= m_RawDataContainer.size()) {
+			        std::string strErr = "AccompaniedPeakAndDelayedPeakRes: Peak->OffEventsPeakPos[nPeakStartNum - nIndex] Error";
+			        WriteLog(strErr);
+			        m_nErrCode = PEAK_NUM_ERROR;
+			        continue;
+			    }
 			    // 累加最近nPeakNum个峰处的OFF事件数
-				OffEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex]].m_OffEventsNum[nChannel];
+				OffEventsPeakNumber += m_RawDataContainer[peakPos].m_OffEventsNum[nChannel];
 			    // 累加这些峰后一帧的OFF和ON事件数
-				NextOffEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OffEventsNum[nChannel];
-				NextOnEventsPeakNumber += m_RawDataContainer[Peak->OffEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OnEventsNum[nChannel];
+			    NextOffEventsPeakNumber += m_RawDataContainer[peakPos + 1].m_OffEventsNum[nChannel];
+				NextOnEventsPeakNumber += m_RawDataContainer[peakPos + 1].m_OnEventsNum[nChannel];
 			}
 
 			if (OffEventsPeakNumber != 0)
@@ -871,7 +881,15 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 
 		uint32_t nPeakStartNum = 0;
 
-		if (Peak->OnEventsPeakPos[Peak->nOnEventsPeakNumber - 1] == nIndexStart + nNumber - 1)
+	    if (Peak->nOnEventsPeakNumber < 2 &&
+            Peak->OnEventsPeakPos[Peak->nOnEventsPeakNumber - 1] == nIndexStart + nNumber - 1)
+	    {
+	        std::string strErr = "AccompaniedPeakAndDelayedPeak: Not enough on-event-peaks after boundary check";
+	        WriteLog(strErr);
+	        m_nErrCode = PEAK_NUM_ERROR;
+	        return false;
+	    }
+	    if (Peak->OnEventsPeakPos[Peak->nOnEventsPeakNumber - 1] == nIndexStart + nNumber - 1)
 		{
 			nPeakStartNum = Peak->nOnEventsPeakNumber - 2;
 		}
@@ -887,9 +905,16 @@ bool CAlpDVSMPAlgorithm::AccompaniedPeakAndDelayedPeak(uint32_t nIndexStart, uin
 			double NextOnEventsPeakNumber = 0;
 			for (uint32_t nIndex = 0; nIndex < nPeakNum && nPeakStartNum >= nIndex; nIndex++)
 			{
-				OnEventsPeakNumber += m_RawDataContainer[Peak->OnEventsPeakPos[nPeakStartNum - nIndex]].m_OnEventsNum[nChannel];
-				NextOffEventsPeakNumber += m_RawDataContainer[Peak->OnEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OffEventsNum[nChannel];
-				NextOnEventsPeakNumber += m_RawDataContainer[Peak->OnEventsPeakPos[nPeakStartNum - nIndex] + 1].m_OnEventsNum[nChannel];
+			    uint32_t peakPos = Peak->OnEventsPeakPos[nPeakStartNum - nIndex];
+			    if (peakPos + 1 >= m_RawDataContainer.size()) {
+			        std::string strErr = "AccompaniedPeakAndDelayedPeakRes: Peak->OnEventsPeakPos[nPeakStartNum - nIndex] Error";
+			        WriteLog(strErr);
+			        m_nErrCode = PEAK_NUM_ERROR;
+			        continue;
+			    }
+			    OnEventsPeakNumber += m_RawDataContainer[peakPos].m_OnEventsNum[nChannel];
+			    NextOffEventsPeakNumber += m_RawDataContainer[peakPos + 1].m_OffEventsNum[nChannel];
+				NextOnEventsPeakNumber += m_RawDataContainer[peakPos + 1].m_OnEventsNum[nChannel];
 			}
 			if (OnEventsPeakNumber != 0)
 			{
@@ -1236,11 +1261,11 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 						AreaSize++;
 						for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 						{
-							if (nTempRows >= 0 && nTempRows < m_nTotalRow)
+							if (nTempRows >= 0 && nTempRows < (int)m_nTotalRow)
 							{
 								for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 								{
-									if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+									if (nTempCols >= 0 && nTempCols < (int)m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 									{
 										BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
 										Search.push({ (uint32_t)nTempRows , (uint32_t)nTempCols });
@@ -1319,14 +1344,11 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 			}
 		}
 
-	    uint32_t nSlidingWindowOnEventsDeadPixelNum{0};
-	    if (CalcSlidingWindowBadPixel(BadPixelMask,nColSize,nRowSize,m_AlgorithmThre.m_nBadPixelSlidingWindowWidth,m_AlgorithmThre.m_nBadPixelSlidingWindowHeight,nSlidingWindowOnEventsDeadPixelNum)) {
-	        BadpixelRes.nOnEventsSlidingWindowMaxDeadPixelNum = nSlidingWindowOnEventsDeadPixelNum;
-	    } else {
-			std::string strErr = "EVS BadPixel: CalcSlidingWindowBadPixel error";
-			WriteLog(strErr);
-	        return false;
-	    }
+        if (!CalcSlidingWindowBadPixel(BadPixelMask, nColSize, nRowSize, m_AlgorithmThre.m_nBadPixelSlidingWindowWidth, m_AlgorithmThre.m_nBadPixelSlidingWindowHeight, BadpixelRes.nOnEventsSlidingWindowMaxDeadPixelNum)) {
+            std::string strErr = "EVS BadPixel: CalcSlidingWindowBadPixel error";
+            WriteLog(strErr);
+            return false;
+        }
 
 		for (uint32_t nRows = m_ActiveArea.Up; nRows <= m_ActiveArea.Down; nRows++)
 		{
@@ -1360,16 +1382,16 @@ bool CAlpDVSMPAlgorithm::BadPixel(uint32_t nIndexStart, uint32_t nNumber, DVSPea
 						Local temp = Search.top();
 						Search.pop();
 						AreaSize++;
-						for (uint32_t nTempRows = temp.x - 1; nTempRows <= temp.x + 1; nTempRows++)
+						for (int nTempRows = (int)temp.x - 1; nTempRows <= (int)temp.x + 1; nTempRows++)
 						{
-							if (nTempRows < m_nTotalRow)
+							if (nTempRows >= 0 && nTempRows < (int)m_nTotalRow)
 							{
-								for (uint32_t nTempCols = temp.y - 1; nTempCols <= temp.y + 1; nTempCols++)
+								for (int nTempCols = (int)temp.y - 1; nTempCols <= (int)temp.y + 1; nTempCols++)
 								{
-									if (nTempCols < m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
+									if (nTempCols >= 0 && nTempCols < (int)m_nTotalCol && BadPixelMask[nTempRows][nTempCols] != 0 && BadPixelMask[nTempRows][nTempCols] < ConnectedAreaFlag)
 									{
 										BadPixelMask[nTempRows][nTempCols] = ConnectedAreaFlag;
-										Search.push({ nTempRows , nTempCols });
+										Search.push({ static_cast<uint32_t>(nTempRows) , static_cast<uint32_t>(nTempCols) });
 									}
 								}
 							}
@@ -2045,7 +2067,7 @@ void CAlpDVSMPAlgorithm::Min(double& dMinValue, Local& MinLocal, CAPSDataContain
 	uint32_t nSize = (RealRoi.Down - RealRoi.Up + 1) * (RealRoi.Right - RealRoi.Left + 1);
 	if (nSize < 1 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
-		std::string strErr = "Max: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
+		std::string strErr = "Min: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
 		WriteLog(strErr);
 		m_nErrCode = DATA_ROI_SET_ERROR;
 		return;
@@ -2198,6 +2220,7 @@ int CAlpDVSMPAlgorithm::FindQuadraticXValueFromYValue(const std::vector<std::pai
 }
 
 bool CAlpDVSMPAlgorithm::CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num) {
+    sliding_window_badpixel_num = 0;
     if (width <= 0 || height <= 0 || sliding_window_width <= 0 || sliding_window_height <= 0) {
         WriteLog("EVS CalcSlidingWindowBadPixel SlidingWindowSize Error");
         return false;
@@ -2253,8 +2276,8 @@ bool CAlpDVSMPAlgorithm::CalcSlidingWindowBadPixel(const std::vector<std::vector
     return true;
 }
 
-bool CAlpDVSMPAlgorithm::CalcMaxConnectedBadBlock(const std::vector<std::vector<uint32_t> >& BadPixelMask, uint32_t width, uint32_t height, uint32_t BlockRowNum, uint32_t BlockColNum, uint32_t BlockBadPixelNumThd, uint32_t& MaxConnectedBadBlockNum){
-    if (width <= 0 || height <= 0) return false;
+bool CAlpDVSMPAlgorithm::CalcMaxConnectedBadBlock(const std::vector<std::vector<uint32_t> >& BadPixelMask, uint32_t width, uint32_t height, uint32_t BlockRowNum, uint32_t BlockColNum, uint32_t BlockBadPixelNumThd, uint32_t& MaxConnectedBadBlockNum,std::vector<std::vector<uint8_t>> &BadBlockMaskRes){
+    if (width == 0 || height == 0) return false;
     if (BlockRowNum == 0 || BlockColNum == 0) return false;
 
     uint32_t blockH = height / BlockRowNum;
@@ -2397,5 +2420,7 @@ bool CAlpDVSMPAlgorithm::CalcMaxConnectedBadBlock(const std::vector<std::vector<
             MaxConnectedBadBlockNum = (MaxConnectedBadBlockNum < componentSize) ? componentSize : MaxConnectedBadBlockNum;
         }
     }
+
+    BadBlockMaskRes = std::move(BadBlockMask);
     return true;
 }

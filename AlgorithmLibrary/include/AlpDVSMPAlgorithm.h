@@ -6,6 +6,7 @@
 #include <queue>
 
 typedef std::vector<CDVSDataContainer> DVSRawDataContainer;
+
 enum EVS_SUBSAMEPLE_MODE {
     EM_EVS_ONLY_FULL_SIZE_MODE = 0,
     EM_EVS_ONLY_1_2_SUB_MODE = 1,
@@ -17,6 +18,7 @@ enum EVS_SUBSAMEPLE_MODE {
     EM_EVS_HVS_1_8_SUB_MODE = 7,
 };
 
+// @formatter:off
 class CAlpDVSMPAlgorithm : public CAlpDVSMPAlgoInterface
 {
 public:
@@ -81,7 +83,7 @@ protected:
     virtual std::vector<double> get_quadratic_x_value_from_y_value(double y_target, double a, double b, double c);
     virtual int FindQuadraticXValueFromYValue(const std::vector<std::pair<double, double>>& points, double& y_target, std::vector<double>& x_roots);
     bool CalcSlidingWindowBadPixel(const std::vector<std::vector<uint32_t>> &BadPixelMask, int width, int height, int sliding_window_width, int sliding_window_height, uint32_t &sliding_window_badpixel_num);
-    bool CalcMaxConnectedBadBlock(const std::vector<std::vector<uint32_t>>& BadPixelMask, uint32_t width, uint32_t height, uint32_t BlockRowNum, uint32_t BlockColNum, uint32_t BlockBadPixelNumThd, uint32_t& MaxConnectedBadBlockNum);
+    bool CalcMaxConnectedBadBlock(const std::vector<std::vector<uint32_t>>& BadPixelMask, uint32_t width, uint32_t height, uint32_t BlockRowNum, uint32_t BlockColNum, uint32_t BlockBadPixelNumThd, uint32_t& MaxConnectedBadBlockNum, std::vector<std::vector<uint8_t>> &BadBlockMaskRes);
 protected:
 	ROIArea m_ActiveArea;
 	uint32_t m_nTotalRow;
@@ -98,3 +100,4 @@ protected:
 	PixelFormatType m_PixelFormat;
 	int m_nCode;
 };
+// @formatter:on

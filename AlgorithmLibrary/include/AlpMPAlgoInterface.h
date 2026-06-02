@@ -482,6 +482,7 @@ typedef struct
 	BadPixelMaskType HotPixelMask;
     uint32_t SlidingWindowMaxHotPixelNum;
     uint32_t nMaxConnectedBadBlockNum;
+    std::vector<std::vector<uint8_t> > BadBlockMask;
 }DVSHotpixelType;
 
 typedef enum

@@ -494,6 +494,7 @@ typedef struct {
     uint32_t MaxClusterSize;
     uint32_t SlidingWindowMaxHotPixelNum;
     uint32_t nMaxConnectedBadBlockNum;
+    std::vector<std::vector<uint8_t> > BadBlockMask;
 } DVSHotpixelType;
 
 typedef struct {
@@ -508,6 +509,7 @@ typedef struct {
     uint32_t MaxClusterSize;
     uint32_t SlidingWindowMaxHotPixelNum;
     uint32_t nMaxConnectedBadBlockNum;
+    std::vector<std::vector<uint8_t> > BadBlockMask;
 } DVSHotpixelTypeC;
 
 typedef enum {
