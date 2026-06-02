@@ -841,7 +841,7 @@ ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_1(HANDLE h, uint32_t nIndexStart, 
 ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_2(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, ROIArea *ROI,
                                                 SubFrameIndex nChannelIndex, APSType *ImgData);
 
-ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_3(HANDLE h, uint32_t nIndex, uint16_t *RawData);
+ALP_ALGO_DLL_API_C uint32_t __stdcall ShowAPS_3(HANDLE h, uint32_t nIndex, uint16_t **RawData);
 
 ALP_ALGO_DLL_API_C uint32_t __stdcall SetMultiThreadEnableAPS(HANDLE h, bool bEnable = true);
 

@@ -200,11 +200,11 @@ uint32_t __stdcall HotPixelTypeCDVS(HANDLE h, uint32_t nIndexStart, uint32_t nNu
         if (!res.BadBlockMask.empty()) {
             HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize = res.BadBlockMask[0].size()*res.BadBlockMask.size();
             if (HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize > 0) {
-                HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData =
-                        new uint32_t[HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize];
-                for (int i=0;i<res.BadBlockMask.size();i++) {
-                    for (int j=0;j<res.BadBlockMask[i].size();j++) {
-                        HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData[i*j+j] = res.BadBlockMask[i][j];
+                HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData = new uint32_t[HotpixelRes->BadBlockMaskTypeC.BadBlockMaskSize];
+                size_t flatIdx = 0;
+                for (size_t i = 0; i < res.BadBlockMask.size(); i++) {
+                    for (size_t j = 0; j < res.BadBlockMask[i].size(); j++) {
+                        HotpixelRes->BadBlockMaskTypeC.BadBlockMaskData[flatIdx++] = res.BadBlockMask[i][j];
                     }
                 }
             } else {
@@ -517,13 +517,7 @@ uint32_t __stdcall ShowDVS(HANDLE h, uint32_t nIndex, uint8_t NoEventFlag, uint8
         if (bRet) {
             uint32_t nTotalRow = 0, nTotalCol = 0;
             reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetRawDataSize(nTotalRow, nTotalCol);
-
-            for (uint32_t nRows = 0; nRows < nTotalRow; nRows++) {
-                for (uint32_t nCols = 0; nCols < nTotalCol; nCols++) {
-                    // ImgData[nRows * nTotalCol + nCols] = res[nRows][nCols];
-                    ImgData->assign(res.begin(), res.end());
-                }
-            }
+            ImgData->assign(res.begin(), res.end());
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpDVSMPAlgoInterface *>(h)->GetErrCode();
@@ -684,6 +678,7 @@ uint32_t __stdcall CalcLightIntensityDVS(HANDLE h, double eventPercent,
         } else {
             return FUNCTION_ERROR;
         }
+        return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
     }
@@ -1552,13 +1547,13 @@ uint32_t __stdcall ShowAPS_2(HANDLE h, uint32_t nIndexStart, uint32_t nNumber, R
     }
 }
 
-uint32_t __stdcall ShowAPS_3(HANDLE h, uint32_t nIndex, uint16_t *RawData) {
+uint32_t __stdcall ShowAPS_3(HANDLE h, uint32_t nIndex, uint16_t **RawData) {
     if (h) {
         uint16_t *RawDataTmp = nullptr;
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->Show(nIndex, RawDataTmp);
 
         if (bRet) {
-            RawData = RawDataTmp;
+            *RawData = RawDataTmp;
             return TEST_NO_ERROR;
         } else {
             return reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->GetCode();
@@ -1656,6 +1651,12 @@ uint32_t __stdcall GetAlgorithmThreAPS(HANDLE h, APSAlgorithmThre *AlgoThre) {
         AlgoThre->nOETCRadius = res.nOETCRadius;
         AlgoThre->m_nBadPixelSlidingWindowWidth  = res.m_nBadPixelSlidingWindowWidth ;
         AlgoThre->m_nBadPixelSlidingWindowHeight = res.m_nBadPixelSlidingWindowHeight;
+        AlgoThre->nSFRRowBlockNum = res.nSFRRowBlockNum;
+        AlgoThre->nSFRColBlockNum = res.nSFRColBlockNum;
+        AlgoThre->nRIRowBlockNum = res.nRIRowBlockNum;
+        AlgoThre->nRIColBlockNum = res.nRIColBlockNum;
+        AlgoThre->nRURowBlockNum = res.nRURowBlockNum;
+        AlgoThre->nRUColBlockNum = res.nRUColBlockNum;
         return TEST_NO_ERROR;
     } else {
         return ALGO_HANDLE_ERROR;
@@ -1677,6 +1678,8 @@ uint32_t __stdcall SaveBinAPS(HANDLE h, uint8_t *pRawData, uint64_t nLens, const
         bool bRet = reinterpret_cast<CAlpAPSMPAlgoInterface *>(h)->SaveBin(pRawData, nLens, strSavePath);
         if (bRet) {
             return TEST_NO_ERROR;
+        } else {
+            return FUNCTION_ERROR;
         }
     } else {
         return ALGO_HANDLE_ERROR;
