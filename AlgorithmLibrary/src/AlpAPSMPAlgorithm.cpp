@@ -1828,7 +1828,7 @@ bool CAlpAPSMPAlgorithm::OETC(uint32_t nIndexStart, uint32_t nNumber, uint32_t n
 		OETCRes.ReadNoiseData[nIndex / nNumberInOneStep] = temp.TempNoise;
 		// 3. 计算Read Noise(通过相邻2帧差分)
 		//SubFrameReadNoise(nIndexStart + nIndex, nIndexStart + nIndex + 1, &RealRoi, nChannelIndex, OETCRes.ReadNoiseData[nIndex / 2], bRes, DataContainer);
-		OETCRes.TNoiseData[nIndex / 2] = temp.TempNoise;
+		OETCRes.TNoiseData[nIndex / nNumberInOneStep] = temp.TempNoise;
         if (!bRes)
         {
             return false;
@@ -2166,16 +2166,16 @@ bool CAlpAPSMPAlgorithm::RelativeUniformity(uint32_t nIndexStart, uint32_t nNumb
 		return false;
 	}
 
+    RURes.RUGbBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+    RURes.RUBBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+    RURes.RURBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+    RURes.RUGrBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
     for (int r = 0; r < m_AlgorithmThre.nRURowBlockNum; r++) {
-        RURes.RUGbBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
-        RURes.RUBBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
-        RURes.RURBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
-        RURes.RUGrBlockData.resize(m_AlgorithmThre.nRURowBlockNum);
+        RURes.RUGbBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+        RURes.RUBBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+        RURes.RURBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
+        RURes.RUGrBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
         for (int c = 0; c < m_AlgorithmThre.nRUColBlockNum; c++) {
-            RURes.RUGbBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
-            RURes.RUBBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
-            RURes.RURBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
-            RURes.RUGrBlockData[r].resize(m_AlgorithmThre.nRUColBlockNum,0.0);
             double ui_gb = (BlockData[Gb].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[Gb].m_RawData[r][c]-BlackLevelValue);
             double ui_b =(BlockData[B].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[B].m_RawData[r][c]-BlackLevelValue);
             double ui_r =(BlockData[R].m_RawData[r][c]<BlackLevelValue)?0:(BlockData[R].m_RawData[r][c]-BlackLevelValue);
@@ -2197,7 +2197,7 @@ bool CAlpAPSMPAlgorithm::RelativeUniformity(uint32_t nIndexStart, uint32_t nNumb
                 int ni = r + dRow[k];
                 int nj = c + dCol[k];
 
-                if (ni >= 0 && ni < m_AlgorithmThre.nRUColBlockNum && nj >= 0 && nj < m_AlgorithmThre.nRUColBlockNum) {
+                if (ni >= 0 && ni < m_AlgorithmThre.nRURowBlockNum && nj >= 0 && nj < m_AlgorithmThre.nRUColBlockNum) {
                     neighborSumGb += ((BlockData[Gb].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[Gb].m_RawData[ni][nj] - BlackLevelValue));
                     neighborSumB += ((BlockData[B].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[B].m_RawData[ni][nj] - BlackLevelValue));
                     neighborSumR += ((BlockData[R].m_RawData[ni][nj] < BlackLevelValue) ? 0 : (BlockData[R].m_RawData[ni][nj] - BlackLevelValue));
@@ -2231,8 +2231,8 @@ bool CAlpAPSMPAlgorithm::RelativeUniformity(uint32_t nIndexStart, uint32_t nNumb
                 double currentRU = std::abs((ui_r - uk_r) / ui_r) * 100.0;
 
                 RURes.RUBBlockData[r][c] = currentRU;
-                if (currentRU > RURes.RUBBlockDataMax) RURes.RUBBlockDataMax = currentRU;
-                if (currentRU < RURes.RUBBlockDataMin) RURes.RUBBlockDataMin = currentRU;
+                if (currentRU > RURes.RURBlockDataMax) RURes.RURBlockDataMax = currentRU;
+                if (currentRU < RURes.RURBlockDataMin) RURes.RURBlockDataMin = currentRU;
             }
             if (neighborCountGr > 0 && std::abs(ui_gr) > 1e-9) {
                 double uk_gr = neighborSumGr / neighborCountGr;
@@ -2369,14 +2369,19 @@ bool CAlpAPSMPAlgorithm::Show(uint32_t nIndexStart, uint32_t nNumber, ROIArea* R
 		Max(dMaxValue, temp, NormalizeDataContainer, &RealRoi);
 		Min(dMinValue, temp, NormalizeDataContainer, &RealRoi);
 
+	    double tmpVal = dMaxValue - dMinValue;
 		for (uint32_t nRows = 0; nRows < nChannelRow; nRows++)
 		{
 			for (uint32_t nCols = 0; nCols < nChannelCol; nCols++)
 			{
 				if (PosInRoi(nRows, nCols, RealRoi))
 				{
-					double NewValue = (NormalizeDataContainer.m_RawData[nRows][nCols] - dMinValue) / (dMaxValue - dMinValue) * 255; // BUG: (dMaxValue - dMinValue)==0时会有除0错误
-					ImgData[nRows][nCols] = round(NewValue);
+				    if (std::abs(tmpVal) > 1e-9) {
+				        double NewValue = (NormalizeDataContainer.m_RawData[nRows][nCols] - dMinValue) / (tmpVal) * 255;
+				        ImgData[nRows][nCols] = round(NewValue);
+				    }else {
+				        ImgData[nRows][nCols] = 128;
+				    }
 				}
 				else
 				{
@@ -2879,7 +2884,7 @@ void CAlpAPSMPAlgorithm::Min(double& dMinValue, Local& MinLocal, CAPSDataContain
 	uint32_t nSize = (RealRoi.Down - RealRoi.Up + 1) * (RealRoi.Right - RealRoi.Left + 1);
 	if (nSize < 1 || RealRoi.Down >= RawData.m_nRow || RealRoi.Right >= RawData.m_nCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
-		std::string strErr = "Max: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
+		std::string strErr = "Min: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(RawData.m_nRow) + ", Col: " + std::to_string(RawData.m_nCol);
 		WriteLog(strErr, SubFrameIndex::All);
 		return;
 	}
@@ -3965,14 +3970,14 @@ void CAlpAPSMPAlgorithm::SubFrameColMean(uint32_t nIndexStart, uint32_t nNumber,
 	}
 	if (0 == nNumber || nIndexStart >= m_RawDataContainer[nChannelIndex].size() || (nIndexStart + nNumber) > m_RawDataContainer[nChannelIndex].size())
 	{
-		std::string strErr = "SubFrameBLCByColBase: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
+		std::string strErr = "SubFrameColMean: Index error: nIndexStart: " + std::to_string(nIndexStart) + ", nNumber: " + std::to_string(nNumber);
 		WriteLog(strErr, nChannelIndex);
 		bRes = false;
 		return;
 	}
 	if (RealRoi.Down >= m_nChannelRow || RealRoi.Right >= m_nChannelCol || RealRoi.Down < RealRoi.Up || RealRoi.Right < RealRoi.Left)
 	{
-		std::string strErr = "SubFrameBLCByColBase: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
+		std::string strErr = "SubFrameColMean: ROI error: ROI: " + std::to_string(RealRoi.Up) + ", " + std::to_string(RealRoi.Down) + ", " + std::to_string(RealRoi.Left) + ", " + std::to_string(RealRoi.Right) + ", Row: " + std::to_string(m_nChannelRow) + ", Col: " + std::to_string(m_nChannelCol);
 		WriteLog(strErr, nChannelIndex);
 		bRes = false;
 		return;
@@ -4133,7 +4138,6 @@ void CAlpAPSMPAlgorithm::SubFrameBlockMean(uint32_t nIndexStart, uint32_t nNumbe
 				nColIndex + nColBlockSize - 1  // Right: 结束列
 			};
 
-			double dValue = 0; // 声明重复
 			BlockData.m_RawData[nRowBlockIndex][nColBlockIndex] = 0;
 			// 遍历当前block的每一行
 			for (uint32_t nRows = temp.Up; nRows <= temp.Down; nRows++)
