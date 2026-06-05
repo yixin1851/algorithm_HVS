@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(AlgorithmDemo VERSION 1.0.0 LANGUAGES CXX)
 
-set(ALGO_VERSION "AlgorithmLibrary2.0.0.1")
+set(ALGO_VERSION "AlgorithmLibrary2.0.1.0")
 # 设置 C++ 标准
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -48,6 +48,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
         $<$<CONFIG:Debug>:_DEBUG>
         $<$<CONFIG:Release>:NDEBUG>
         _CONSOLE
+        ALGORITHM_DEMO_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+        ALGORITHM_DEMO_PROJECT_ROOT="${CMAKE_SOURCE_DIR}"
 )
 
 # 编译选项
@@ -69,20 +71,18 @@ endif ()
 if (WIN32)
     target_include_directories(${PROJECT_NAME} PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}/include
-            ${THIRD_PARTY_BIN_DIR}/include
+            ${CMAKE_SOURCE_DIR}/AlgorithmLibrary/include
     )
-    # 如果需要指定库文件的路径,可以使用:
-    target_link_directories(${PROJECT_NAME} PRIVATE
-            $<$<CONFIG:Debug>:${THIRD_PARTY_BIN_DIR}/Debug/bin>
-            $<$<CONFIG:Release>:${THIRD_PARTY_BIN_DIR}/Release/bin>
-    )
-
-    # Debug 配置链接 AlgorithmLibraryd.lib
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-#            $<$<CONFIG:Debug>:AlgorithmLibraryd>
-#            $<$<CONFIG:Release>:AlgorithmLibrary>
-            AlgorithmLibrary$<$<CONFIG:Debug>:d>
-    )
+    if (TARGET AlgorithmLibrary)
+        target_link_libraries(${PROJECT_NAME} PRIVATE AlgorithmLibrary)
+    else()
+        target_include_directories(${PROJECT_NAME} PRIVATE ${THIRD_PARTY_BIN_DIR}/include)
+        target_link_directories(${PROJECT_NAME} PRIVATE
+                $<$<CONFIG:Debug>:${THIRD_PARTY_BIN_DIR}/Debug/bin>
+                $<$<CONFIG:Release>:${THIRD_PARTY_BIN_DIR}/Release/bin>
+        )
+        target_link_libraries(${PROJECT_NAME} PRIVATE AlgorithmLibrary$<$<CONFIG:Debug>:d>)
+    endif()
 endif ()
 
 # 生成调试信息
@@ -97,18 +97,28 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/BUILD/Release${PROJECT_NAME}/${CURRENT_PLATFORM}/bin"
 )
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.dll"
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#        "${THIRD_PARTY_LIB_DIR}/AlgorithmLibrary.lib"
-        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.lib"
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-#        "${THIRD_PARTY_LIB_DIR}/AlgorithmLibrary.exp"
-        "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.exp"
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>
-    COMMENT "Copying third-party library files"
-)
+if (TARGET AlgorithmLibrary)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:AlgorithmLibrary>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_LINKER_FILE:AlgorithmLibrary>
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMENT "Copying local AlgorithmLibrary build output"
+    )
+else()
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.dll"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.lib"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${THIRD_PARTY_BIN_DIR}/$<CONFIG>/bin/AlgorithmLibrary$<$<CONFIG:Debug>:d>.exp"
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        COMMENT "Copying third-party library files"
+    )
+endif()
 add_version_info(${PROJECT_NAME})
