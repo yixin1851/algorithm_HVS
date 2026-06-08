@@ -604,10 +604,12 @@ ApsDemoConfig LoadProfileConfig(const std::string& profilePath) {
     }
 
     config.sensor = ParseSensor(JsonString(root.get("sensor"), ""), config.sensor);
-    config.multiThread = JsonBool(root.get("multi_thread"), config.multiThread);
     config.logEnable = JsonBool(root.get("log_enabled"), config.logEnable);
+    const simple_json::Value* multiThreadValue = root.get("multi_thread");
     const uint32_t threadCount = JsonUInt(root.get("thread_count"), 0);
-    if (threadCount > 1) {
+    if (multiThreadValue != 0) {
+        config.multiThread = JsonBool(multiThreadValue, config.multiThread);
+    } else if (threadCount > 1) {
         config.multiThread = true;
     }
 
@@ -636,6 +638,12 @@ ApsDemoConfig LoadProfileConfig(const std::string& profilePath) {
     if (ReadRoiObject(root.get("active_area"), activeArea)) {
         config.activeArea = activeArea;
         config.activeAreaEnabled = true;
+    }
+
+    ROIArea roi = config.roi;
+    if (ReadRoiObject(root.get("roi"), roi)) {
+        config.roi = roi;
+        config.roiEnabled = true;
     }
 
     const simple_json::Value* output = root.get("output");

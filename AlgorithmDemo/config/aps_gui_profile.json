@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "mode": "APS",
+  "sensor": "ALP_003CA",
+  "multi_thread": false,
+  "thread_count": 8,
+  "log_enabled": false,
+  "raw": {
+    "path": "E:\\test\\algorithmlibrary_ALP\\test_rawdata\\testdata_center_crop_3264x2448_5frames_u16_from_3280x2464.raw",
+    "width": 3264,
+    "height": 2448,
+    "frames": 5,
+    "frame_start": 0,
+    "raw_type": "UNPACK10",
+    "pixel_format": "QuadBayerGBRG",
+    "header_footer": false
+  },
+  "tests": [
+    {
+      "name": "snoise",
+      "enabled": true
+    },
+    {
+      "name": "tnoise",
+      "enabled": true
+    },
+    {
+      "name": "badpixel",
+      "enabled": true,
+      "thresholds": {
+        "pixel": 0.19,
+        "radius": 1
+      }
+    },
+    {
+      "name": "hotpixel",
+      "enabled": false,
+      "thresholds": {
+        "pixel": 120.0
+      }
+    },
+    {
+      "name": "datamean",
+      "enabled": false
+    },
+    {
+      "name": "dsnu",
+      "enabled": false
+    }
+  ],
+  "conditions": {
+    "repeat_count": 1,
+    "exposure_ms": 0.0,
+    "gain": 0.0,
+    "temperature": 25.0,
+    "note": ""
+  },
+  "output": {
+    "directory": "E:\\test\\algorithmlibrary_ALP\\output\\aps_gui_run",
+    "result_json": "result.json"
+  }
+}
