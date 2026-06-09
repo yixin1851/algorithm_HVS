@@ -115,6 +115,30 @@ END
     # 直接写入RC文件
     file(WRITE "${RC_OUTPUT}" "${RC_CONTENT}")
 
+    # Ninja + MSVC 场景下，rc.exe 有时拿不到 vcvars 设置的 INCLUDE 环境变量。
+    # 从 rc.exe 路径反推 Windows SDK include 目录，保证 <windows.h> 可被资源编译器找到。
+    set(WINDOWS_SDK_INCLUDE_DIRS "")
+    if(CMAKE_RC_COMPILER)
+        get_filename_component(RC_ARCH_DIR "${CMAKE_RC_COMPILER}" DIRECTORY)
+        get_filename_component(RC_VERSION_BIN_DIR "${RC_ARCH_DIR}" DIRECTORY)
+        get_filename_component(RC_BIN_DIR "${RC_VERSION_BIN_DIR}" DIRECTORY)
+        get_filename_component(RC_SDK_ROOT "${RC_BIN_DIR}" DIRECTORY)
+        get_filename_component(RC_SDK_VERSION "${RC_VERSION_BIN_DIR}" NAME)
+        set(RC_SDK_INCLUDE_BASE "${RC_SDK_ROOT}/Include/${RC_SDK_VERSION}")
+        foreach(RC_SDK_SUBDIR um shared ucrt)
+            if(EXISTS "${RC_SDK_INCLUDE_BASE}/${RC_SDK_SUBDIR}")
+                list(APPEND WINDOWS_SDK_INCLUDE_DIRS "${RC_SDK_INCLUDE_BASE}/${RC_SDK_SUBDIR}")
+            endif()
+        endforeach()
+    endif()
+
+    if(WINDOWS_SDK_INCLUDE_DIRS)
+        set_source_files_properties("${RC_OUTPUT}" PROPERTIES
+                INCLUDE_DIRECTORIES "${WINDOWS_SDK_INCLUDE_DIRS}"
+        )
+        message(STATUS "  Windows SDK include dirs = ${WINDOWS_SDK_INCLUDE_DIRS}")
+    endif()
+
     # 将版本资源添加到目标
     target_sources(${TARGET_NAME} PRIVATE ${RC_OUTPUT})
 

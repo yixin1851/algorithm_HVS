@@ -31,6 +31,7 @@ add_executable(${PROJECT_NAME}
         ${HEADERS}
         ${SRC}
 )
+alp_apply_msvc_toolchain_paths(${PROJECT_NAME})
 
 # Windows 特定设置
 if (WIN32)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -364,6 +365,7 @@ class AlgorithmTestWindow(QMainWindow):
         path, _ = QFileDialog.getOpenFileName(self, "Select raw", str(ROOT), "Raw (*.raw);;All files (*)")
         if path:
             self.raw_path.setText(path)
+            self.correct_raw_shape_if_possible()
 
     def browse_output(self) -> None:
         path = QFileDialog.getExistingDirectory(self, "Select output", self.output_dir.text())
@@ -396,6 +398,71 @@ class AlgorithmTestWindow(QMainWindow):
                 }
             tests.append(item)
         return tests
+
+    @staticmethod
+    def infer_raw_shape_from_name(path_text: str) -> tuple[int, int, int] | None:
+        name = Path(path_text).name.lower()
+        match = re.search(r"(\d{2,5})x(\d{2,5}).*?(\d{1,5})\s*frames?", name)
+        if not match:
+            return None
+        return int(match.group(1)), int(match.group(2)), int(match.group(3))
+
+    @staticmethod
+    def expected_raw_bytes(width: int, height: int, frames: int, raw_type: str) -> int:
+        pixels = width * height
+        raw_type = raw_type.lower()
+        if raw_type == "raw8":
+            one_frame_bytes = pixels
+        elif raw_type == "raw10":
+            one_frame_bytes = pixels // 4 * 5
+        elif raw_type == "raw12":
+            one_frame_bytes = pixels // 2 * 3
+        else:
+            one_frame_bytes = pixels * 2
+        return one_frame_bytes * frames
+
+    def correct_raw_shape_if_possible(self, log: bool = True) -> None:
+        raw_path = Path(self.raw_path.text())
+        if not raw_path.exists():
+            return
+
+        actual_bytes = raw_path.stat().st_size
+        current_expected = self.expected_raw_bytes(
+            self.width.value(),
+            self.height.value(),
+            self.frames.value(),
+            self.raw_type.currentText(),
+        )
+        if actual_bytes == current_expected:
+            return
+
+        inferred = self.infer_raw_shape_from_name(self.raw_path.text())
+        if inferred is None:
+            if log:
+                self.append_log(
+                    f"Raw size mismatch before run: raw={actual_bytes}, expected={current_expected}"
+                )
+            return
+
+        width, height, frames = inferred
+        inferred_expected = self.expected_raw_bytes(width, height, frames, self.raw_type.currentText())
+        if actual_bytes != inferred_expected:
+            if log:
+                self.append_log(
+                    "Raw size mismatch before run: "
+                    f"raw={actual_bytes}, expected={current_expected}, "
+                    f"inferred_expected={inferred_expected}"
+                )
+            return
+
+        old_shape = f"{self.width.value()}x{self.height.value()}, frames={self.frames.value()}"
+        self.width.setValue(width)
+        self.height.setValue(height)
+        self.frames.setValue(frames)
+        if log:
+            self.append_log(
+                f"Raw size auto-corrected from file name: {old_shape} -> {width}x{height}, frames={frames}"
+            )
 
     def build_profile(self) -> dict:
         profile = {
@@ -435,6 +502,7 @@ class AlgorithmTestWindow(QMainWindow):
         return profile
 
     def save_profile(self) -> None:
+        self.correct_raw_shape_if_possible()
         profile_path = Path(self.profile_path.text())
         profile_path.parent.mkdir(parents=True, exist_ok=True)
         profile_path.write_text(json.dumps(self.build_profile(), indent=2), encoding="utf-8")
@@ -531,6 +599,7 @@ class AlgorithmTestWindow(QMainWindow):
         self.save_before_run.setChecked(bool(session.get("save_before_run", self.save_before_run.isChecked())))
         self.auto_load_result.setChecked(bool(session.get("auto_load_result", self.auto_load_result.isChecked())))
         self.clear_log_on_run.setChecked(bool(session.get("clear_log_on_run", self.clear_log_on_run.isChecked())))
+        self.correct_raw_shape_if_possible(log=False)
 
     def load_roi(self, data: dict, up: QSpinBox, down: QSpinBox, left: QSpinBox, right: QSpinBox) -> None:
         up.setValue(int(data.get("up", up.value())))
@@ -647,9 +716,8 @@ class AlgorithmTestWindow(QMainWindow):
             return
         if exit_code != 0:
             self.statusBar().showMessage(f"Failed: exit={exit_code}")
-            self.append_log("Skip loading result.json because this run failed.")
-            return
-        self.statusBar().showMessage(f"Finished: exit={exit_code}")
+        else:
+            self.statusBar().showMessage(f"Finished: exit={exit_code}")
         if self.auto_load_result.isChecked():
             self.load_result()
 

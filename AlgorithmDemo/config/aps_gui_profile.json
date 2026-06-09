@@ -3,7 +3,7 @@
   "mode": "APS",
   "sensor": "ALP_003CA",
   "multi_thread": false,
-  "thread_count": 8,
+  "thread_count": 7,
   "log_enabled": false,
   "raw": {
     "path": "E:\\test\\algorithmlibrary_ALP\\test_rawdata\\testdata_center_crop_3264x2448_5frames_u16_from_3280x2464.raw",

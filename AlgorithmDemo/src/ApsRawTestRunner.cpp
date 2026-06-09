@@ -1307,7 +1307,7 @@ void ConfigureThresholds(ApsDemoConfig& config) {
 } // namespace
 
 int RunApsRawTestProfile(const std::string& profilePath) {
-    std::cout << std::fixed << std::setprecision(6);
+    std::cout << std::fixed << std::setprecision(6) << std::unitbuf;
 
     ApsDemoConfig config = DefaultConfig();
     ApsRunResult result;

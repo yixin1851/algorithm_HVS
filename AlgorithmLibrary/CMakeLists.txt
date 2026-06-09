@@ -16,6 +16,7 @@ target_sources(AlgorithmLibrary PRIVATE
 target_include_directories(AlgorithmLibrary PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+alp_apply_msvc_toolchain_paths(AlgorithmLibrary)
 # 指示在构建该库时导出符号
 target_compile_definitions(AlgorithmLibrary PRIVATE API_EXPORTS)
 

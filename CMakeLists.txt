@@ -26,6 +26,7 @@ endif (CMAKE_CL_64)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(VersionInfo)
+include(MSVCToolchainPaths)
 add_subdirectory(AlgorithmLibrary)
 #add_subdirectory(AlgorithmTest)
 #add_subdirectory(AlgorithmCTypeTest)
