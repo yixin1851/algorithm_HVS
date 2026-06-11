@@ -63,7 +63,7 @@ echo Add more breakpoints in LLDB, then type c to continue.
 echo.
 
 "%LLDB%" "%EXE%" ^
-  -o "breakpoint set --file main.cpp --line 17" ^
+  -o "breakpoint set --file main.cpp --line 19" ^
   -o "process launch -- --profile ""%PROFILE%"""
 
 set "LLDB_EXIT=%ERRORLEVEL%"

@@ -400,6 +400,164 @@ LLDBFrontend.exe
 
 这通常说明崩溃发生在 CLion 的 LLDB 调试前端，不是 `AlgorithmDemod.exe` 本身。
 
+## 命令行 LLDB 图形界面
+
+如果 CLion 的调试前端不稳定，但命令行 LLDB 可以正常断住，可以使用项目里的 PySide6 调试 GUI：
+
+```text
+E:\test\algorithmlibrary_ALP\tools\algorithm_debug_gui.py
+```
+
+启动方式是使用已经安装 PySide6 的 Python 解释器运行它，例如：
+
+```powershell
+cd E:\test\algorithmlibrary_ALP
+<安装了 PySide6 的 python.exe> tools\algorithm_debug_gui.py
+```
+
+这个 GUI 做的事情和命令行 LLDB 一样：
+
+```text
+启动 lldb.exe
+加载 AlgorithmDemod.exe
+设置 main.cpp:19 断点
+process launch -- --profile aps_gui_profile.json
+停在 main 函数的第一行循环附近
+```
+
+界面中有三个核心区域：
+
+```text
+调试配置：选择 lldb.exe、AlgorithmDemod.exe、aps_gui_profile.json
+断点：选择常用断点，或手工输入 file + line
+LLDB 命令：手工命令、函数断点、线程、内存
+LLDB 输出：显示 LLDB 原始输出
+```
+
+推荐使用顺序：
+
+```text
+1. 先用 Algorithm Test GUI 保存最新 aps_gui_profile.json
+2. 打开 algorithm_debug_gui.py
+3. 确认 lldb.exe、AlgorithmDemod.exe、profile 路径正确
+4. 点击“启动”，程序会自动停在 main
+5. 添加目标断点，例如 Demo SNoise 调用或 DLL SNoise 实现
+6. 点击“继续”
+7. 命中断点后使用“单步进入 / 单步跳过 / 跳出函数 / 调用栈 / 变量”
+```
+
+按钮只有在 LLDB 输出 `Process stopped` 后才适合使用。启动后如果还在 `process launch` 阶段，或者点击“继续”后程序正在运行，此时不要连续发送 `step` / `next`；等命中断点停住后再单步。
+
+如果目标是进入 profile 流程，推荐在断点预设中选择 `RunApsRawTestProfile`，再点击“运行到选中断点”。
+
+等价的手工命令是：
+
+```text
+breakpoint set --file ApsRawTestRunner.cpp --line 1309
+continue
+```
+
+所以当 LLDB 停在 `main.cpp:26`，但点击“单步进入”直接跑到 `main.cpp:34` 时，不要继续纠结 step into，直接用“运行到选中断点”。这是绕开 Windows LLDB 对 MSVC/PDB 跨函数 step into 不稳定问题的更稳方式。
+
+如果要进入其他函数，也按同样思路操作：
+
+```text
+1. 在断点预设中选择目标，例如 RunSelectedTests / ImportRawData / Demo SNoise 调用
+2. 点击“运行到选中断点”
+3. LLDB 命中断点后再查看变量或继续运行
+```
+
+这等价于手工执行：
+
+```text
+breakpoint set --file <file> --line <line>
+continue
+```
+
+GUI 按钮和 LLDB 命令对应关系：
+
+```text
+继续        -> continue
+单步跳过    -> next
+单步进入    -> step
+跳出函数    -> finish
+调用栈      -> bt
+变量        -> frame variable
+运行到选中断点 -> breakpoint set <file>:<line> + continue
+列出断点    -> breakpoint list
+停止        -> process kill + quit
+```
+
+### 调试 GUI：函数断点
+
+如果不想记文件行号，可以切到 `函数` 页签：
+
+```text
+1. 在 Preset 中选择函数，或者在 Name 中输入函数名
+2. 点击“添加函数断点”
+3. 或者点击“运行到函数”
+```
+
+对应 LLDB 命令：
+
+```text
+breakpoint set --name RunSelectedTests
+breakpoint set --name CAlpAPSMPAlgorithm::SNoise
+continue
+```
+
+函数名断点适合快速定位，但如果遇到重载、内联、符号名不匹配，还是优先使用文件行号断点。
+
+### 调试 GUI：多线程
+
+切到 `线程` 页签后可以直接执行：
+
+```text
+线程列表      -> thread list
+选择线程      -> thread select <N>
+当前线程栈    -> thread backtrace
+所有线程栈    -> thread backtrace all
+```
+
+多线程调试建议：
+
+```text
+先关多线程看清主流程
+再开多线程看线程分发和共享数据
+命中断点后先看 thread list，再选择目标线程
+```
+
+### 调试 GUI：内存
+
+切到 `内存` 页签后可以输入地址或表达式：
+
+```text
+0x0000012345678000
+&config
+raw.data()
+aps
+```
+
+常用按钮：
+
+```text
+读取内存    -> memory read --format <fmt> --size <size> --count <count> -- <Expr>
+读变量内存  -> 对“变量名”输入框中的变量执行 memory read -- &<变量名>
+读指针内容  -> 对“变量名”输入框中的指针执行 memory read -- <变量名>
+```
+
+例如：
+
+```text
+变量名输入 config，点击“读变量内存”
+等价于 memory read --format x --size 1 --count 64 -- &config
+
+变量名输入 aps，点击“读指针内容”
+等价于 memory read --format x --size 1 --count 64 -- aps
+```
+
+注意：这个 GUI 管理的是命令行 LLDB 断点。CLion 编辑器里点出来的红色断点不会自动同步到这个 GUI。
+
 当前项目提供了一个绕开 CLion UI 调试前端的脚本。这个脚本只负责启动命令行 LLDB，并让程序先停在 `main`：
 
 ```text
@@ -423,7 +581,7 @@ cd /d E:\test\algorithmlibrary_ALP
 
 ```text
 加载 AlgorithmDemod.exe
-设置 main.cpp:17 断点
+设置 main.cpp:19 断点
 使用 aps_gui_profile.json 启动程序
 停在 main 函数附近
 ```
@@ -570,7 +728,7 @@ no locations (pending)
 Profile 入口：
 
 ```text
-b main.cpp:17
+b main.cpp:19
 b main.cpp:26
 b ApsRawTestRunner.cpp:1309
 ```
@@ -655,6 +813,61 @@ s
 ```
 
 如果 `s` 没有进入算法库源码，可以直接在算法库具体实现函数上打断点，再输入 `c`。
+
+### 6.1 查看变量值和地址
+
+查看当前栈帧所有局部变量：
+
+```text
+frame variable
+```
+
+查看某个变量的值：
+
+```text
+frame variable config
+frame variable result
+frame variable ok
+```
+
+查看某个变量的地址：
+
+```text
+expression -- &config
+expression -- &result
+expression -- &ok
+```
+
+简写也可以：
+
+```text
+p config
+p &config
+```
+
+如果变量是指针，查看指针本身：
+
+```text
+frame variable aps
+```
+
+查看指针指向的对象：
+
+```text
+p *aps
+```
+
+调试 GUI 的“查看值”按钮等价于：
+
+```text
+frame variable <变量名>
+```
+
+“查看地址”按钮等价于：
+
+```text
+expression -- &<变量名>
+```
 
 ### 7. 删除断点
 
